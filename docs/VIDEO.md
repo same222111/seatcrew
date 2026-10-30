@@ -50,3 +50,17 @@ seatcrew video qc my_video/work/manifest.json
 
 ## Dashboard
 `seatcrew ui short_video`: type a topic (and optionally your script) and press Submit. The Video studio panel shows the storyboard, a preview player, the quality report and a download link. CHIEF chat understands "make a video about …", "switch to 16:9" and "use the product promo template". Three shareable profiles are in `examples/short_video/profiles/`.
+
+### Chinese / Japanese subtitles and voice tuning
+
+Subtitles switch automatically to `Noto Sans SC Black` when the narration contains CJK text. That font is not bundled
+(it is ~9 MB); install it system-wide or download the OFL `NotoSansSC-Black.otf` from
+https://github.com/notofonts/noto-cjk and point the editor at it:
+
+```bash
+seatcrew video assemble my_video --tts edge --tts-voice zh-CN-XiaoxiaoNeural \
+  --tts-rate=-6% --tts-pitch=-2Hz --fonts-dir ~/fonts --bgm piano.wav
+# or: export SEATCREW_FONTS_DIR=~/fonts
+```
+
+`seatcrew video qc` accepts the video folder, its `final.mp4`, or `work/manifest.json`.

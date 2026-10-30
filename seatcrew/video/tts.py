@@ -116,13 +116,13 @@ def realign(text, heard):
         if b["end"] < b["start"]: b["end"] = b["start"] + 0.05
     return out
 
-def edge(text, out, voice=None, lang="en", model=None, rate="+0%"):
+def edge(text, out, voice=None, lang="en", model=None, rate="+0%", pitch="+0Hz"):
     try: import edge_tts, asyncio
     except ImportError: raise TTSError("edge-tts is not installed (pip install edge-tts)")
     v = voice or EDGE_VOICES.get(lang, EDGE_VOICES["en"]); words = []; audio = bytearray()
     async def go():
-        try: c = edge_tts.Communicate(text, v, rate=rate, boundary="WordBoundary")
-        except TypeError: c = edge_tts.Communicate(text, v, rate=rate)
+        try: c = edge_tts.Communicate(text, v, rate=rate, pitch=pitch, boundary="WordBoundary")
+        except TypeError: c = edge_tts.Communicate(text, v, rate=rate, pitch=pitch)
         async for ch in c.stream():
             if ch["type"] == "audio": audio.extend(ch["data"])
             elif ch["type"] == "WordBoundary":
@@ -170,14 +170,15 @@ def auto_order(pref="auto"):
     except ImportError: pass
     return order
 
-def synth(text, out, pref="auto", voice=None, lang="en", allow_draft=True, model=None):
+def synth(text, out, pref="auto", voice=None, lang="en", allow_draft=True, model=None, rate=None, pitch=None):
     """Try backends in order. Returns (path, words, info). Falls back to the labeled draft voice only if allowed."""
     errs = []
     for b in auto_order(pref):
         if b not in BACKENDS: raise TTSError(f"unknown TTS backend {b}")
         try:
             ext = ".wav" if b in ("openai", "draft", "mock") else ".mp3"
-            return BACKENDS[b](text, str(Path(out).with_suffix(ext)), voice=voice, lang=lang, model=model)
+            kw = {k: v for k, v in dict(rate=rate, pitch=pitch).items() if v} if b == "edge" else {}
+            return BACKENDS[b](text, str(Path(out).with_suffix(ext)), voice=voice, lang=lang, model=model, **kw)
         except (TTSError, ff.FFError) as e: errs.append(f"{b}: {e}")
     if allow_draft and pref in ("auto", "draft"):
         p, w, info = draft(text, out, lang=lang); info["fallback_reasons"] = errs; return p, w, info

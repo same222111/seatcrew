@@ -95,7 +95,9 @@ def assemble(shots, out, work, aspect="9:16", size=None, voice=None, bgm=None, d
     ass, cues = build_ass(tl["words"], caps, w, h, tl["total"])
     (work / "subs.ass").write_text(ass, encoding="utf-8")
     fd = work / "fonts"; fd.mkdir(exist_ok=True)
-    for f in FONTS.glob("*.ttf"): shutil.copy(f, fd / f.name)
+    extra = [Path(x) for x in (o.get("fonts_dir"), os.environ.get("SEATCREW_FONTS_DIR")) if x and Path(x).is_dir()]
+    for d in [FONTS, *extra]:
+        for f in [*d.glob("*.ttf"), *d.glob("*.otf")]: shutil.copy(f, fd / f.name)
     # 3) audio: voice stem -> (+ducked music) -> loudness
     total = tl["total"]
     if voice:

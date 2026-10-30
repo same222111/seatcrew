@@ -5,6 +5,7 @@ from .tts import CJK
 ACCENT = "&H0000E5FF"          # sung words: warm yellow (ASS is &HAABBGGRR)
 WHITE, BLACK, SHADOW = "&H00FFFFFF", "&H00000000", "&H96000000"
 FONT_NAME = "Montserrat ExtraBold"
+FONT_CJK = "Noto Sans SC Black"      # OFL; put NotoSansSC-*.ttf/otf in a fonts dir (SEATCREW_FONTS_DIR) or install it system-wide
 END_P = re.compile(r"[.!?。！？…]$"); MID_P = re.compile(r"[,;:，、；：]$")
 
 def layout(w, h):
@@ -29,8 +30,9 @@ def ts(t):
 
 def esc(s): return s.replace("\\", "＼").replace("{", "(").replace("}", ")").replace("\n", " ")
 
-def build_ass(words, captions, w, h, total, font=FONT_NAME):
+def build_ass(words, captions, w, h, total, font=None):
     """words: global [{w,start,end,shot}], captions: [(start, end, text)]. Returns (ass_text, cues) where cues are the subtitle events (for QC)."""
+    if font is None: font = FONT_CJK if any(CJK.search(x["w"]) for x in words) or any(CJK.search(c[2] or "") for c in captions) else FONT_NAME
     L = layout(w, h)
     head = f"""[Script Info]
 ScriptType: v4.00+

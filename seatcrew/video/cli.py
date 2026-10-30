@@ -51,12 +51,12 @@ def assemble(a):
     else:
         for sh, s in zip(shots, sb["shots"]):
             if not s["narration"]: continue
-            try: p, words, info = TTS.synth(s["narration"], work / f"voice_{s['id']}", pref=a.tts, voice=a.tts_voice, lang=sb["language"], allow_draft=a.allow_draft)
+            try: p, words, info = TTS.synth(s["narration"], work / f"voice_{s['id']}", pref=a.tts, voice=a.tts_voice, lang=sb["language"], allow_draft=a.allow_draft, rate=a.tts_rate, pitch=a.tts_pitch)
             except TTS.TTSError as e: print(f"voice for {s['id']}: {e}"); return 1
             sh["audio"], sh["words"] = str(p), words; draft |= bool(info.get("draft")); sync = sync if info["sync"] == "exact" else "estimated"
             print(f"  voice {s['id']}: {info['backend']} ({info['sync']} timing)")
     out = Path(a.output or folder / "final.mp4")
-    man = ED.assemble(shots, out, work, aspect=aspect, voice=voice, bgm=a.bgm, draft=draft, crf=a.crf, preset=a.preset, bgm_gain_db=a.bgm_gain_db)
+    man = ED.assemble(shots, out, work, aspect=aspect, voice=voice, bgm=a.bgm, draft=draft, crf=a.crf, preset=a.preset, bgm_gain_db=a.bgm_gain_db, fonts_dir=a.fonts_dir)
     tot = sum(s["duration"] for s in sb["shots"])
     rep = QC.check(man, dict(total_sec=(min(3, tot), max(600, tot * 2)), sync=sync))
     (Path(man["output"]).parent / "quality_report.json").write_text(json.dumps(rep, indent=1), encoding="utf-8")
@@ -68,7 +68,11 @@ def _print(rep):
     print(rep["summary"])
 
 def qc(a):
-    man = json.loads(Path(a.manifest).read_text(encoding="utf-8")); rep = QC.check(man); _print(rep); return 0 if rep["passed"] else 1
+    p = Path(a.manifest)
+    if p.is_dir(): p = p / "work" / "manifest.json"
+    elif p.suffix.lower() != ".json": p = p.parent / "work" / "manifest.json"   # final.mp4 -> its folder's manifest
+    if not p.is_file(): raise ValueError(f"no manifest at {p} - run `seatcrew video assemble` first")
+    man = json.loads(p.read_text(encoding="utf-8")); rep = QC.check(man); _print(rep); return 0 if rep["passed"] else 1
 
 def main(argv):
     ap = argparse.ArgumentParser(prog="seatcrew video", description="Short-video tools: init a storyboard folder, assemble a finished video, quality-check it.")
@@ -77,11 +81,11 @@ def main(argv):
     i.add_argument("--template", choices=list(TEMPLATES), default="knowledge_explainer"); i.add_argument("--aspect", choices=["9:16", "16:9"], default="9:16")
     s = sp.add_parser("assemble", help="folder (storyboard.yaml + clips/) -> final.mp4 + quality_report.json"); s.add_argument("folder")
     s.add_argument("--storyboard"); s.add_argument("-o", "--output"); s.add_argument("--aspect", choices=["9:16", "16:9"])
-    s.add_argument("--tts", default="auto", choices=["auto", "elevenlabs", "openai", "edge", "draft"]); s.add_argument("--tts-voice")
+    s.add_argument("--tts", default="auto", choices=["auto", "elevenlabs", "openai", "edge", "draft"]); s.add_argument("--tts-voice"); s.add_argument("--tts-rate", help="edge-tts speaking rate, e.g. -8%%"); s.add_argument("--tts-pitch", help="edge-tts pitch, e.g. -2Hz"); s.add_argument("--fonts-dir", help="extra fonts (e.g. Noto Sans SC for Chinese subtitles)")
     s.add_argument("--voice", help="your own narration file (instead of TTS)"); s.add_argument("--words", help="word timings JSON [{w,start,end}] for --voice")
     s.add_argument("--bgm", help="background music (ducked under the voice)"); s.add_argument("--bgm-gain-db", type=float)
     s.add_argument("--crf", type=int, default=18); s.add_argument("--preset", default="slow"); s.add_argument("--allow-draft", action="store_true", help=f"fill gaps offline; output is labeled {DRAFT_LABEL}")
-    q = sp.add_parser("qc", help="re-run the quality check on a manifest.json"); q.add_argument("manifest")
+    q = sp.add_parser("qc", help="re-run the quality check (video folder, final.mp4 or work/manifest.json)"); q.add_argument("manifest")
     a = ap.parse_args(argv)
     try: return {"init": init, "assemble": assemble, "qc": qc}[a.c](a)
     except (ValueError, FFError) as e: print(f"error: {e}"); return 1
