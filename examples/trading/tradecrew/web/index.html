@@ -39,6 +39,11 @@ button.sm{padding:2px 8px;font-size:12px}label{color:var(--dim)}.row{display:fle
 canvas{width:100%;height:260px;background:#05080d;border-radius:10px;border:1px solid var(--ln)}
 a.home{display:none;background:var(--acc,#39ff88);color:#04140a;font-weight:bold;font-size:15px;padding:8px 16px;border-radius:6px;text-decoration:none;margin-right:10px}
 .bar2{display:none;gap:12px;align-items:center;padding:8px 14px;border-bottom:1px solid #1f3a29;background:#0f1612}.bar2 .dim{font-size:12px}
+.qm{display:inline-grid;place-items:center;width:15px;height:15px;border-radius:50%;border:1px solid var(--dim);color:var(--dim);font:700 10px var(--sans);cursor:help;margin-left:6px;vertical-align:middle}
+.who{padding:12px 16px;margin-bottom:12px}.who .steps{display:grid;grid-template-columns:repeat(4,1fr);gap:26px}.who .st{position:relative;padding:10px 12px;border:1px solid var(--ln);border-radius:12px;background:var(--pn2)}
+.who .st:not(:last-child)::after{content:'→';position:absolute;right:-19px;top:50%;transform:translateY(-50%);color:var(--acc);font-weight:800}.who .st b{display:block;font:800 13px var(--sans);color:var(--c);margin-bottom:4px}.who .st .d{color:var(--dim);font-size:12px}
+.who .ai{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}.who .ai span{font-size:10.5px;border:1px solid var(--ln);border-radius:6px;padding:1px 6px}.who .ai span.on{border-color:var(--blue);color:var(--blue)}
+@media(max-width:900px){.who .steps{grid-template-columns:1fr 1fr;gap:10px}.who .st::after{display:none}}
 .tc-hero{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:20px;align-items:center;padding:14px 20px;margin-bottom:12px}
 .tc-hero .nm{font:800 26px var(--sans)}.tc-stats{display:grid;grid-template-columns:repeat(4,auto);gap:4px 26px}.tc-stats .l{color:var(--dim);font-size:11px;letter-spacing:.12em;text-transform:uppercase}
 .tc-flow{position:relative;aspect-ratio:1000/150;max-height:150px}.tc-flow svg{width:100%;height:100%}
@@ -62,6 +67,7 @@ a.home{display:none;background:var(--acc,#39ff88);color:#04140a;font-weight:bold
   <div class="tc-flow" id="tcFlow"></div>
   <div class="tc-stats"><div><div class="nx-big" id="tcEq" style="color:var(--acc)">$0</div><div class="l" data-i18n="tc_equity"></div></div><div><div class="nx-big" id="tcOrd">0</div><div class="l" data-i18n="tc_orders"></div></div>
    <div><div class="nx-big" id="tcFill" style="color:var(--blue)">0</div><div class="l" data-i18n="tc_filled"></div></div><div><div class="nx-big" id="tcBlk" style="color:var(--bad)">0</div><div class="l" data-i18n="tc_blocked"></div></div></div></div>
+ <div class="nx-card who" id="tcWho"></div>
  <div class="grid g2">
  <div class="pn"><h3 data-i18n="seats_title"></h3><div class="seats" id="seats"></div>
   <div class="runner" id="runner"></div><div class="row" style="justify-content:center"><button class="b sm" id="runNow" data-i18n="scan_now"></button><span id="cyc" class="dim"></span></div></div>
@@ -164,7 +170,7 @@ async function tick(){if(!LOC.app_sub)return;let s;try{s=await get('/api/state')
  $('src').textContent=T('data')+': '+(s.source||'…');$('dialp').textContent=T('dial_lbl')+': '+s.dial;$('clk').textContent=s.time.replace('T',' ')+' ET';
  $('cyc').textContent=` ${T('cycle')} ${s.cycle} · ${T('last')} ${s.last_cycle?s.last_cycle.slice(11,19):'—'}${s.kill_switch?' · '+T('kill_on'):''}`;
  $('runner').textContent=T('runner',{n:s.runner.interval});
- $('seats').innerHTML=SEATORDER.map(k=>{const a=s.seats[k];return `<div class="seat ${k=='chief'?'chief':''} ${a.active?'on':''}" data-seat="${k}"><span class="dot"></span><div class="code">${k.toUpperCase()}</div><div class="job">${T('seat_'+k)}</div>
+ $('seats').innerHTML=SEATORDER.map(k=>{const a=s.seats[k];return `<div class="seat ${k=='chief'?'chief':''} ${a.active?'on':''}" data-seat="${k}"><span class="dot"></span><div class="code">${k.toUpperCase()}<span class="qm" title="${T('seat_'+k)} - ${k=='chief'?T('help_chief'):T('help_check')}">?</span></div><div class="job">${T('seat_'+k)}</div>
   <div class="ai">AI: ${esc(a.ai)}</div><div class="st">${esc(a.status)} <span class="dim">${esc(a.ts)}</span></div><div class="l" title="${esc(a.last)}">${esc(a.last)}</div></div>`}).join('');
  $('ports').innerHTML=`<tr><th>${T('th_portfolio')}</th><th>${T('th_equity')}</th><th>${T('th_return')}</th><th>${T('th_cash')}</th><th>${T('th_positions')}</th><th>${T('th_why')}</th></tr>`+Object.entries(s.portfolios).map(([n,p])=>`<tr><td>${p.label}${p.enabled?'':' <span class=dim>('+T('off')+')</span>'}</td><td>$${p.equity.toFixed(2)}</td><td class="${p.ret>=0?'up':'dn'}">${f2(p.ret)}%</td><td>$${p.cash.toFixed(2)}</td><td>${Object.entries(p.pos).map(([k,v])=>`${k} ${(+v.qty).toFixed(4)}`).join('<br>')||'<span class=dim>'+T('cash')+'</span>'}</td><td class="dim" style="max-width:300px">${esc(p.reason)}</td></tr>`).join('');
  $('orders').innerHTML=s.orders.length?s.orders.slice(0,12).map(o=>{const ch=o.chain||[];const blocked=ch.find(c=>!c.ok);
@@ -216,4 +222,11 @@ loadCfg();setInterval(tick,2000);
   CH.forEach((n,i)=>{h+=`<g class="${st[i]}">${st[i]=='bad'?`<circle class="ring" cx="${X(i)}" cy="${y}" r="26"/>`:''}<circle class="core" cx="${X(i)}" cy="${y}" r="24"/><text x="${X(i)}" y="${y+5}" style="font-size:15px">${st[i]=='ok'?'✓':st[i]=='bad'?'✕':'·'}</text><text x="${X(i)}" y="${y+46}">${n.toUpperCase()}</text></g>`});
   const bi=st.indexOf('bad');$('tcFlow').innerHTML=`<svg viewBox="0 0 ${W} 110">${h}</svg>`+(bi>=0?`<div class="nx-stamp" style="left:calc(${X(bi)/10}% - 50px);top:-6px;font-size:14px">${T('stamp_blocked')}</div>`:'')}
  setInterval(hero,2000);setTimeout(hero,600)})();
-</script></body></html>
+(()=>{let sig='';async function who(){if(!LOC.app_sub)return;let c;try{c=await get('/api/config')}catch(e){return}
+ const S=c.config.seats,ai=k=>(S[k]||{}).provider||'rules',lab=k=>ai(k)=='rules'?T('ai_rules'):ai(k)+((S[k]||{}).model?'/'+S[k].model:'');
+ const chips=Object.keys(S).filter(k=>k!='chief').map(k=>`<span class="${ai(k)!='rules'?'on':''}" title="${T('seat_'+k)}">${k.toUpperCase()}: ${lab(k)}</span>`).join('');
+ const st=(c,t,d,x)=>`<div class="st" style="--c:${c}"><b>${t}</b><div class="d">${d}</div>${x||''}</div>`;
+ const h=`<div class="nx-h"><span>${T('who_title')}</span><span class="qm" title="${T('who_hint')}">?</span><button class="b sm" style="margin-left:auto" onclick="window.ChiefChat&&ChiefChat.ask(T('who_title'))">◆ ${T('ask_chief')}</button></div>
+ <div class="steps">${st('var(--or)',T('who_1'),T('who_1d'),`<div class="ai"><span class="${ai('chief')!='rules'?'on':''}">CHIEF: ${lab('chief')}</span></div>`)}${st('var(--blue)',T('who_2'),T('who_2d'),`<div class="ai">${chips}</div>`)}${st('var(--bad)',T('who_3'),T('who_3d'))}${st('var(--acc)',T('who_4'),T('who_4n'))}</div>`;
+ if(h!==sig){$('tcWho').innerHTML=h;sig=h}}setInterval(who,4000);setTimeout(who,700)})();
+</script><script src="/chat.js"></script></body></html>

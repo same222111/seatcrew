@@ -11,7 +11,8 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from . import __version__, loader
 from .config import LANGUAGES, load_env
-from .llm import PROVIDERS, key_status
+from .llm import PROVIDERS, key_status, test_connection
+from .assistant import KEY_LINKS
 
 APP = "SeatCrew"
 HERE = Path(__file__).parent
@@ -126,6 +127,17 @@ class App:
         load_env(str(self.home / ".env"))
         self.prefs_path = self.home / "desktop.json"
         self.prefs = json.loads(self.prefs_path.read_text(encoding="utf-8")) if self.prefs_path.exists() else {}
+        self.apply_ai_env()
+        from . import assistant as AS
+        self.chat = AS.Assistant(self.home / "chat.json", lang=lambda: self.prefs.get("language", "en"), cfg=lambda: None,
+                                 wf_dir=self.home / "workflows", taken=lambda: [w["name"] for w in workflows(self.home)],
+                                 prefer=lambda: self.prefs.get("default_provider"), demo=lambda: self.prefs.get("ai_mode") == "demo")
+
+    def apply_ai_env(self):
+        """Tell every dashboard (same process) which provider CHIEF chat should use, or that demo mode is on."""
+        os.environ["SEATCREW_DEMO"] = "1" if self.prefs.get("ai_mode") == "demo" else "0"
+        if self.prefs.get("default_provider"): os.environ["SEATCREW_CHAT_PROVIDER"] = self.prefs["default_provider"]
+        else: os.environ.pop("SEATCREW_CHAT_PROVIDER", None)
 
     def close_workflows(self):
         for wf, srv, _ in self.open.values():
@@ -150,7 +162,8 @@ class App:
                     last=self.prefs.get("last"), workflows=workflows(self.home), data_dir=pretty(self.home),
                     data_source="fixed" if self.fixed_home else data_location()[1], version=__version__,
                     providers={k: dict(label=v.get("label", k), key_env=v.get("key_env")) for k, v in PROVIDERS.items()},
-                    keys=key_status(), running=list(self.open), animations=self.prefs.get("animations", True))
+                    keys=key_status(), running=list(self.open), animations=self.prefs.get("animations", True),
+                    ai_mode=self.prefs.get("ai_mode", "rules"), default_provider=self.prefs.get("default_provider"), links=KEY_LINKS)
 
     def setup(self, b):
         lang = b.get("language", "en")
@@ -158,12 +171,31 @@ class App:
         if b.get("data_dir") and Path(str(b["data_dir"])).expanduser().resolve() != self.home.resolve() and not self.fixed_home:
             self.change_data(b["data_dir"], True)
         prov, key = b.get("provider"), (b.get("api_key") or "").strip()
+        mode = b.get("mode") or ("key" if key else "rules")
+        if mode not in ("key", "ollama", "demo", "rules"): raise ValueError("mode must be key, ollama, demo or rules")
         if key:
             env = PROVIDERS.get(prov, {}).get("key_env")
             if not env: raise ValueError("pick a provider for the key")
             save_key(self.home / ".env", env, key)
-        self.save_prefs(language=lang, setup_done=True, default_provider=prov if key else None)
-        return dict(ok=True, keys=key_status())
+        chosen = "ollama" if mode == "ollama" else (prov if mode == "key" and prov in PROVIDERS and (key or key_status().get(prov)) else None)
+        self.save_prefs(language=lang, setup_done=True, default_provider=chosen, ai_mode=mode if chosen or mode in ("demo", "rules") else "rules")
+        self.apply_ai_env()
+        return dict(ok=True, keys=key_status(), ai_mode=self.prefs["ai_mode"])
+
+    def test_key(self, b):
+        """Wizard 'Test connection': real minimal call. A typed key is used only for this call, never saved or returned."""
+        prov = b.get("provider")
+        if prov not in PROVIDERS: raise ValueError("pick a provider")
+        env, key = PROVIDERS[prov]["key_env"], (b.get("api_key") or "").strip()
+        with self.lock:
+            old = os.environ.get(env) if env else None
+            try:
+                if env and key: os.environ[env] = key
+                return test_connection(prov, {"providers": {}, "llm_limits": {"timeout_sec": 20}}, b.get("model") or None)
+            finally:
+                if env and key:
+                    if old is None: os.environ.pop(env, None)
+                    else: os.environ[env] = old
 
     def open_workflow(self, name):
         from .core import Runner
@@ -177,6 +209,9 @@ class App:
                 patch = {"language": self.prefs.get("language", "en")}
                 p = self.prefs.get("default_provider")
                 if p: patch["seats"] = {s: {"provider": p} for s in wf.seat_map}
+                if self.prefs.get("ai_mode") == "demo" and "data" in wf.cfg.data:      # demo mode: offline demo prices
+                    try: wf.cfg.update({"data": {"price_source": "demo"}})
+                    except Exception: pass
                 try: wf.cfg.update(patch)
                 except Exception: wf.cfg.update({"language": patch["language"]})
             srv = serve(wf, "127.0.0.1", free_port())
@@ -187,6 +222,7 @@ class App:
 
     def handler(app):
         page = (HERE / "web" / "launcher.html").read_bytes()
+        from . import assistant as AS
         class H(BaseHTTPRequestHandler):
             def log_message(self, *a): pass
             def send(self, obj, code=200, ctype="application/json"):
@@ -198,11 +234,18 @@ class App:
                 if p == "/neon.css": return self.send(NEON.read_bytes(), ctype="text/css; charset=utf-8")
                 if p == "/icon.png": return self.send(ICON.read_bytes(), ctype="image/png")
                 if p == "/api/home": return self.send(app.info())
+                st = AS.static(p)
+                if st: return self.send(st[0], ctype=st[1])
+                r = AS.route(app.chat, "GET", p)
+                if r: return self.send(*r)
                 self.send({"error": "not found"}, 404)
             def do_POST(self):
                 try:
                     b = json.loads(self.rfile.read(int(self.headers.get("Content-Length") or 0)) or b"{}")
                     if self.path == "/api/setup": return self.send(app.setup(b))
+                    if self.path == "/api/test-connection": return self.send(app.test_key(b))
+                    r = AS.route(app.chat, "POST", self.path, b)
+                    if r: return self.send(*r)
                     if self.path == "/api/prefs":
                         if not isinstance(b.get("animations"), bool): raise ValueError("animations must be true or false")
                         app.save_prefs(animations=b["animations"]); return self.send(dict(ok=True, animations=b["animations"]))

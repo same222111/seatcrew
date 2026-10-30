@@ -11,9 +11,14 @@ from . import backtest as BT
 
 WEB = Path(__file__).parent / "web"
 from seatcrew.server import NEON  # shared "Night Shift" stylesheet
+from seatcrew import assistant as AS
 
 def make_handler(cfg, team):
     lab = dict(running=False, result=None, error=None, log=[])
+    import os
+    chat = AS.Assistant(Path(getattr(team, "state_dir", "state")) / "chat.json", lang=lambda: cfg.data["language"], cfg=lambda: cfg.data, config=cfg,
+                        wf_dir=Path("workflows"), taken=lambda: ["trading", "content_review", "support_triage"],
+                        prefer=lambda: os.getenv("SEATCREW_CHAT_PROVIDER"), demo=lambda: os.getenv("SEATCREW_DEMO") == "1")
 
     def run_lab(kind, body):
         lab.update(running=True, result=None, error=None, log=[])
@@ -27,7 +32,7 @@ def make_handler(cfg, team):
     class H(BaseHTTPRequestHandler):
         def log_message(self, *a): pass
         def send(self, obj, code=200, ctype="application/json"):
-            b = obj if isinstance(obj, bytes) else json.dumps(obj, default=str).encode()
+            b = obj if isinstance(obj, bytes) else json.dumps(obj, default=str, ensure_ascii=False).encode()
             self.send_response(code); self.send_header("Content-Type", ctype); self.send_header("Cache-Control", "no-store"); self.end_headers(); self.wfile.write(b)
         def body(self):
             n = int(self.headers.get("Content-Length") or 0); return json.loads(self.rfile.read(n) or b"{}")
@@ -36,6 +41,10 @@ def make_handler(cfg, team):
             if p in ("/", "/index.html"): return self.send((WEB / "index.html").read_bytes(), ctype="text/html; charset=utf-8")
             if p == "/neon.css": return self.send(NEON.read_bytes(), ctype="text/css; charset=utf-8")
             if p == "/api/state": return self.send(team.snapshot())
+            st = AS.static(p)
+            if st: return self.send(st[0], ctype=st[1])
+            r = AS.route(chat, "GET", p)
+            if r: return self.send(*r)
             if p == "/api/config": return self.send(dict(config=cfg.data, keys=key_status(), providers=PROVIDERS, seats=SEATS, languages=LANGUAGES,
                                                           default_prompts=DEFAULT_PROMPTS, strategies={k: v["label"] for k, v in STRATEGIES.items()}, version=__version__))
             if p == "/api/lab": return self.send(lab)
@@ -45,6 +54,8 @@ def make_handler(cfg, team):
             p = self.path
             try:
                 b = self.body()
+                r = AS.route(chat, "POST", p, b)
+                if r: return self.send(*r)
                 if p == "/api/config":
                     cfg.update(b); team.log("chief", "CONFIG", "settings saved: " + ", ".join(b)); team.wake.set(); return self.send(dict(ok=True, config=cfg.data))
                 if p == "/api/test-connection": return self.send(test_connection(b["provider"], cfg.data, b.get("model") or None))

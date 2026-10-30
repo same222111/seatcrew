@@ -47,7 +47,14 @@ button.no{background:#3a1212;color:var(--bad);border-color:var(--bad)}button.sm{
 .scard .nm{font:700 14px var(--sans);letter-spacing:.04em}.scard .jb{grid-column:2/4;color:var(--dim);font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .scard .ln{grid-column:2/4;font-size:11px;color:var(--c);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .scard.live{border-color:#5cc8ff66;background:#5cc8ff0c;box-shadow:inset 0 0 18px #5cc8ff14}.scard.block{border-color:#ff4f6d55;background:#ff4f6d0a}
-.flowcard{padding:12px 14px;position:relative}.fp{color:var(--fg);letter-spacing:.1em}
+.flowcard{padding:12px 14px;position:relative}
+.qm{display:inline-grid;place-items:center;width:16px;height:16px;border-radius:50%;border:1px solid var(--dim);color:var(--dim);font:700 10px var(--sans);cursor:help;margin-left:6px;vertical-align:middle}.qm:hover{border-color:var(--acc);color:var(--acc)}
+.who{margin-top:12px;padding:14px 16px}.who .steps{display:grid;grid-template-columns:repeat(4,1fr);gap:0;align-items:stretch}.who .st{position:relative;padding:12px 14px;border:1px solid var(--ln);border-radius:12px;background:var(--pn2);margin-right:26px}
+.who .st:last-child{margin-right:0}.who .st:not(:last-child)::after{content:'→';position:absolute;right:-21px;top:50%;transform:translateY(-50%);color:var(--acc);font-weight:800}
+.who .st b{display:block;font:800 13px var(--sans);letter-spacing:.06em;color:var(--c,var(--acc));margin-bottom:4px}.who .st .d{color:var(--dim);font-size:12px;line-height:1.4}.who .st .n{font:800 22px var(--sans);color:var(--c,var(--acc));opacity:.35;position:absolute;right:10px;top:4px}
+.who .ai{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}.who .ai span{font-size:10.5px;border:1px solid var(--ln);border-radius:6px;padding:1px 6px}.who .ai span.on{border-color:var(--blue);color:var(--blue)}
+@media(max-width:900px){.who .steps{grid-template-columns:1fr 1fr;gap:10px}.who .st{margin-right:0}.who .st::after{display:none}}
+body.simple .adv{display:none!important}#simpleBtn.on{border-color:var(--acc);color:var(--acc)}.fp{color:var(--fg);letter-spacing:.1em}
 .chips{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin-bottom:6px}
 .chip{border:1px solid var(--ln);border-radius:9px;padding:7px 10px;cursor:pointer;transition:all .3s;position:relative;min-width:0}.chip b{font:700 13px var(--sans);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .chip .s{font-size:11px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}.chip:after{content:"";position:absolute;top:9px;right:9px;width:7px;height:7px;border-radius:50%;background:var(--dim)}
@@ -93,7 +100,7 @@ body[data-density=comfy] main{padding:20px}body[data-density=comfy] .pn{padding:
 </style></head><body>
 <div class="bar2"><a id="homeBtn" class="home" href="#" data-i18n="back_home"></a><span class="crumb"><span id="crumbHome" data-i18n="home"></span> › <b id="crumbWf"></b></span><span class="dim" style="margin-left:auto;font-size:11px" data-i18n="back_keys"></span></div>
 <header><b id="title">▌SeatCrew</b><span class="dim" data-i18n="app_sub"></span><span id="wfname" class="pill"></span><span id="clk" class="dim"></span>
-<button id="motionBtn" class="b sm" title="" onclick="toggleMotion()" data-i18n="motion"></button><select id="langSel"></select>
+<button id="simpleBtn" class="b sm" onclick="toggleSimple()"></button><button id="motionBtn" class="b sm" title="" onclick="toggleMotion()" data-i18n="motion"></button><select id="langSel"></select>
 <nav><button data-t="dash" class="act" data-i18n="nav_dash"></button><button data-t="team" data-i18n="nav_seats"></button><button data-t="set" data-i18n="nav_set"></button><button data-t="prof" data-i18n="nav_prof"></button></nav></header>
 <main>
 <section id="dash" class="tab act">
@@ -112,6 +119,7 @@ body[data-density=comfy] main{padding:20px}body[data-density=comfy] .pn{padding:
    <div><div class="nx-big bad" id="stBlock">0</div><div class="lbl" data-i18n="stat_blocked"></div></div>
    <div><div class="nx-big warn" id="stWait">0</div><div class="lbl" data-i18n="stat_waiting"></div></div></div>
  </div>
+ <div class="nx-card who" id="whoCard"></div>
  <div class="dgrid">
   <aside class="nx-card col"><div class="nx-h"><span data-i18n="seats_title"></span><span style="margin-left:auto" id="online"></span></div><div id="seats"></div>
    <div class="runner" id="runner"></div><div class="row" style="justify-content:center"><button class="b sm" id="runNow" data-i18n="run_now"></button><span id="cyc" class="dim"></span></div></aside>
@@ -177,8 +185,8 @@ function renderCfg(){if(!META)return;const P=['rules',...Object.keys(META.provid
  $('form').querySelectorAll('[data-f]').forEach(e=>{const f=DEF.submit.find(x=>x.name==e.dataset.f);e.previousElementSibling.textContent=LOC['field_'+f.name]||f.label||f.name});
  $('seatcfg').innerHTML=DEF.seats.map(s=>{const v=META.seats[s.name];return `<div class="agent"><span class="n">${s.name.toUpperCase()}</span> <span class="dim">— ${esc(job(s))}${s.labels.length?' · AI: '+s.labels.join('|')+(s.block_labels.length?' (blocks on '+s.block_labels.join('|')+')':''):''}</span>
   <div class="row"><label>${T('provider')}</label><select data-sp="${s.name}">${P.map(p=>`<option ${p==v.provider?'selected':''}>${p}</option>`).join('')}</select>
-  <label>${T('model')}</label><input data-sm="${s.name}" value="${esc(v.model)}" placeholder="default"><button class="b sm" data-st="${s.name}">${T('test')}</button><span id="tr-${s.name}" class="dim"></span></div>
-  <textarea data-spr="${s.name}">${esc(v.prompt)}</textarea></div>`}).join('');
+  <label class="adv">${T('model')}</label><input class="adv" data-sm="${s.name}" value="${esc(v.model)}" placeholder="default"><button class="b sm" data-st="${s.name}">${T('test')}</button><span id="tr-${s.name}" class="dim"></span></div>
+  <textarea class="adv" data-spr="${s.name}">${esc(v.prompt)}</textarea></div>`}).join('');
  document.querySelectorAll('[data-st]').forEach(b=>b.onclick=async()=>{const n=b.dataset.st,p=document.querySelector(`[data-sp=${n}]`).value;if(p=='rules')return;$('tr-'+n).textContent='…';
   const r=await post('/api/test-connection',{provider:p,model:document.querySelector(`[data-sm=${n}]`).value});$('tr-'+n).textContent=r.ok?`✓ ${r.model} "${r.reply}" ${r.latency_ms}ms`:'✗ '+r.error});
  $('keys').innerHTML=Object.entries(META.keys).map(([k,ok])=>`<span class="pill" style="margin-right:6px;color:${ok?'var(--acc)':'var(--dim)'}">${k}: ${ok?T('key_set'):T('key_missing')}</span>`).join('');
@@ -214,6 +222,14 @@ function seatState(name,s){const a=s.seats[name]||{};const it=s.items.find(o=>(o
  const c=it&&(it.chain||[]).find(x=>x.seat==name);if(c&&!c.ok)return['block','b-block',T('badge_block')];if(c)return['pass','b-pass',T('badge_pass')];
  if(d.kind=='human')return['','b-human',T('badge_human')];return['','b-idle',T('badge_idle')]}
 function nodeState(o,k){if(!o)return'pend';const c=(o.chain||[]).find(x=>x.seat==k);if(c)return c.ok?'ok':'bad';if(o.pending!=null&&DEF.chain[o.pending]==k)return'wait';return'pend'}
+function help(d){const kd=d.name=='chief'?'chief':(d.kind||'check');const hk='help_'+kd;return (d.job?d.job+' - ':'')+(LOC[hk]||T("help_check"))}
+function whoCard(s){const seats=DEF.seats.filter(d=>d.name!='chief'),hum=seats.filter(d=>d.kind=='human'),ai=d=>((s.seats[d.name]||{}).ai||'rules');
+ const chips=seats.filter(d=>d.kind!='human').map(d=>`<span class="${ai(d)!='rules'?'on':''}" title="${esc(help(d))}">${esc(d.name.toUpperCase())}: ${esc(ai(d)=='rules'?T('ai_rules'):ai(d))}</span>`).join('');
+ const st=(n,c,t,d,x)=>`<div class="st" style="--c:${c}"><span class="n">${n}</span><b>${esc(t)}</b><div class="d">${esc(d)}</div>${x||''}</div>`;
+ return `<div class="nx-h"><span>${esc(T('who_title'))}</span><span class="qm" title="${esc(T('who_hint'))}">?</span><button class="b sm" style="margin-left:auto" onclick="window.ChiefChat&&ChiefChat.ask(T('who_title'))">◆ ${esc(T('ask_chief'))}</button></div>
+ <div class="steps">${st(1,'var(--or)',T('who_1'),T('who_1d'),`<div class="ai"><span class="${ai({name:'chief'})!='rules'?'on':''}">CHIEF: ${esc(ai({name:'chief'})=='rules'?T('ai_rules'):ai({name:'chief'}))}</span></div>`)}
+ ${st(2,'var(--blue)',T('who_2'),T('who_2d'),`<div class="ai">${chips}</div>`)}${st(3,'var(--bad)',T('who_3'),T('who_3d'))}
+ ${st(4,'var(--acc)',T('who_4'),hum.length?T('who_4d')+' ('+hum.map(h=>h.name.toUpperCase()).join(', ')+')':T('who_4n'))}</div>`}
 function flowSVG(o){const ch=DEF.chain,n=ch.length,W=1000,H=230,y=100,x0=70,dx=n>1?(W-2*x0)/(n-1):0,X=i=>n>1?x0+i*dx:W/2;
  const st=ch.map(k=>nodeState(o,k));let w='',pk='',nd='';
  for(let i=0;i<n-1;i++){const a=st[i],b2=st[i+1];const cls=a=='ok'&&(b2=='ok'||b2=='bad'||b2=='wait')?(b2=='wait'?'wait':'ok'):a=='bad'?'bad':'';
@@ -224,7 +240,7 @@ function flowSVG(o){const ch=DEF.chain,n=ch.length,W=1000,H=230,y=100,x0=70,dx=n
   nd+=`<g class="node ${s0}">${s0=='bad'||s0=='wait'?`<circle class="ring" cx="${X(i)}" cy="${y}" r="36"/><circle class="ring r2" cx="${X(i)}" cy="${y}" r="36"/>`:''}
    <circle class="core" cx="${X(i)}" cy="${y}" r="34"/><text class="glyph" x="${X(i)}" y="${y+7}">${s0=='bad'?'✕':s0=='ok'?'✓':s0=='wait'?'⏸':GLYPH[di%GLYPH.length]}</text>
    <text class="lbl" x="${X(i)}" y="${y+56}">${esc(k.toUpperCase())}</text><text class="sub" x="${X(i)}" y="${y+72}" style="fill:var(--dim)">${esc(sub)}</text>
-   ${c&&!c.ok?`<title>${esc(c.reason)}</title>`:''}</g>`});
+   <text class="lbl" x="${X(i)+30}" y="${y-30}" style="fill:var(--dim);cursor:help">?</text><title>${esc(k.toUpperCase()+' - '+help(DEF.seats[di]||{name:k})+(c&&!c.ok?'\n'+T('reason')+': '+c.reason:''))}</title></g>`});
  const bi=st.indexOf('bad');const stamp=bi>=0?`<div class="nx-stamp" style="left:calc(${X(bi)/10}% - 60px);top:18px">${esc(T('stamp_blocked'))}</div>`:'';
  const why=bi>=0?`<div class="dim" style="position:absolute;left:0;right:0;bottom:2px;text-align:center;font-size:12px"><span class="bad">${esc(ch[bi].toUpperCase())}:</span> ${esc(((o.chain||[]).find(x=>x.seat==ch[bi])||{}).reason||'')}</div>`:'';
  return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">${w}${pk}${nd}</svg>${stamp}${why}`}
@@ -259,9 +275,9 @@ async function tick(){if(!DEF||!LOC.app_sub||busy)return;if(document.activeEleme
  const fsig=fo?fo.id+':'+JSON.stringify(fo.chain)+fo.pending+LOC.app_sub:'none'+LOC.app_sub;
  if(SIG.flow!==fsig){$('flow').innerHTML=fo?flowSVG(fo):`<div class="dim" style="padding:90px 0;text-align:center">${esc(T('chain_empty'))}</div>`;SIG.flow=fsig;renderDetail(fo)}
  let online=0;const seats=DEF.seats.map((d,i)=>{const a=s.seats[d.name]||{},[cls,bc,bt]=seatState(d.name,s);if(a.active)online++;
-  return `<div class="scard ${cls}" data-seat="${d.name}" style="--c:${d.name=='chief'?'var(--or)':PAL[i%PAL.length]}"><div class="ic">${GLYPH[i%GLYPH.length]}</div><div class="nm">${esc(d.name.toUpperCase())}</div><span class="nx-badge ${bc}">${esc(bt)}</span>
+  return `<div class="scard ${cls}" data-seat="${d.name}" style="--c:${d.name=='chief'?'var(--or)':PAL[i%PAL.length]}"><div class="ic">${GLYPH[i%GLYPH.length]}</div><div class="nm">${esc(d.name.toUpperCase())}<span class="qm" title="${esc(help(d))}">?</span></div><span class="nx-badge ${bc}">${esc(bt)}</span>
    <div class="jb">${esc(job(d))} · AI: ${esc(a.ai||'rules')}</div><div class="ln" title="${esc(a.last||'')}">${esc(a.last||a.status||'')}</div></div>`}).join('');
- if(SIG.seats!==seats){$('seats').innerHTML=seats;SIG.seats=seats}$('online').textContent=T('online',{n:DEF.seats.length});
+ if(SIG.seats!==seats){$('seats').innerHTML=seats;SIG.seats=seats}const wc=whoCard(s)+LOC.app_sub;if(SIG.who!==wc){$('whoCard').innerHTML=whoCard(s);SIG.who=wc}$('online').textContent=T('online',{n:DEF.seats.length});
  $('panels').innerHTML=(s.panels||[]).map(p=>`<div class="nx-card pn"><h3>${esc(p.title)}</h3><table><tr>${p.columns.map(c=>`<th>${esc(c)}</th>`).join('')}</tr>${p.rows.map(r=>`<tr>${r.map(c=>`<td>${esc(c)}</td>`).join('')}</tr>`).join('')}</table></div>`).join('');
  const items=s.items.length?s.items.slice(0,14).map(itemCard).join(''):`<span class="dim">${T('chain_empty')}</span>`;if(SIG.items!==items){$('items').innerHTML=items;SIG.items=items;
  document.querySelectorAll('[data-ap]').forEach(b=>b.onclick=()=>decide(+b.dataset.ap,true));document.querySelectorAll('[data-rj]').forEach(b=>b.onclick=()=>decide(+b.dataset.rj,false))}
@@ -276,9 +292,10 @@ document.addEventListener('keydown',e=>{const open=document.querySelector('.moda
  if(e.altKey&&e.key=='ArrowLeft'){e.preventDefault();goHome()}});
 document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>b.closest('.modal').classList.remove('open'));
 // ---------- display options ----------
-function applyDisplay(d){d=d||{};document.body.dataset.theme=d.theme||'dark';document.body.dataset.density=d.density||'normal';document.body.style.fontSize=(d.font_size||13)+'px';document.body.classList.toggle('noanim',d.animations===false);if(typeof SIG!='undefined'){SIG={};}if($('motionBtn'))$('motionBtn').classList.toggle('off',d.animations===false)}
+function applyDisplay(d){d=d||{};document.body.dataset.theme=d.theme||'dark';document.body.dataset.density=d.density||'normal';document.body.style.fontSize=(d.font_size||13)+'px';document.body.classList.toggle('noanim',d.animations===false);if(typeof SIG!='undefined'){SIG={};}if($('motionBtn'))$('motionBtn').classList.toggle('off',d.animations===false);document.body.classList.toggle('simple',d.simple!==false);if($('simpleBtn')){$('simpleBtn').classList.toggle('on',d.simple!==false);$('simpleBtn').textContent=T('simple')+': '+(d.simple!==false?T('on'):T('off'));$('simpleBtn').title=T('simple_hint')}}
 async function toggleMotion(){const d=Object.assign({},PF_DISPLAY(),{animations:document.body.classList.contains('noanim')});const r=await post('/api/config',{display:d});if(r.ok){META.display=d;applyDisplay(d);toast((d.animations?'✨ ':'')+T('motion')+': '+(d.animations?T('on'):T('off')))}}
-const PF_DISPLAY=()=>Object.assign({theme:'dark',font_size:13,density:'normal',animations:true},META&&META.display||{});
+async function toggleSimple(){const d=Object.assign({},PF_DISPLAY(),{simple:!document.body.classList.contains('simple')});const r=await post('/api/config',{display:d});if(r.ok){META.display=d;applyDisplay(d);if(PROF)renderEditor(PROF.current);toast(T('simple')+': '+(d.simple?T('on'):T('off')))}}
+const PF_DISPLAY=()=>Object.assign({theme:'dark',font_size:13,density:'normal',animations:true,simple:true},META&&META.display||{});
 // ---------- profiles / parameter editor ----------
 let PROF=null;
 const lab=k=>LOC['p_'+k]||LOC['set_'+k]||k.replace(/_/g,' ');
@@ -292,12 +309,14 @@ function fld(p,v){const k=p.split('.').pop(),a=`data-pp="${esc(p)}"`;
  if(Array.isArray(v))return v.every(x=>x===null||typeof x!='object')?`<input ${a} data-ty=l data-num="${v.length&&v.every(x=>typeof x=='number')?1:0}" value="${esc(v.join(', '))}" style="width:100%">`:`<textarea ${a} data-ty=j style="height:90px">${esc(JSON.stringify(v,null,1))}</textarea>`;
  if(k=='prompt'||String(v).length>60)return `<textarea ${a} data-ty=s>${esc(v)}</textarea>`;
  return `<input ${a} data-ty=s value="${esc(v)}">`}
+const ADV=/^(providers|llm_limits|data|run_interval_sec|scan_interval_sec|interval)|\.(model|prompt|base_url|font_size|density)$|^display\.(font_size|density)$/;
+const adv=p=>ADV.test(p)?' adv':'';
 function rows(o,path){return Object.entries(o).map(([k,v])=>{const p=path?path+'.'+k:k;
- if(v&&typeof v=='object'&&!Array.isArray(v))return `<fieldset><legend>${esc(path=='seats'?k.toUpperCase():lab(k))}</legend>${rows(v,p)}</fieldset>`;
- return `<div class="row"><label>${esc(lab(k))}</label>${fld(p,v)}</div>`}).join('')}
+ if(v&&typeof v=='object'&&!Array.isArray(v))return `<fieldset class="${adv(p)}"><legend>${esc(path=='seats'?k.toUpperCase():lab(k))}</legend>${rows(v,p)}</fieldset>`;
+ return `<div class="row${adv(p)}${Array.isArray(v)&&v.some(x=>x&&typeof x=='object')?' adv':''}"><label>${esc(lab(k))}</label>${fld(p,v)}</div>`}).join('')}
 function renderEditor(d){const order=['display','language','seats','settings'],ks=[...order.filter(k=>k in d),...Object.keys(d).filter(k=>!order.includes(k))];
  $('editor').innerHTML=ks.map((k,i)=>{const v=d[k];const body=v&&typeof v=='object'&&!Array.isArray(v)?rows(v,k):`<div class="row"><label>${esc(lab(k))}</label>${fld(k,v)}</div>`;
-  return `<details class="sec" ${i<3?'open':''} data-sec="${k}"><summary>${esc(LOC['sec_'+k]||lab(k))}</summary>${body}</details>`}).join('')}
+  return `<details class="sec${adv(k)}" ${i<3?'open':''} data-sec="${k}"><summary>${esc(LOC['sec_'+k]||lab(k))}</summary>${body}</details>`}).join('')}
 function collect(){const out={};let bad=0;document.querySelectorAll('#editor [data-pp]').forEach(e=>{e.classList.remove('err');let v;const t=e.dataset.ty;
   try{if(t=='b')v=e.checked;else if(t=='n'){v=e.value.trim()===''?NaN:+e.value;if(!isFinite(v))throw 0;if(e.min&&v<+e.min||e.max&&v>+e.max)throw 0}
    else if(t=='l'){v=e.value.split(',').map(x=>x.trim()).filter(Boolean);if(e.dataset.num=='1'){v=v.map(Number);if(v.some(x=>!isFinite(x)))throw 0}}
@@ -333,4 +352,4 @@ document.querySelector('nav button[data-t=prof]').addEventListener('click',()=>l
 
 load().then(()=>{applyDisplay(META.display);loadProf()});setInterval(tick,2000);
 
-</script></body></html>
+</script><script src="/chat.js"></script></body></html>

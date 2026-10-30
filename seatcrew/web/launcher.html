@@ -19,6 +19,10 @@ h2{font:600 11px var(--mono);letter-spacing:.14em;text-transform:uppercase;color
 label{display:block;margin:10px 0 4px;color:var(--dim)}select,input{background:#05080d;color:var(--fg);border:1px solid var(--ln);padding:8px;border-radius:8px;width:100%;box-sizing:border-box;font:inherit}
 button{background:var(--acc);color:#04140a;border:0;padding:9px 16px;border-radius:8px;font:inherit;font-weight:bold;cursor:pointer;margin-top:14px;box-shadow:0 0 16px #3dffa044;transition:filter .2s}button:hover{filter:brightness(1.1)}
 button.ghost{background:none;color:var(--dim);border:1px solid var(--ln);box-shadow:none}.err{color:var(--bad)}.row{display:flex;gap:12px}.row>*{flex:1}
+
+.steps{display:flex;align-items:center;gap:10px;margin:4px 0 14px;font:600 12px var(--mono);color:var(--dim)}.steps i{flex:1;height:1px;background:var(--ln)}.steps span.on{color:var(--acc)}.steps span.on b{color:var(--acc)}
+.opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}.opt{border:1px solid var(--ln);border-radius:12px;padding:12px;cursor:pointer;margin:0;display:flex;flex-direction:column;gap:4px;transition:all .25s}
+.opt input{width:auto;margin:0 0 4px}.opt b{color:var(--fg)}.opt.sel{border-color:var(--acc);box-shadow:0 0 0 1px var(--acc),0 0 18px #3dffa033}.ok{color:var(--acc)}a{color:var(--blue)}
 body[data-theme=light] select,body[data-theme=light] input{background:#fff}
 </style></head><body><div class="wrap">
 <div class="nx-card hero"><svg class="mascot" viewBox="0 0 100 100" aria-hidden="true"><defs><radialGradient id="mg" cx="40%" cy="30%"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#b9c6d8"/></radialGradient></defs>
@@ -29,11 +33,21 @@ body[data-theme=light] select,body[data-theme=light] input{background:#fff}
  <svg class="art" viewBox="0 0 1000 70" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><path class="w" d="M90 30 H910"/>
   <g><circle class="n" cx="90" cy="30" r="12"/><text x="90" y="62">IDEA</text></g><g><circle class="n" cx="300" cy="30" r="12"/><text x="300" y="62">CHECK</text></g><g><circle class="n x" cx="500" cy="30" r="12"/><text x="500" y="62">CHECK</text></g><g><circle class="n" cx="700" cy="30" r="12"/><text x="700" y="62">HUMAN</text></g><g><circle class="n" cx="910" cy="30" r="12"/><text x="910" y="62">DONE</text></g>
   <circle class="nx-packet" r="4"><animateMotion dur="3s" repeatCount="indefinite" path="M90 30 H910"/></circle><circle class="nx-packet" r="4"><animateMotion dur="3s" begin="-1.5s" repeatCount="indefinite" path="M90 30 H910"/></circle></svg></div>
-<div class="card nx-card" id="wizard" style="display:none"><h2 id="wzT"></h2><p class="dim" id="wzP"></p>
- <label id="lLang"></label><select id="lang"></select>
- <div class="row"><div><label id="lProv"></label><select id="prov"></select></div><div><label id="lKey"></label><input id="key" type="password" autocomplete="off"></div></div>
- <label id="lData"></label><input id="dataIn"><p class="dim" id="dHint"></p>
- <p class="dim" id="wzK"></p><button id="go"></button> <button class="ghost" id="skip"></button> <span id="wzErr" class="err"></span></div>
+<div class="card nx-card" id="wizard" style="display:none"><h2 id="wzT"></h2>
+ <div class="steps"><span data-st="1">1 · <b id="s1"></b></span><i></i><span data-st="2">2 · <b id="s2"></b></span><i></i><span data-st="3">3 · <b id="s3"></b></span></div>
+ <div class="wstep" id="st1"><p class="dim" id="wzP"></p><label id="lLang"></label><select id="lang"></select>
+  <label id="lData"></label><input id="dataIn"><p class="dim" id="dHint"></p><button id="n1"></button></div>
+ <div class="wstep" id="st2" style="display:none"><p class="dim" id="aiP"></p>
+  <div class="opts"><label class="opt" data-mode="key"><input type="radio" name="mode" value="key"><b id="oKey"></b><span class="dim" id="oKeyD"></span></label>
+   <label class="opt" data-mode="ollama"><input type="radio" name="mode" value="ollama"><b id="oOl"></b><span class="dim" id="oOlD"></span></label>
+   <label class="opt" data-mode="demo"><input type="radio" name="mode" value="demo" checked><b id="oDemo"></b><span class="dim" id="oDemoD"></span></label></div>
+  <div id="keyBox" style="display:none"><div class="row"><div><label id="lProv"></label><select id="prov"></select></div><div><label id="lKey2"></label><input id="key" type="password" autocomplete="off"></div></div>
+   <p class="dim"><a id="getKey" target="_blank" rel="noopener"></a></p></div>
+  <div id="olBox" style="display:none"><p class="dim" id="olHelp"></p><p><a href="https://ollama.com/download" target="_blank" rel="noopener">ollama.com/download</a></p></div>
+  <button class="ghost" id="test" style="display:none"></button> <span id="testOut"></span>
+  <p class="dim" id="wzK"></p><button class="ghost" id="b2"></button> <button id="n2"></button></div>
+ <div class="wstep" id="st3" style="display:none"><p class="dim" id="stP"></p><div class="grid" id="starters"></div><button class="ghost" id="b3"></button> <button class="ghost" id="skip"></button></div>
+ <span id="wzErr" class="err"></span></div>
 <div class="card nx-card" id="pick" style="display:none"><h2 id="pkT"></h2><div class="grid" id="wfs"></div><p class="dim" id="pkH"></p><span id="pkErr" class="err"></span>
  <button class="ghost" id="redo"></button></div>
 <div class="card nx-card" id="dcard" style="display:none"><h2 id="dT"></h2><p class="dim"><span id="dCur"></span> <span class="tag" id="dSrc"></span></p><p class="dim" id="dHint2"></p>
@@ -47,14 +61,39 @@ const T={en:{anim:"animations",on:"on",off:"off",ready:"ready",lWf:"workflows",l
 "zh-TW":{anim:"動畫效果",on:"開",off:"關",ready:"就緒",lWf:"個流程",lLn:"種語言",lKey:"個 AI 金鑰",sub:"多 AI 席位工作流程 - 每個職位一個席位,每個項目走一遍檢查鏈。",wzT:"歡迎 - 首次設定",wzP:"選擇語言。AI 金鑰可選:所有流程都能只靠規則執行。",lLang:"語言",lProv:"AI 服務商(可選)",lKey:"API 金鑰(只存在本機)",wzK:"之後可在每個看板修改席位、服務商與金鑰。",go:"儲存並繼續",skip:"略過 - 只用規則",pkT:"開啟工作流程",pkH:"自己的流程放在資料夾的 workflows/ 裡。",redo:"重新設定",none:"只用規則",example:"範例",mine:"我的",d:{},data:"資料夾",lData:"資料夾",dHint:"設定、設定檔、紀錄與金鑰都存在這裡。可選任意資料夾,例如 D:\\SeatCrewData。",chg:"變更資料夾",mv:"把現有資料一併搬移",envLock:"由環境變數 SEATCREW_DATA_DIR 指定,請在該處修改。",dOk:"資料夾已變更"},
 ja:{anim:"アニメーション",on:"オン",off:"オフ",ready:"準備完了",lWf:"ワークフロー",lLn:"言語",lKey:"AI キー",sub:"マルチ AI シート型ワークフロー - 仕事ごとに席、項目ごとにチェックチェーン。",wzT:"ようこそ - 初回設定",wzP:"言語を選択。AI キーは任意です(ルールだけでも動きます)。",lLang:"言語",lProv:"AI プロバイダー(任意)",lKey:"API キー(この PC にのみ保存)",wzK:"席・プロバイダー・キーは後で各ダッシュボードで変更できます。",go:"保存して続行",skip:"スキップ - ルールのみ",pkT:"ワークフローを開く",pkH:"自作ワークフローはデータフォルダの workflows/ に置きます。",redo:"再設定",none:"ルールのみ",example:"例",mine:"自作",d:{},data:"データフォルダ",lData:"データフォルダ",dHint:"設定・プロファイル・履歴・キーはここに保存されます。例: D:\\SeatCrewData",chg:"データフォルダを変更",mv:"既存データも移動する",envLock:"環境変数 SEATCREW_DATA_DIR で指定されています。",dOk:"データフォルダを変更しました"},
 es:{anim:"animaciones",on:"sí",off:"no",ready:"listo",lWf:"flujos",lLn:"idiomas",lKey:"claves IA",sub:"Flujos con varios puestos de IA - cada tarea tiene un puesto, cada elemento pasa una cadena de controles.",wzT:"Bienvenido - configuración inicial",wzP:"Elige idioma. La clave de IA es opcional: todo funciona también solo con reglas.",lLang:"Idioma",lProv:"Proveedor de IA (opcional)",lKey:"Clave API (queda en este equipo)",wzK:"Puedes cambiar puestos, proveedores y claves luego en cada panel.",go:"Guardar y continuar",skip:"Omitir - solo reglas",pkT:"Abrir un flujo",pkH:"Tus flujos van en la carpeta workflows/ de los datos.",redo:"Configurar de nuevo",none:"solo reglas",example:"ejemplo",mine:"mío",d:{},data:"Carpeta de datos",lData:"Carpeta de datos",dHint:"Aquí se guardan ajustes, perfiles, historial y claves. Sirve cualquier carpeta, p. ej. D:\\SeatCrewData.",chg:"Cambiar carpeta de datos",mv:"mover mis datos existentes",envLock:"Definida por la variable SEATCREW_DATA_DIR; cámbiala allí.",dOk:"Carpeta de datos cambiada"}};
-let H,L="en";const $=id=>document.getElementById(id);
-const tr=k=>(T[L]&&T[L][k])||T.en[k];
+const W={en:{s1:"Language",s2:"Connect an AI",s3:"Pick a starter",n:"Next →",b:"← Back",aiP:"SeatCrew works without AI (plain rules). Connecting one AI makes the seats smarter and turns on CHIEF chat.",
+ oKey:"Cloud AI (API key)",oKeyD:"OpenAI, Anthropic, Gemini, xAI, DeepSeek or OpenAI-compatible. Pay-as-you-go.",oOl:"Free local AI (Ollama)",oOlD:"Runs on this computer. No key, no cost. Needs Ollama installed.",
+ oDemo:"Demo mode (no AI)",oDemoD:"Try everything with rules + demo data. CHIEF chat answers from the offline FAQ.",lKey2:"API key (stays on this computer)",getKey:"Where do I get a key? →",
+ olHelp:"Install Ollama, then run:  ollama pull llama3.2  (keep Ollama running).",test:"Test connection",testing:"testing…",tOk:"connected",stP:"Pick a starter workflow. You can open the others any time from Home.",
+ st:{trading:"Paper-trading crew (simulated money): watch 8 seats check every order.",content_review:"Blog post review: draft → fact-check → policy → you approve.",support_triage:"Support replies: privacy + tone checks, you approve. Made in YAML only."}},
+"zh-CN":{s1:"语言",s2:"连接 AI",s3:"选一个入门工作流",n:"下一步 →",b:"← 上一步",aiP:"不接 AI 也能用(只靠规则)。连接一个 AI 会让席位更聪明,并开启总指挥对话。",
+ oKey:"云端 AI(API 密钥)",oKeyD:"OpenAI、Anthropic、Gemini、xAI、DeepSeek 或 OpenAI 兼容接口,按量付费。",oOl:"免费本地 AI(Ollama)",oOlD:"在本机运行,无需密钥、不花钱。需要先安装 Ollama。",
+ oDemo:"演示模式(不接 AI)",oDemoD:"用规则 + 演示数据体验全部功能。总指挥对话使用离线问答。",lKey2:"API 密钥(只保存在本机)",getKey:"去哪里拿密钥? →",
+ olHelp:"安装 Ollama 后运行:  ollama pull llama3.2  (保持 Ollama 运行)。",test:"测试连接",testing:"测试中…",tOk:"已连接",stP:"选一个入门工作流。其它的随时可以从首页打开。",
+ st:{trading:"模拟盘交易团队(虚拟资金):看 8 个席位逐一检查每笔订单。",content_review:"博客审稿:起草 → 事实核查 → 合规 → 你来批准。",support_triage:"客服回复:隐私 + 语气检查,你来批准。只用 YAML 写成。"}},
+"zh-TW":{s1:"語言",s2:"連接 AI",s3:"選一個入門流程",n:"下一步 →",b:"← 上一步",aiP:"不接 AI 也能用(只靠規則)。連接一個 AI 會讓席位更聰明,並開啟總指揮對話。",
+ oKey:"雲端 AI(API 金鑰)",oKeyD:"OpenAI、Anthropic、Gemini、xAI、DeepSeek 或 OpenAI 相容介面,按量付費。",oOl:"免費本機 AI(Ollama)",oOlD:"在本機執行,免金鑰、免費用。需先安裝 Ollama。",
+ oDemo:"展示模式(不接 AI)",oDemoD:"用規則 + 展示資料體驗全部功能。總指揮對話使用離線問答。",lKey2:"API 金鑰(只存在本機)",getKey:"哪裡取得金鑰? →",
+ olHelp:"安裝 Ollama 後執行:  ollama pull llama3.2  (保持 Ollama 執行)。",test:"測試連線",testing:"測試中…",tOk:"已連線",stP:"選一個入門流程,其他的隨時可從首頁開啟。",
+ st:{trading:"模擬交易團隊(虛擬資金):看 8 個席位逐一檢查每筆訂單。",content_review:"部落格審稿:起草 → 查核 → 合規 → 你核准。",support_triage:"客服回覆:隱私 + 語氣檢查,你核准。只用 YAML。"}},
+ja:{s1:"言語",s2:"AI を接続",s3:"スターターを選ぶ",n:"次へ →",b:"← 戻る",aiP:"AI なし(ルールのみ)でも動きます。AI を 1 つ接続するとシートが賢くなり、CHIEF チャットが使えます。",
+ oKey:"クラウド AI(API キー)",oKeyD:"OpenAI、Anthropic、Gemini、xAI、DeepSeek、OpenAI 互換。従量課金。",oOl:"無料ローカル AI(Ollama)",oOlD:"この PC で動作。キー不要・無料。Ollama のインストールが必要。",
+ oDemo:"デモモード(AI なし)",oDemoD:"ルール + デモデータで全機能を試せます。CHIEF チャットはオフライン FAQ。",lKey2:"API キー(この PC にのみ保存)",getKey:"キーの取得方法 →",
+ olHelp:"Ollama をインストールして実行:  ollama pull llama3.2",test:"接続テスト",testing:"テスト中…",tOk:"接続 OK",stP:"スターターを選んでください。他はいつでもホームから開けます。",
+ st:{trading:"ペーパートレード(仮想資金): 8 つのシートが注文をチェック。",content_review:"ブログ記事レビュー: 下書き → 事実確認 → ポリシー → あなたが承認。",support_triage:"サポート返信: プライバシーとトーンを確認、あなたが承認。YAML のみ。"}},
+es:{s1:"Idioma",s2:"Conecta una IA",s3:"Elige un flujo inicial",n:"Siguiente →",b:"← Atrás",aiP:"SeatCrew funciona sin IA (solo reglas). Conectar una IA hace más listos los puestos y activa el chat CHIEF.",
+ oKey:"IA en la nube (clave API)",oKeyD:"OpenAI, Anthropic, Gemini, xAI, DeepSeek o compatible con OpenAI. Pago por uso.",oOl:"IA local gratis (Ollama)",oOlD:"Corre en este equipo. Sin clave ni coste. Requiere Ollama.",
+ oDemo:"Modo demo (sin IA)",oDemoD:"Prueba todo con reglas + datos demo. El chat CHIEF usa las FAQ sin conexión.",lKey2:"Clave API (queda en este equipo)",getKey:"¿Dónde consigo una clave? →",
+ olHelp:"Instala Ollama y ejecuta:  ollama pull llama3.2",test:"Probar conexión",testing:"probando…",tOk:"conectado",stP:"Elige un flujo inicial. Los demás se abren desde Inicio.",
+ st:{trading:"Equipo de trading simulado (dinero ficticio): 8 puestos revisan cada orden.",content_review:"Revisión de artículos: borrador → verificación → política → tú apruebas.",support_triage:"Respuestas de soporte: privacidad y tono, tú apruebas. Solo YAML."}}};
+let H,L="en",STEP=1;const $=id=>document.getElementById(id);
+const tr=k=>(W[L]&&W[L][k])||(T[L]&&T[L][k])||W.en[k]||T.en[k];
 async function api(p,b){const r=await fetch(p,b?{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(b)}:{});return r.json()}
-function paint(){for(const k of["sub","wzT","wzP","lLang","lProv","lKey","wzK","go","skip","pkT","pkH","redo","lData","dHint","chg","envLock","ready","lWf","lLn","lKey"])$(k).textContent=tr(k);
- $("prov").options[0].textContent=tr("none");
+function paint(){for(const k of["s1","s2","s3","aiP","oKey","oKeyD","oOl","oOlD","oDemo","oDemoD","lKey2","getKey","olHelp","test","stP","sub","wzT","wzP","lLang","lProv","lKey","wzK","skip","pkT","pkH","redo","lData","dHint","chg","envLock","ready","lWf","lLn","lKey"])$(k).textContent=tr(k);
+ $("n1").textContent=$("n2").textContent=tr("n");$("b2").textContent=$("b3").textContent=tr("b");
  const C=["#3dffa0","#ffc94d","#5cc8ff","#b18cff","#ff9a3d","#ff4f6d"],G=["◆","▲","●","■","✦","⬢"];
  $("wfs").innerHTML=H.workflows.map((w,i)=>`<div class="wf nx-in ${w.name==H.last?"last":""}" tabindex="0" data-wf="${w.name}" style="animation-delay:${i*60}ms"><div class="ic" style="background:${C[i%C.length]}">${G[i%G.length]}</div><span class="go">OPEN →</span><b>${w.name}</b><span class="tag">${tr(w.kind)}</span>${w.name==H.last?`<span class="tag lastt">last</span>`:""}<div class="dim" style="margin-top:8px">${(T[L].d||{})[w.name]||T.en.d[w.name]||""}</div></div>`).join("");
- $("ver").textContent="v"+H.version;$("nWf").textContent=H.workflows.length;document.querySelectorAll(".hstats .nx-big")[2].textContent=Object.values(H.keys||{}).filter(Boolean).length;
+ $("ver").textContent="v"+H.version;$("nWf").textContent=H.workflows.length;document.querySelectorAll(".hstats .nx-big")[2].textContent=Object.entries(H.keys||{}).filter(([k,v])=>v&&k!="ollama"&&k!="custom").length;
  document.querySelectorAll("[data-wf]").forEach(e=>{e.onclick=()=>openWf(e.dataset.wf);e.onkeydown=k=>{if(k.key=="Enter")openWf(e.dataset.wf)}});
  $("dHint2").textContent=tr("dHint");$("dT").textContent=tr("data");$("mvL").textContent=tr("mv");
  $("dCur").textContent=H.data_dir;$("dSrc").textContent=(T.en.src[H.data_source]||H.data_source);const lock=H.data_source=="env"||H.data_source=="fixed";
@@ -64,14 +103,24 @@ function paint(){for(const k of["sub","wzT","wzP","lLang","lProv","lKey","wzK","
 async function changeData(){$("dMsg").className="";$("dMsg").textContent="…";const r=await api("/api/datadir",{path:$("dataNew").value,move:$("mv").checked});
  if(!r.ok){$("dMsg").className="err";$("dMsg").textContent=r.error;return}H=await api("/api/home");paint();$("dMsg").textContent="✓ "+tr("dOk")+": "+r.data_dir}
 async function openWf(n){$("pkErr").textContent="…";const r=await api("/api/open",{workflow:n});if(r.ok)location.href=r.url;else $("pkErr").textContent=r.error}
-function show(w){$("wizard").style.display=w?"block":"none";$("pick").style.display=$("dcard").style.display=w?"none":"block"}
-async function setup(withKey){const r=await api("/api/setup",{language:$("lang").value,provider:withKey?$("prov").value:null,api_key:withKey?$("key").value:"",data_dir:$("dataIn").value.trim()==H.data_dir?"":$("dataIn").value.trim()});
- if(!r.ok){$("wzErr").textContent=r.error;return}$("key").value="";H=await api("/api/home");show(false);paint()}
+function show(w){if(w)setTimeout(()=>step(STEP),0);$("wizard").style.display=w?"block":"none";$("pick").style.display=$("dcard").style.display=w?"none":"block"}
+const mode=()=>(document.querySelector('input[name=mode]:checked')||{}).value||"demo";
+function step(n){STEP=n;for(const i of[1,2,3])$("st"+i).style.display=i==n?"block":"none";document.querySelectorAll("[data-st]").forEach(e=>e.classList.toggle("on",+e.dataset.st<=n));$("wzErr").textContent="";paintMode()}
+function paintMode(){const m=mode();document.querySelectorAll(".opt").forEach(o=>o.classList.toggle("sel",o.dataset.mode==m));$("keyBox").style.display=m=="key"?"block":"none";$("olBox").style.display=m=="ollama"?"block":"none";
+ $("test").style.display=m=="demo"?"none":"inline-block";const p=$("prov").value;$("getKey").href=(H.links||{})[p]||"#";$("getKey").style.display=p?"inline":"none";
+ $("starters").innerHTML=H.workflows.filter(w=>w.kind=="example").map((w,i)=>`<div class="wf" tabindex="0" data-start="${w.name}"><div class="ic" style="background:${["#3dffa0","#ffc94d","#5cc8ff"][i%3]}">${["◆","▲","●"][i%3]}</div><b>${w.name}</b><div class="dim" style="margin-top:8px">${(tr("st")||{})[w.name]||""}</div></div>`).join("");
+ document.querySelectorAll("[data-start]").forEach(e=>{e.onclick=()=>finish(e.dataset.start);e.onkeydown=k=>{if(k.key=="Enter")finish(e.dataset.start)}})}
+async function testConn(){const m=mode(),o=$("testOut");o.className="dim";o.textContent=tr("testing");const r=await api("/api/test-connection",{provider:m=="ollama"?"ollama":$("prov").value,api_key:m=="key"?$("key").value:""});
+ o.className=r.ok?"ok":"err";o.textContent=r.ok?`✓ ${tr("tOk")} · ${r.model} · ${r.latency_ms} ms`:`✕ ${r.error||"error"}`}
+async function setup(open){const m=mode();const r=await api("/api/setup",{language:$("lang").value,mode:m,provider:m=="key"?$("prov").value:null,api_key:m=="key"?$("key").value:"",data_dir:$("dataIn").value.trim()==H.data_dir?"":$("dataIn").value.trim()});
+ if(!r.ok){$("wzErr").textContent=r.error;return false}$("key").value="";H=await api("/api/home");if(window.ChiefChat)ChiefChat.refresh();if(!open){show(false);paint()}return true}
+async function finish(name){if(await setup(true))openWf(name)}
 (async()=>{H=await api("/api/home");L=H.language;
  $("lang").innerHTML=Object.entries(H.languages).map(([c,n])=>`<option value="${c}">${n}</option>`).join("");$("lang").value=L;
- $("prov").innerHTML=`<option value=""></option>`+Object.entries(H.providers).filter(([k,v])=>v.key_env).map(([k,v])=>`<option value="${k}">${v.label}${H.keys[k]?" ✓":""}</option>`).join("");
- $("lang").onchange=()=>{L=$("lang").value;paint()};$("go").onclick=()=>setup(true);$("skip").onclick=()=>setup(false);$("redo").onclick=()=>show(true);$("chg").onclick=changeData;$("anim").onclick=async()=>{await api("/api/prefs",{animations:H.animations===false});H=await api("/api/home");paint()};$("dataIn").value=$("dataNew").value=H.data_dir;
- show(H.first_run);paint()})();
+ $("prov").innerHTML=Object.entries(H.providers).filter(([k,v])=>v.key_env&&k!="custom").map(([k,v])=>`<option value="${k}">${v.label}${H.keys[k]?" ✓":""}</option>`).join("");
+ $("lang").onchange=()=>{L=$("lang").value;paint()};$("n1").onclick=()=>step(2);$("n2").onclick=()=>step(3);$("b2").onclick=()=>step(1);$("b3").onclick=()=>step(2);$("skip").onclick=()=>setup(false);$("test").onclick=testConn;document.querySelectorAll("input[name=mode]").forEach(r=>r.onchange=paintMode);$("prov").onchange=paintMode;$("redo").onclick=()=>{show(true);step(1)};$("chg").onclick=changeData;$("anim").onclick=async()=>{await api("/api/prefs",{animations:H.animations===false});H=await api("/api/home");paint()};$("dataIn").value=$("dataNew").value=H.data_dir;
+ if(H.ai_mode&&document.querySelector(`input[value=${H.ai_mode}]`))document.querySelector(`input[value=${H.ai_mode}]`).checked=true;
+ const wz=new URLSearchParams(location.search).get("wizard");show(H.first_run||!!wz);paint();step(1)})();
 setInterval(()=>{const c=document.getElementById("clock");if(c)c.textContent=new Date().toLocaleTimeString()},1000);
 if(window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches)document.body.classList.add("noanim");
-</script></body></html>
+</script><script src="/chat.js"></script></body></html>

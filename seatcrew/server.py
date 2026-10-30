@@ -3,15 +3,24 @@ submit form and human approval. stdlib only; binds 127.0.0.1 (no auth - do not e
 import json
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from . import __version__, i18n, profiles as PF
+import os
+from . import __version__, i18n, profiles as PF, assistant as AS, loader
 from .config import LANGUAGES
 from .llm import PROVIDERS, key_status, test_connection
 
 WEB = Path(__file__).parent / "web"
 NEON = WEB / "neon.css"
 
+def chat_for(wf, on_change=None):
+    """CHIEF chat bound to this workflow (history in its state folder)."""
+    def taken():
+        w = Path("workflows"); return loader.list_examples() + ([x.name for x in w.iterdir() if x.is_dir()] if w.is_dir() else [])
+    return AS.Assistant(wf.state_dir / "chat.json", lang=lambda: wf.cfg.data["language"], cfg=lambda: wf.cfg.data, config=wf.cfg, wf=wf,
+                        wf_dir=Path("workflows"), taken=taken, prefer=lambda: os.getenv("SEATCREW_CHAT_PROVIDER"),
+                        demo=lambda: os.getenv("SEATCREW_DEMO") == "1", on_change=on_change)
+
 def make_handler(wf):
-    cfg = wf.cfg
+    cfg = wf.cfg; chat = chat_for(wf)
     class H(BaseHTTPRequestHandler):
         def log_message(self, *a): pass
         def send(self, obj, code=200, ctype="application/json"):
@@ -24,6 +33,10 @@ def make_handler(wf):
             if p in ("/", "/index.html"): return self.send((WEB / "index.html").read_bytes(), ctype="text/html; charset=utf-8")
             if p == "/neon.css": return self.send(NEON.read_bytes(), ctype="text/css; charset=utf-8")
             if p == "/api/state": return self.send(wf.snapshot())
+            st = AS.static(p)
+            if st: return self.send(st[0], ctype=st[1])
+            r = AS.route(chat, "GET", p)
+            if r: return self.send(*r)
             if p == "/api/config":
                 c = cfg.data
                 return self.send(dict(definition=wf.definition(), seats={k: c["seats"][k] for k in wf.seat_map}, language=c["language"],
@@ -38,6 +51,8 @@ def make_handler(wf):
             p = self.path
             try:
                 b = self.body()
+                r = AS.route(chat, "POST", p, b)
+                if r: return self.send(*r)
                 if p == "/api/config":
                     patch = {k: v for k, v in b.items() if k in ("seats", "language", "settings", "auto_run", "display")}
                     if "interval" in b: patch[wf.interval_key] = int(b["interval"])

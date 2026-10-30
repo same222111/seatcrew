@@ -8,6 +8,30 @@
 
 *v0.6 "Night Shift" UI: seat cards with status badges, an animated check chain, live log. Animations follow `prefers-reduced-motion` and can be switched off (Settings → display → animations, or the **motion** button). [Watch the MP4](docs/demo.mp4).*
 
+## Get started in 3 minutes
+
+1. **Install** (any option below) and open SeatCrew. A 3-step wizard appears.
+2. **Pick your language, then connect one AI**: paste a key for any of 7 providers and press **Test connection**, or choose free local **Ollama**, or pick **Demo mode** (no AI, nothing to set up).
+3. **Pick a starter workflow** (support triage, content review, paper trading). It opens right away.
+
+You never need your own model to start. Every seat works with plain rules, and AI is optional and seat-by-seat. **Simple mode** (on by default) hides advanced parameters. Every seat and check has a **?** tooltip, and each dashboard shows a **Who decides?** card: CHIEF assigns the work, the seats judge, the checks gate, and a human approves.
+
+![First-run wizard](docs/wizard.png)
+
+## Talk to CHIEF (built-in chat)
+
+Click **◆ CHIEF chat** (bottom-right on Home and every dashboard) or open `/chat` for a full page. Ask in any of the 5 languages:
+
+- *"Who decides what?"* shows which AI (or rules) sits in each seat and how an item flows.
+- *"Create a workflow that reviews job applications"* gives you a YAML preview. Press **Confirm** to save it.
+- *"Switch to the light theme"* gives you a settings diff. Press **Confirm** to apply it.
+- *"Run a sample item"* or *"Why isn't my AI working?"* runs a sample or troubleshoots.
+
+CHIEF uses whichever provider you connected (OpenAI, Anthropic, Gemini, xAI, DeepSeek, Ollama, or custom). **Nothing changes until you press Confirm.** Keys are never sent to the AI or stored in chat history (pasted keys are scrubbed). Chat can't touch broker, live trading, or providers: trading stays paper-only. History lives in a local `chat.json` and **Clear** wipes it. With no AI connected, CHIEF runs an offline FAQ mode and links to where to get a key.
+
+![CHIEF chat](docs/chat.png)
+![Who decides? card](docs/who-decides.png)
+
 ## Install (pick one)
 
 ### A. Let your AI coding agent install it (easiest)
@@ -134,6 +158,17 @@ MIT licensed. See [CONTRIBUTING.md](CONTRIBUTING.md).
 ---
 
 ## 中文说明
+
+### 3 分钟上手
+1. 安装并打开 SeatCrew，首次启动出现 3 步向导。
+2. 选语言，再接入一个 AI：在 7 家服务商里任选一家粘贴密钥，点「测试连接」；或选择免费本地 **Ollama**；或选 **演示模式**（无需 AI，零配置）。
+3. 选择一个入门工作流（客服分流 / 内容审核 / 模拟交易），立即打开。
+
+不需要自备模型：每个席位都能只用规则运行，AI 可按席位选择开启。「简洁模式」默认开启，隐藏高级参数；每个席位和检查都有 **?** 提示；每个面板都有「谁来决定?」卡片：CHIEF 分派 → 席位判断 → 检查把关 → 人工批准。
+
+### 和总指挥 CHIEF 对话
+点右下角 **◆ CHIEF chat**（主页和每个面板都有），或打开 `/chat` 全屏页面。可以问：「谁来决定什么?」、「创建一个审核求职申请的工作流」（先预览 YAML，确认后才保存）、「切换到浅色主题」（先显示差异，确认后才应用）、「跑一个样例」、「为什么 AI 不工作?」。
+CHIEF 使用你接入的任意服务商（含 Ollama）。**不点「确认」什么都不会改变**；密钥绝不发给 AI，也不会存进聊天记录（粘贴的密钥会被自动清除）；聊天无法修改券商/实盘/服务商设置，交易永远只是模拟盘。记录保存在本地 `chat.json`，可一键清空。未接入 AI 时进入离线 FAQ 模式，并给出获取密钥的链接。
 ![SeatCrew 演示](docs/demo.gif)
 
 v0.6 全新「Night Shift」界面:席位卡片带状态徽章,检查链动画实时流动,被拦截的项目会盖上 BLOCKED 印章。动画遵循系统「减少动态效果」设置,也可在设置里或点 **motion** 按钮关闭。

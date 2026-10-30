@@ -15,7 +15,7 @@ from .config import merge
 SCHEMA = 1
 CODE_PREFIX = "SC1."
 EXCLUDE = {"setup_complete", "broker"}                     # machine state / safety locks, never shared
-DISPLAY_DEFAULTS = {"theme": "dark", "font_size": 13, "density": "normal", "animations": True}
+DISPLAY_DEFAULTS = {"theme": "dark", "font_size": 13, "density": "normal", "animations": True, "simple": True}
 THEMES, DENSITIES = ("dark", "light", "contrast"), ("compact", "normal", "comfy")
 NAME_RE = re.compile(r"[\w\- ]{1,40}")
 SECRET_KEY_RE = re.compile(r"(api[_-]?key|secret|token|password|passwd|credential|private[_-]?key|authorization|bearer)", re.I)
@@ -27,6 +27,7 @@ def validate_display(d):
     fs = d.get("font_size")
     if not isinstance(fs, (int, float)) or isinstance(fs, bool) or not 10 <= fs <= 22: raise ValueError("display.font_size must be 10-22")
     if not isinstance(d.get("animations", True), bool): raise ValueError("display.animations must be true or false")
+    if not isinstance(d.get("simple", True), bool): raise ValueError("display.simple must be true or false")
 
 def strip_secrets(obj, path="", removed=None):
     """Copy of obj without secret-looking keys/values. Env-var NAMES (key_env: OPENAI_API_KEY) are kept."""
