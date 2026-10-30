@@ -84,10 +84,10 @@ def draft_card(shot, out_dir, aspect, model=None, style="", size=None):
     """Offline DRAFT still: dark gradient + the shot's caption/visual text. Clearly not final."""
     from .storyboard import SIZES
     w, h = size or SIZES[aspect]; p = Path(out_dir) / f"{shot['id']}.png"
-    txt = (shot.get("caption") or shot.get("visual") or shot["id"])[:60].replace("'", "").replace(":", " ").replace("%", " ").replace("\\", " ")
+    txt = (shot.get("caption") or shot.get("visual") or shot["id"])[:110].replace("'", "").replace(":", " ").replace("%", " ").replace("\\", " ")
     hue = (sum(map(ord, shot["id"])) * 47) % 360
     import textwrap
-    per = max(8, int(w / (h * 0.035 * 0.62)))
+    per = max(8, int(w * 0.84 / (h * 0.035 * 0.7)))
     txt = "\n".join(textwrap.wrap(txt, per)[:4]) if " " in txt else "\n".join(txt[i:i + per // 2] for i in range(0, len(txt), per // 2))[:200]
     tf = Path(out_dir) / f"{shot['id']}.card.txt"; tf.write_text(txt, encoding="utf-8")
     font = Path(os.path.relpath(FONT, out_dir)).as_posix()

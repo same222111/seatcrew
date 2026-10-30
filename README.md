@@ -201,3 +201,6 @@ macOS/Linux 运行 install.sh,Windows 运行 install.ps1,检查最后的 RESULT 
 **安装位置与数据文件夹**:Windows 安装包可以选择安装目录(例如 `D:\SeatCrew`),按用户安装,不需要管理员权限,升级时会记住上次的选择。便携版 zip 自带 `portable.txt`,数据默认保存在 exe 旁边的 `data` 文件夹。数据文件夹(设置、方案、历史、密钥)可以在首次向导里选择,之后在首页点「更改数据文件夹」修改,并可勾选「把现有数据一起搬过去」。这个选择记录在默认位置的 `location.json` 里。环境变量 `SEATCREW_DATA_DIR` 的优先级最高。首页显示路径时会把用户目录显示为 `~`,截图不会泄露用户名。
 
 快速开始：`pip install -e .`，然后运行 `seatcrew ui content_review`，打开 http://127.0.0.1:8800 。新建工作流用 `seatcrew new my_flow`（名称只能用小写英文、数字和下划线），交易终端用 `tradecrew start`。
+
+## Short-video studio (preview)
+The `short_video` workflow turns a topic or script into a vertical or landscape short. The seats are WRITER, SCRIPT CHECK, VOICE, VISUALS, EDITOR, an automated QUALITY CHECK, and your approval. Videos without a real voice and real visuals are labeled as draft previews. See [docs/VIDEO.md](docs/VIDEO.md).

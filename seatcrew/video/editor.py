@@ -99,7 +99,7 @@ def assemble(shots, out, work, aspect="9:16", size=None, voice=None, bgm=None, d
     # 3) audio: voice stem -> (+ducked music) -> loudness
     total = tl["total"]
     if voice:
-        ff.run(["-i", voice["path"], "-af", f"aformat=sample_rates=48000:channel_layouts=mono,apad,atrim=0:{total}", "-ar", "48000", "voice.wav"], cwd=str(work))
+        ff.run(["-i", voice["path"], "-af", f"aformat=sample_rates=48000:channel_layouts=mono,apad=whole_dur={total},atrim=0:{total}", "-t", f"{total:.3f}", "-ar", "48000", "voice.wav"], cwd=str(work))
     else:
         ins, fl = [], []
         for i, s in enumerate(shots):
@@ -108,7 +108,7 @@ def assemble(shots, out, work, aspect="9:16", size=None, voice=None, bgm=None, d
                 fl.append(f"[{len(fl)}:a]aformat=sample_rates=48000:channel_layouts=mono,adelay={ms}:all=1[a{len(fl)}]")
         if fl:
             mix = "".join(f"[a{i}]" for i in range(len(fl)))
-            ff.run([*ins, "-filter_complex", ";".join(fl) + f";{mix}amix=inputs={len(fl)}:normalize=0:dropout_transition=0,apad,atrim=0:{total}[v]", "-map", "[v]", "-ar", "48000", "voice.wav"], cwd=str(work))
+            ff.run([*ins, "-filter_complex", ";".join(fl) + f";{mix}amix=inputs={len(fl)}:normalize=0:dropout_transition=0,apad=whole_dur={total},atrim=0:{total}[v]", "-map", "[v]", "-t", f"{total:.3f}", "-ar", "48000", "voice.wav"], cwd=str(work))
         else: ff.run(["-f", "lavfi", "-i", "anullsrc=r=48000:cl=mono", "-t", total, "voice.wav"], cwd=str(work))
     if bgm:
         g = o["bgm_gain_db"]; fo = max(0.0, total - 1.5)
