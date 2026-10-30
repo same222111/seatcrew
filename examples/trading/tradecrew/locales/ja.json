@@ -114,5 +114,7 @@
  "cli_dashboard": "ダッシュボード：{url}（Ctrl+Cで停止）",
  "cli_nokeys": "環境変数/.env にキーがありません。追加するか（.env.example 参照）、tradecrew test-ai ollama を実行してください",
  "cli_bind": "{addr} にバインドできません（{err}）。--port 8788 をお試しください",
- "cli_saved": "{path} を保存しました。APIキーを .env に入れて（.env.example 参照）、tradecrew start を実行"
+ "cli_saved": "{path} を保存しました。APIキーを .env に入れて（.env.example 参照）、tradecrew start を実行",
+ "back_home": "← ホームに戻る",
+ "home": "ホーム"
 }

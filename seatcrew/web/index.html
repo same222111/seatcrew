@@ -32,10 +32,27 @@ button.b{background:#123a1d;color:var(--acc);border:1px solid var(--acc);padding
 button.no{background:#3a1212;color:var(--bad);border-color:var(--bad)}button.sm{padding:2px 8px;font-size:12px}label{color:var(--dim)}.dim{color:var(--dim)}
 .agent{border:1px solid var(--ln);padding:6px 8px;margin-bottom:6px}.agent .n{color:var(--acc);font-weight:bold}
 #toast{position:fixed;bottom:16px;right:16px;background:var(--acc);color:var(--bg);padding:8px 14px;display:none}
+a.home{display:none;align-items:center;gap:6px;background:var(--acc);color:var(--bg);font-weight:bold;font-size:15px;padding:8px 16px;border-radius:6px;text-decoration:none;box-shadow:0 0 0 2px #0006,0 0 14px #3dff7a55}
+a.home:hover,a.home:focus{filter:brightness(1.15);outline:2px solid var(--fg)}.crumb{color:var(--dim);font-size:13px}.crumb a{color:var(--dim)}.crumb b{color:var(--acc)}
+.bar2{display:flex;gap:12px;align-items:center;padding:8px 14px;border-bottom:1px solid var(--ln);background:var(--pn);position:sticky;top:0;z-index:5}
+details.sec{border:1px solid var(--ln);margin:0 0 8px;padding:6px 10px;background:var(--bg)}details.sec>summary{cursor:pointer;color:var(--acc);font-weight:bold;text-transform:uppercase;letter-spacing:.06em}
+fieldset{border:1px solid var(--ln);margin:6px 0;padding:4px 10px}legend{color:var(--blue)}.err{outline:2px solid var(--bad)!important}
+#editor .row label{min-width:190px}#editor input:not([type=checkbox]){min-width:220px}
+.modal{position:fixed;inset:0;background:#000a;display:none;align-items:flex-start;justify-content:center;z-index:20;overflow:auto}.modal.open{display:flex}
+.modal .box{background:var(--pn);border:1px solid var(--acc);margin:40px 12px;padding:16px;width:min(860px,96vw)}.modal h3{color:var(--acc);margin-top:0}
+.chg{font-size:12px;max-height:260px;overflow:auto}.chg td{word-break:break-word}.warn{color:var(--warn)}
+body[data-theme=light]{--bg:#f4f7f5;--pn:#ffffff;--ln:#c9d6cd;--fg:#14251a;--dim:#5a6e60;--acc:#0b8a3e;--warn:#a86b00;--bad:#c62828;--blue:#1565c0;--or:#d35400}
+body[data-theme=light] header,body[data-theme=light] .seat,body[data-theme=light] .it,body[data-theme=light] input,body[data-theme=light] select,body[data-theme=light] textarea{background:#fff}
+body[data-theme=light] .seat.chief{background:#fff4ea}body[data-theme=light] button.b{background:#e6f5ec}body[data-theme=light] button.b:hover{background:var(--acc);color:#fff}
+body[data-theme=contrast]{--bg:#000;--pn:#000;--ln:#9a9a9a;--fg:#fff;--dim:#d0d0d0;--acc:#00ff66;--warn:#ffd400;--bad:#ff4040;--blue:#59c8ff}
+body[data-theme=contrast] header,body[data-theme=contrast] .seat,body[data-theme=contrast] .it{background:#000}
+body[data-density=compact] main{padding:6px}body[data-density=compact] .pn{padding:6px}body[data-density=compact] .grid,body[data-density=compact] .seats{gap:5px}
+body[data-density=comfy] main{padding:20px}body[data-density=comfy] .pn{padding:16px}body[data-density=comfy] .grid,body[data-density=comfy] .seats{gap:16px}
 </style></head><body>
-<header><a id="homeBtn" href="#" title="All workflows" style="display:none;margin-right:8px;text-decoration:none">⌂</a><b id="title">▌SeatCrew</b><span class="dim" data-i18n="app_sub"></span><span id="wfname" class="pill"></span><span id="clk" class="dim"></span>
+<div class="bar2"><a id="homeBtn" class="home" href="#" data-i18n="back_home"></a><span class="crumb"><span id="crumbHome" data-i18n="home"></span> › <b id="crumbWf"></b></span><span class="dim" style="margin-left:auto;font-size:11px" data-i18n="back_keys"></span></div>
+<header><b id="title">▌SeatCrew</b><span class="dim" data-i18n="app_sub"></span><span id="wfname" class="pill"></span><span id="clk" class="dim"></span>
 <select id="langSel"></select>
-<nav><button data-t="dash" class="act" data-i18n="nav_dash"></button><button data-t="team" data-i18n="nav_seats"></button><button data-t="set" data-i18n="nav_set"></button></nav></header>
+<nav><button data-t="dash" class="act" data-i18n="nav_dash"></button><button data-t="team" data-i18n="nav_seats"></button><button data-t="set" data-i18n="nav_set"></button><button data-t="prof" data-i18n="nav_prof"></button></nav></header>
 <main>
 <section id="dash" class="tab act">
  <div class="grid g2">
@@ -57,7 +74,22 @@ button.no{background:#3a1212;color:var(--bad);border-color:var(--bad)}button.sm{
  <div class="row"><label data-i18n="interval"></label><input id="interval" type="number" min="5" style="width:90px"> <label><input id="autorun" type="checkbox"> <span data-i18n="auto_run"></span></label></div>
  <h3 style="margin-top:12px" data-i18n="wf_settings"></h3><div id="wfset"></div>
  <button class="b" id="saveSet" data-i18n="save"></button> <span id="setmsg" class="dim"></span></div></section>
-</main><div id="toast"></div>
+<section id="prof" class="tab"><div class="pn"><h3 data-i18n="prof_title"></h3><p class="dim" data-i18n="prof_hint"></p>
+ <div class="row"><label data-i18n="profile"></label><select id="profSel"></select><button class="b sm" id="profLoad" data-i18n="load"></button><button class="b sm no" id="profDel" data-i18n="delete"></button>
+  <span style="margin-left:14px"></span><input id="profName" data-i18n-ph="profile_name" style="width:160px"><button class="b sm" id="profSave" data-i18n="save_as"></button>
+  <button class="b sm" id="profApply" data-i18n="apply"></button><button class="b sm no" id="profReset" data-i18n="reset"></button>
+  <span style="margin-left:14px"></span><button class="b sm" id="profExport" data-i18n="export"></button><button class="b sm" id="profImport" data-i18n="import"></button></div>
+ <div class="dim" id="profMsg"></div><div id="editor" style="margin-top:10px"></div>
+ <div class="row"><button class="b" id="profApply2" data-i18n="apply"></button><span class="dim" id="profFolder"></span></div></div></section>
+</main>
+<div class="modal" id="expM"><div class="box"><h3 data-i18n="export_title"></h3><p class="dim" data-i18n="export_hint"></p>
+ <div class="row"><label data-i18n="author"></label><input id="expAuthor" style="width:240px"><button class="b sm" id="expRefresh">↻</button></div>
+ <div class="row"><b id="expFile"></b><button class="b" id="expDl" data-i18n="download"></button><button class="b" id="expCopy" data-i18n="copy_code"></button></div>
+ <textarea id="expCode" readonly style="height:110px;font-size:11px"></textarea><div class="row"><button class="b sm" data-close data-i18n="close"></button></div></div></div>
+<div class="modal" id="impM"><div class="box"><h3 data-i18n="import_title"></h3><p class="dim" data-i18n="import_hint"></p>
+ <div class="row"><input type="file" id="impFile" accept=".json,.yaml,.yml,.txt"></div><textarea id="impText" style="height:110px;font-size:11px" placeholder="SC1.… / { &quot;seatcrew_profile&quot;: 1, … }"></textarea>
+ <div class="row"><button class="b" id="impPrev" data-i18n="preview"></button><button class="b sm" data-close data-i18n="cancel"></button></div>
+ <div id="impOut"></div></div></div><div id="toast"></div>
 <script>
 const $=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const get=u=>fetch(u).then(r=>r.json()),post=(u,b)=>fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)}).then(r=>r.json());
@@ -65,11 +97,11 @@ let LOC={},META=null,DEF=null;
 function T(k,v){let s=LOC[k]??k;for(const x in v||{})s=s.replace('{'+x+'}',v[x]);return s}
 const job=s=>LOC['seat_'+s.name]||s.job;
 function toast(m){$('toast').textContent=m;$('toast').style.display='block';setTimeout(()=>$('toast').style.display='none',2200)}
-async function setLang(l,save){LOC=await get('/api/locale/'+l);document.documentElement.lang=l;document.querySelectorAll('[data-i18n]').forEach(e=>e.textContent=T(e.dataset.i18n));
+async function setLang(l,save){LOC=await get('/api/locale/'+l);document.documentElement.lang=l;document.querySelectorAll('[data-i18n]').forEach(e=>e.textContent=T(e.dataset.i18n));document.querySelectorAll('[data-i18n-ph]').forEach(e=>e.placeholder=T(e.dataset.i18nPh));if(typeof HOME!='undefined'&&HOME)$('crumbHome').innerHTML=`<a href="${HOME}">${esc(T('home'))}</a>`;
  ['langSel','setLang'].forEach(i=>$(i).value=l);if(save)await post('/api/config',{language:l});renderCfg();tick()}
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{document.querySelectorAll('nav button,.tab').forEach(x=>x.classList.remove('act'));b.classList.add('act');$(b.dataset.t).classList.add('act')});
 ['langSel','setLang'].forEach(i=>$(i).onchange=e=>setLang(e.target.value,true));
-async function load(){META=await get('/api/config');DEF=META.definition;document.title=DEF.title+' · SeatCrew';$('title').textContent='▌'+DEF.title;$('wfname').textContent=DEF.name;
+async function load(){META=await get('/api/config');DEF=META.definition;document.title=DEF.title+' · SeatCrew';$('title').textContent='▌'+DEF.title;$('crumbWf').textContent=DEF.title;$('wfname').textContent=DEF.name;
  const lo=Object.entries(META.languages).map(([k,v])=>`<option value="${k}">${v}</option>`).join('');['langSel','setLang'].forEach(i=>$(i).innerHTML=lo);
  $('submitPn').style.display=DEF.submit.length?'':'none';
  $('form').innerHTML=DEF.submit.map(f=>`<div class="row" style="display:block"><label>${esc(LOC['field_'+f.name]||f.label||f.name)}</label>${f.type=='textarea'?`<textarea data-f="${f.name}"></textarea>`:`<input data-f="${f.name}" style="width:100%">`}</div>`).join('');
@@ -110,7 +142,69 @@ async function tick(){if(!DEF||!LOC.app_sub||busy)return;if(document.activeEleme
  $('items').innerHTML=s.items.length?s.items.slice(0,14).map(itemCard).join(''):`<span class="dim">${T('chain_empty')}</span>`;
  document.querySelectorAll('[data-ap]').forEach(b=>b.onclick=()=>decide(+b.dataset.ap,true));document.querySelectorAll('[data-rj]').forEach(b=>b.onclick=()=>decide(+b.dataset.rj,false));
  $('log').innerHTML=s.events.slice().reverse().map(e=>`<div class="k-${e.kind}"><span class=dim>${e.ts.slice(11,19)}</span> ${e.agent.padEnd(9)} ${e.kind.padEnd(13)} ${esc(e.sym)} ${esc(e.msg)}</div>`).join('')}
-load();setInterval(tick,2000);
 
-{const h=new URLSearchParams(location.search).get("home");if(h&&/^http:\/\/127\.0\.0\.1:\d+\/$/.test(h)){const a=document.getElementById("homeBtn");a.href=h;a.style.display="inline";}}
+// ---------- navigation: big back button, breadcrumb, Esc / Alt+Left ----------
+const HOME=(()=>{const h=new URLSearchParams(location.search).get("home");return h&&/^http:\/\/127\.0\.0\.1:\d+\/$/.test(h)?h:null})();
+if(HOME){$('homeBtn').href=HOME;$('homeBtn').style.display='inline-flex';$('crumbHome').innerHTML=`<a href="${HOME}">${esc(T('home'))}</a>`}else{$('homeBtn').style.display='none';document.querySelector('[data-i18n=back_keys]').style.display='none'}
+function goHome(){if(HOME)location.href=HOME}
+document.addEventListener('keydown',e=>{const open=document.querySelector('.modal.open');
+ if(e.key=='Escape'){if(open){open.classList.remove('open');return}const a=document.activeElement;if(a&&/INPUT|TEXTAREA|SELECT/.test(a.tagName)){a.blur();return}goHome()}
+ if(e.altKey&&e.key=='ArrowLeft'){e.preventDefault();goHome()}});
+document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>b.closest('.modal').classList.remove('open'));
+// ---------- display options ----------
+function applyDisplay(d){d=d||{};document.body.dataset.theme=d.theme||'dark';document.body.dataset.density=d.density||'normal';document.body.style.fontSize=(d.font_size||13)+'px'}
+// ---------- profiles / parameter editor ----------
+let PROF=null;
+const lab=k=>LOC['p_'+k]||LOC['set_'+k]||k.replace(/_/g,' ');
+function fld(p,v){const k=p.split('.').pop(),a=`data-pp="${esc(p)}"`;
+ if(p=='language')return `<select ${a} data-ty=s>${Object.entries(META.languages).map(([c,n])=>`<option value="${c}" ${c==v?'selected':''}>${n}</option>`).join('')}</select>`;
+ if(p=='display.theme'||p=='display.density')return `<select ${a} data-ty=s>${(p.endsWith('theme')?PROF.themes:PROF.densities).map(x=>`<option ${x==v?'selected':''} value="${x}">${esc(LOC['opt_'+x]||x)}</option>`).join('')}</select>`;
+ if(k=='provider'&&p.startsWith('seats.'))return `<select ${a} data-ty=s>${['rules',...Object.keys(META.providers)].map(x=>`<option ${x==v?'selected':''}>${x}</option>`).join('')}</select>`;
+ if(typeof v=='boolean')return `<input type=checkbox ${a} data-ty=b ${v?'checked':''}>`;
+ if(typeof v=='number')return `<input type=number step=any ${a} data-ty=n value="${v}" ${p=='display.font_size'?'min=10 max=22':''}>`;
+ if(v===null)return `<input ${a} data-ty=z value="">`;
+ if(Array.isArray(v))return v.every(x=>x===null||typeof x!='object')?`<input ${a} data-ty=l data-num="${v.length&&v.every(x=>typeof x=='number')?1:0}" value="${esc(v.join(', '))}" style="width:100%">`:`<textarea ${a} data-ty=j style="height:90px">${esc(JSON.stringify(v,null,1))}</textarea>`;
+ if(k=='prompt'||String(v).length>60)return `<textarea ${a} data-ty=s>${esc(v)}</textarea>`;
+ return `<input ${a} data-ty=s value="${esc(v)}">`}
+function rows(o,path){return Object.entries(o).map(([k,v])=>{const p=path?path+'.'+k:k;
+ if(v&&typeof v=='object'&&!Array.isArray(v))return `<fieldset><legend>${esc(path=='seats'?k.toUpperCase():lab(k))}</legend>${rows(v,p)}</fieldset>`;
+ return `<div class="row"><label>${esc(lab(k))}</label>${fld(p,v)}</div>`}).join('')}
+function renderEditor(d){const order=['display','language','seats','settings'],ks=[...order.filter(k=>k in d),...Object.keys(d).filter(k=>!order.includes(k))];
+ $('editor').innerHTML=ks.map((k,i)=>{const v=d[k];const body=v&&typeof v=='object'&&!Array.isArray(v)?rows(v,k):`<div class="row"><label>${esc(lab(k))}</label>${fld(k,v)}</div>`;
+  return `<details class="sec" ${i<3?'open':''} data-sec="${k}"><summary>${esc(LOC['sec_'+k]||lab(k))}</summary>${body}</details>`}).join('')}
+function collect(){const out={};let bad=0;document.querySelectorAll('#editor [data-pp]').forEach(e=>{e.classList.remove('err');let v;const t=e.dataset.ty;
+  try{if(t=='b')v=e.checked;else if(t=='n'){v=e.value.trim()===''?NaN:+e.value;if(!isFinite(v))throw 0;if(e.min&&v<+e.min||e.max&&v>+e.max)throw 0}
+   else if(t=='l'){v=e.value.split(',').map(x=>x.trim()).filter(Boolean);if(e.dataset.num=='1'){v=v.map(Number);if(v.some(x=>!isFinite(x)))throw 0}}
+   else if(t=='j')v=JSON.parse(e.value);else if(t=='z')v=e.value.trim()||null;else v=e.value}catch(_){bad++;e.classList.add('err');return}
+  const ps=e.dataset.pp.split('.');let o=out;ps.slice(0,-1).forEach(x=>o=o[x]=o[x]||{});o[ps.at(-1)]=v});
+ if(bad){profMsg('✗ '+T('invalid')+' ('+bad+')');return null}return out}
+function profMsg(m,w){$('profMsg').innerHTML=esc(m)+(w&&w.length?'<div class="warn">'+w.map(esc).join('<br>')+'</div>':'')}
+async function loadProf(sel){PROF=await get('/api/profiles');$('profSel').innerHTML=`<option value="">— ${esc(T('current'))} —</option>`+PROF.profiles.map(n=>`<option ${n==sel?'selected':''}>${esc(n)}</option>`).join('');
+ $('profFolder').textContent=T('saved_in')+' '+PROF.folder;renderEditor(PROF.current);applyDisplay(PROF.current.display)}
+async function afterChange(r,msg,sel){if(!r.ok){profMsg('✗ '+r.error);return}META=await get('/api/config');if(META.language)await setLang(META.language,false);await loadProf(sel);profMsg('✓ '+msg,r.warnings)}
+$('profApply').onclick=$('profApply2').onclick=async()=>{const d=collect();if(d)afterChange(await post('/api/profiles/apply',{data:d}),T('saved'))};
+$('profSave').onclick=async()=>{const n=$('profName').value.trim()||$('profSel').value;if(!n){$('profName').classList.add('err');return}const d=collect();if(d)afterChange(await post('/api/profiles/save',{name:n,data:d}),T('saved')+': '+n,n)};
+$('profLoad').onclick=async()=>{const n=$('profSel').value;if(n)afterChange(await post('/api/profiles/load',{name:n}),T('load')+': '+n,n)};
+$('profDel').onclick=async()=>{const n=$('profSel').value;if(n&&confirm(T('confirm_delete',{name:n})))afterChange(await post('/api/profiles/delete',{name:n}),T('delete')+': '+n)};
+$('profReset').onclick=async()=>{if(confirm(T('confirm_reset')))afterChange(await post('/api/profiles/reset',{}),T('reset'))};
+let EXP=null;
+async function doExport(){const n=$('profSel').value,b={name:n,author:$('expAuthor').value};if(!n){const d=collect();if(!d)return;b.data=d}
+ EXP=await post('/api/profiles/export',b);if(!EXP.ok){toast('✗ '+EXP.error);return}$('expFile').textContent=EXP.filename;$('expCode').value=EXP.code;$('expM').classList.add('open')}
+$('profExport').onclick=doExport;$('expRefresh').onclick=doExport;
+$('expDl').onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(EXP.file,null,2)],{type:'application/json'}));a.download=EXP.filename;a.click()};
+$('expCopy').onclick=async()=>{$('expCode').select();try{await navigator.clipboard.writeText(EXP.code)}catch(_){document.execCommand('copy')}toast(T('copied'))};
+$('profImport').onclick=()=>{$('impOut').innerHTML='';$('impM').classList.add('open')};
+$('impFile').onchange=async e=>{const f=e.target.files[0];if(f)$('impText').value=await f.text()};
+const fmt=v=>v===undefined||v===null?'—':typeof v=='object'?JSON.stringify(v):String(v);
+$('impPrev').onclick=async()=>{const r=await post('/api/profiles/preview',{text:$('impText').value});
+ if(!r.ok){$('impOut').innerHTML=`<p style="color:var(--bad)">✗ ${esc(r.error)}</p>`;return}
+ $('impOut').innerHTML=`<p><b>${esc(r.name)}</b> ${r.author?'· '+esc(r.author):''} · ${esc(r.workflow)} · SeatCrew ${esc(r.app_version||'?')}</p>${r.warnings.map(w=>`<div class="warn">⚠ ${esc(w)}</div>`).join('')}
+  <p>${r.n_changes} ${T('changes')}</p><div class="chg"><table>${r.changes.map(c=>`<tr><td>${esc(c.path)}</td><td class="dim">${esc(fmt(c.from).slice(0,80))}</td><td>→ ${esc(fmt(c.to).slice(0,80))}</td></tr>`).join('')}</table></div>
+  <div class="row"><label>${T('profile_name')}</label><input id="impName" value="${esc(r.name)}"><label><input type=checkbox id="impApply" checked> ${T('apply_now')}</label><button class="b" id="impGo">${T('confirm_import')}</button></div>`;
+ $('impGo').onclick=async()=>{const x=await post('/api/profiles/import',{text:$('impText').value,name:$('impName').value,apply:$('impApply').checked});
+  if(!x.ok){toast('✗ '+x.error);return}$('impM').classList.remove('open');afterChange({ok:true},T('imported',{name:x.name}),x.name)}};
+document.querySelector('nav button[data-t=prof]').addEventListener('click',()=>loadProf($('profSel').value));
+
+load().then(()=>{applyDisplay(META.display);loadProf()});setInterval(tick,2000);
+
 </script></body></html>

@@ -48,6 +48,7 @@ jobs:
           pyinstaller packaging/seatcrew.spec --noconfirm --distpath dist --workpath build
           choco install innosetup -y --no-progress
           & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" "/DMyVersion=${{ steps.v.outputs.v }}" packaging\seatcrew.iss
+          Set-Content -Path dist\SeatCrew\portable.txt -Encoding utf8 -Value "Portable mode: SeatCrew keeps its data in the data folder next to SeatCrew.exe. Delete this file to use %APPDATA%\SeatCrew instead."
           Compress-Archive -Path dist\SeatCrew\* -DestinationPath "dist\SeatCrew-${{ steps.v.outputs.v }}-windows-portable.zip"
       - uses: actions/upload-artifact@v4
         with:

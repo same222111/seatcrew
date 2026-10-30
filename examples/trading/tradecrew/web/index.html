@@ -37,7 +37,10 @@ button.sm{padding:2px 8px;font-size:12px}label{color:var(--dim)}.row{display:fle
 .tl .st.bad:before{background:var(--bad)}.tl .st.pend{color:#3a4a3e}.tl .st.pend:before{background:#2a3a2e}.tl .ok{color:var(--dim)}.tl .bad b{color:var(--bad)}
 .tl .rs{font-size:11px;color:var(--dim)}.ord .stat.bad{color:var(--bad)}.ord .stat.good{color:var(--acc)}
 canvas{width:100%;height:260px;background:#060a07;border:1px solid var(--ln)}
+a.home{display:none;background:var(--acc,#39ff88);color:#04140a;font-weight:bold;font-size:15px;padding:8px 16px;border-radius:6px;text-decoration:none;margin-right:10px}
+.bar2{display:none;gap:12px;align-items:center;padding:8px 14px;border-bottom:1px solid #1f3a29;background:#0f1612}.bar2 .dim{font-size:12px}
 </style></head><body>
+<div class="bar2" id="bar2"><a id="homeBtn" class="home" href="#" data-i18n="back_home">← Back to home</a><span class="dim"><span data-i18n="home">Home</span> › <b>TradeCrew</b> · Esc / Alt+←</span></div>
 <header><b>▌TradeCrew</b><span class="dim" data-i18n="app_sub"></span>
 <span id="sess" class="pill"></span><span id="src" class="pill"></span><span id="dialp" class="pill"></span><span id="clk" class="dim"></span>
 <select id="langSel" title="Language"></select>
@@ -170,4 +173,10 @@ function draw(a,b){const c=$('chart'),x=c.getContext('2d'),W=c.width,H=c.height;
  [[b,'#6f8f76'],[a,'#3dff7a']].forEach(([s,col])=>{x.strokeStyle=col;x.lineWidth=2;x.beginPath();s.forEach((p,i)=>{const X=i/(s.length-1)*(W-60)+50,Y=H-20-(p[1]-mn)/(mx-mn||1)*(H-40);i?x.lineTo(X,Y):x.moveTo(X,Y)});x.stroke()});
  x.fillStyle='#6f8f76';x.font='12px monospace';x.fillText('$'+mx.toFixed(0),2,16);x.fillText('$'+mn.toFixed(0),2,H-22);x.fillStyle='#3dff7a';x.fillText(T('strategy'),W-150,16);x.fillStyle='#6f8f76';x.fillText('QQQ',W-60,16)}
 loadCfg();setInterval(tick,2000);
+
+// big back-to-home button + Esc / Alt+Left when opened from the SeatCrew desktop launcher (?home=...)
+(()=>{const h=new URLSearchParams(location.search).get("home");if(!h||!/^http:\/\/127\.0\.0\.1:\d+\/$/.test(h))return;
+ const b=document.getElementById("homeBtn");b.href=h;b.style.display="inline-block";document.getElementById("bar2").style.display="flex";
+ document.addEventListener("keydown",e=>{const a=document.activeElement,typing=a&&/INPUT|TEXTAREA|SELECT/.test(a.tagName);
+  if((e.key=="Escape"&&!typing)||(e.altKey&&e.key=="ArrowLeft")){e.preventDefault();location.href=h}})})();
 </script></body></html>

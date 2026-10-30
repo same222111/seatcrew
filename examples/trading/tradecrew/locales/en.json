@@ -114,5 +114,7 @@
  "cli_dashboard": "Dashboard: {url}  (Ctrl+C to stop)",
  "cli_nokeys": "No provider keys found in environment/.env. Add one (see .env.example) or run: tradecrew test-ai ollama",
  "cli_bind": "Cannot bind {addr} ({err}). Try --port 8788",
- "cli_saved": "Saved {path}. Put API keys in .env (see .env.example), then run: tradecrew start"
+ "cli_saved": "Saved {path}. Put API keys in .env (see .env.example), then run: tradecrew start",
+ "back_home": "← Back to home",
+ "home": "Home"
 }

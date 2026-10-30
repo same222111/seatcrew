@@ -114,5 +114,7 @@
  "cli_dashboard": "看板：{url}（按 Ctrl+C 停止）",
  "cli_nokeys": "環境變數或 .env 裡沒有找到任何 Key。請新增一個（參考 .env.example），或執行：tradecrew test-ai ollama",
  "cli_bind": "無法綁定 {addr}（{err}）。試試 --port 8788",
- "cli_saved": "已儲存 {path}。把 API Key 放進 .env（參考 .env.example），然後執行：tradecrew start"
+ "cli_saved": "已儲存 {path}。把 API Key 放進 .env（參考 .env.example），然後執行：tradecrew start",
+ "back_home": "← 返回首頁",
+ "home": "首頁"
 }

@@ -82,4 +82,6 @@ Headless check without a window: `<launcher> --no-window --smoke 3` prints `url:
 | program (venv) | `%LOCALAPPDATA%\SeatCrew\app` | `~/Library/Application Support/SeatCrew/app` | `~/.local/share/seatcrew/app` |
 | your data (config, state, `.env`, own workflows) | `%APPDATA%\SeatCrew` | `~/Library/Application Support/SeatCrew` | `~/.local/share/seatcrew` |
 
+**Data folder:** if the user wants their data somewhere else (e.g. `D:\\SeatCrewData`), they can pick it in the first-run wizard or with *Change data folder* on the home screen, or you can set `SEATCREW_DATA_DIR`. On Windows the installer also lets them choose the install folder (no admin needed).
+
 **Uninstall:** delete the program folder and the shortcuts. Delete the data folder too if you want to remove settings and keys.

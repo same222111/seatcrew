@@ -29,6 +29,10 @@ Go to **[Releases](https://github.com/same222111/seatcrew/releases)** and downlo
 
 Double-click **SeatCrew**: its own window opens, a first-run wizard asks for a language (an AI key is optional), then you pick a workflow. The app starts and stops its local server by itself; your settings live in your user data folder.
 
+**Choose where it goes.** The Windows installer asks for the install folder (any folder you can write to, e.g. `D:\SeatCrew`). It installs per-user, never needs admin rights, and remembers your choice on upgrade. The **portable `.zip`** contains a `portable.txt` marker: unzip it anywhere (even a USB stick) and SeatCrew keeps all data in a `data` folder next to `SeatCrew.exe`. Delete the marker to use the normal folder instead.
+
+**Data folder** (settings, profiles, history, `.env` keys). The default is `%APPDATA%\SeatCrew` on Windows, `~/Library/Application Support/SeatCrew` on macOS and `~/.local/share/seatcrew` on Linux. You can pick another folder in the first-run wizard. Later, use **Change data folder** on the home screen (tick *move my existing data there* to take everything along). The choice is stored in a small `location.json` in the default folder (portable: next to the exe). The environment variable `SEATCREW_DATA_DIR=/path` overrides everything. The home screen shows your home folder as `~`, so screenshots don't leak your user name.
+
 ### C. One command in a terminal
 ```bash
 curl -fsSL https://raw.githubusercontent.com/same222111/seatcrew/main/install.sh | bash        # macOS / Linux
@@ -88,6 +92,22 @@ This repo is a **template**. Hand it to Codex, Claude, ChatGPT or Cursor togethe
 |---|---|---|---|
 | ![](docs/framework_content_review.png) | ![](docs/framework_support_triage.png) | ![](docs/framework_trading.png) | ![](docs/seats.png) |
 
+## Navigation and customization
+- Every workflow page has a big **← Back to home** button at the top left and a breadcrumb (`Home › <workflow>`). **Esc** (when you're not typing) or **Alt+←** also go back.
+- The **Customize** tab edits everything for that workflow: the AI and prompt of each seat, thresholds and workflow parameters (for trading: watchlist, strategies, risk and sizing, data sources), plus display (theme dark/light/high-contrast, font size, density) and language. Input is validated before it's applied.
+- **Save as profile** stores a named profile in `<data folder>/workflows/<workflow>/profiles/<name>.yaml`. You can **Load**, **Delete** and **Reset to default**. Profiles never contain API keys or secrets. The paper-trading lock and setup state are never part of a profile.
+
+## Share your config
+1. In **Customize**, pick a profile (or your current settings) and click **Export / share**.
+2. Either **Download file** (`<workflow>-<name>.seatcrew.json`) or **Copy share code** (a compact `SC1.…` text you can paste in a chat).
+3. The receiver clicks **Import…**, chooses the file or pastes the file/code, and clicks **Preview**. Preview shows who made it, the SeatCrew version and every change it would make. They then confirm the import, optionally applying it right away.
+
+The file holds `seatcrew_profile` (schema version), `workflow`, `app_version`, an optional `author`, and `data`. Keys and secrets are stripped on export *and* on import. A file for another workflow or a newer schema is refused with a clear message. A different app version only shows a warning, and unknown settings are ignored. Want to publish a good setup? Add it to [`configs/`](configs/).
+
+| Big back button | Parameter editor | Import preview |
+|---|---|---|
+| ![](docs/v050_back_button.png) | ![](docs/v050_editor.png) | ![](docs/v050_import.png) |
+
 ## Adding a language
 1. Copy `seatcrew/locales/en.json` to `seatcrew/locales/<code>.json` and translate the values. Keep `{placeholders}`.
 2. Add `"<code>": "Native name"` to `LANGUAGES` in `seatcrew/config.py`.
@@ -122,5 +142,13 @@ macOS/Linux 运行 install.sh,Windows 运行 install.ps1,检查最后的 RESULT 
 - **自带示例**：`trading`（旗舰成品 TradeCrew，多 AI 模拟交易终端，功能完整保留）、`content_review`（内容审核）、`support_triage`（客服回复分流）。
 - **多语言**：English、简体中文、繁體中文、日本語、Español，界面和命令行都支持。
 - **当作模板使用**：把整个仓库交给你自己的 AI（Codex / Claude / ChatGPT / Cursor），贴上 [CUSTOMIZE.md](CUSTOMIZE.md) 里的提示词，就能做出你自己的工作流。
+
+**导航**:每个工作流页面左上角都有醒目的「← 返回首页」大按钮和面包屑(首页 › 工作流名);按 Esc(不在输入框时)或 Alt+← 也能返回。
+
+**自定义**:「自定义」标签页可以修改该工作流的全部参数:每个席位的 AI 和提示词、阈值、工作流参数(交易:股票池、策略、风控和仓位、数据源),以及显示(深色/浅色/高对比度主题、字号、布局密度)和语言。输入会先经过校验。可以「另存为方案」,方案保存在 `<数据文件夹>/workflows/<工作流>/profiles/<名称>.yaml`,支持加载、删除和恢复默认。方案里永远不会保存 API 密钥。
+
+**分享配置**:在「自定义」里点「导出 / 分享」,可以「下载文件」(`.seatcrew.json`)或「复制分享码」(`SC1.…` 短文本,方便发到聊天里)。对方点「导入…」,选择文件或粘贴文件/分享码,先「预览」,能看到作者、版本和每一处改动,确认后导入,也可以选择立即应用。导出和导入时都会自动去除密钥;工作流不匹配或文件格式版本更新时会明确拒绝,app 版本不同只给出提示。优秀的配置欢迎提交到 [`configs/`](configs/)。
+
+**安装位置与数据文件夹**:Windows 安装包可以选择安装目录(例如 `D:\SeatCrew`),按用户安装,不需要管理员权限,升级时会记住上次的选择。便携版 zip 自带 `portable.txt`,数据默认保存在 exe 旁边的 `data` 文件夹。数据文件夹(设置、方案、历史、密钥)可以在首次向导里选择,之后在首页点「更改数据文件夹」修改,并可勾选「把现有数据一起搬过去」。这个选择记录在默认位置的 `location.json` 里。环境变量 `SEATCREW_DATA_DIR` 的优先级最高。首页显示路径时会把用户目录显示为 `~`,截图不会泄露用户名。
 
 快速开始：`pip install -e .`，然后运行 `seatcrew ui content_review`，打开 http://127.0.0.1:8800 。新建工作流用 `seatcrew new my_flow`（名称只能用小写英文、数字和下划线），交易终端用 `tradecrew start`。

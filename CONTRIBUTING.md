@@ -22,3 +22,6 @@ tradecrew start              # trading example, http://127.0.0.1:8787
 - Never commit keys, `.env`, `config*.yaml` or `state/`.
 - Keep the dependency footprint small (stdlib HTTP for providers).
 - Run `pytest -q` before opening a PR.
+
+## Sharing configs
+Community profiles go in [`configs/`](configs/README.md). Export them from the app (keys are stripped) and check the file before opening a PR.

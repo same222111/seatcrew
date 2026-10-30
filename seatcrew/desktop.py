@@ -17,13 +17,79 @@ APP = "SeatCrew"
 HERE = Path(__file__).parent
 ICON = HERE / "assets" / "icon.png"
 
+def default_dir():
+    """Platform default data folder (also where the pointer file lives)."""
+    if sys.platform == "win32": return Path(os.environ.get("APPDATA", Path.home() / "AppData" / "Roaming")) / APP
+    if sys.platform == "darwin": return Path.home() / "Library" / "Application Support" / APP
+    return Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local" / "share")) / "seatcrew"
+
+def exe_dir(): return Path(sys.executable).resolve().parent if getattr(sys, "frozen", False) else None
+
+def is_portable():
+    d = exe_dir(); return bool(d and ((d / "portable").exists() or (d / "portable.txt").exists()))
+
+def pointer_file():
+    """Small JSON file remembering a custom data folder: next to the exe for the portable build, else in the default folder."""
+    return (exe_dir() / "location.json") if is_portable() else default_dir() / "location.json"
+
+MOVE_SKIP = {"location.json", "app", "webview"}   # app = install.sh venv on macOS/Linux; webview = browser cache
+
+def data_location():
+    """(folder, source). Order: SEATCREW_DATA_DIR env > SEATCREW_HOME (legacy) > pointer file > portable (next to exe) > default."""
+    for var in ("SEATCREW_DATA_DIR", "SEATCREW_HOME"):
+        if os.environ.get(var): return Path(os.environ[var]).expanduser(), "env"
+    try:
+        p = pointer_file()
+        if p.exists():
+            d = json.loads(p.read_text(encoding="utf-8")).get("data_dir")
+            if d: return Path(d).expanduser(), "custom"
+    except (OSError, ValueError): pass
+    if is_portable(): return exe_dir() / "data", "portable"
+    return default_dir(), "default"
+
 def data_dir():
-    """Per-user folder for config.*.yaml, state/, workflows/ and .env. Override with SEATCREW_HOME."""
-    if os.environ.get("SEATCREW_HOME"): d = Path(os.environ["SEATCREW_HOME"])
-    elif sys.platform == "win32": d = Path(os.environ.get("APPDATA", Path.home() / "AppData" / "Roaming")) / APP
-    elif sys.platform == "darwin": d = Path.home() / "Library" / "Application Support" / APP
-    else: d = Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local" / "share")) / "seatcrew"
-    d.mkdir(parents=True, exist_ok=True); return d
+    """Per-user folder for config.*.yaml, state/, workflows/ (incl. profiles) and .env."""
+    d, src = data_location()
+    try:
+        d.mkdir(parents=True, exist_ok=True)
+        if src == "portable": (d / ".w").write_text("", encoding="utf-8"); (d / ".w").unlink()
+    except OSError:
+        if src != "portable": raise
+        d = default_dir(); d.mkdir(parents=True, exist_ok=True)   # read-only portable folder -> fall back
+    return d
+
+def pretty(p):
+    """Show paths with the home folder as ~ (keeps user names out of screenshots)."""
+    try: return "~" + os.sep + str(Path(p).resolve().relative_to(Path.home().resolve()))
+    except ValueError: return str(p)
+
+def relocate(cur, new, move):
+    """Point the app at a new data folder, optionally moving existing data there. Returns the new folder."""
+    if os.environ.get("SEATCREW_DATA_DIR") or os.environ.get("SEATCREW_HOME"): raise ValueError("data folder is set by the SEATCREW_DATA_DIR environment variable")
+    new = Path(str(new).strip()).expanduser()
+    if not str(new).strip() or not new.is_absolute(): raise ValueError("please give a full folder path, e.g. D:\\SeatCrewData or /home/me/seatcrew")
+    cur = Path(cur).resolve(); new = new.resolve()
+    if new == cur: return new
+    if move and (cur in new.parents): raise ValueError("the new folder cannot be inside the current data folder")
+    new.mkdir(parents=True, exist_ok=True)
+    probe = new / ".seatcrew-write-test"
+    try: probe.write_text("ok", encoding="utf-8"); probe.unlink()
+    except OSError as e: raise ValueError(f"cannot write to {new}: {e.strerror}")
+    if move:
+        import shutil
+        for item in list(cur.iterdir()):
+            if item.name in MOVE_SKIP or item.resolve() == new: continue
+            dst = new / item.name
+            if dst.exists(): raise ValueError(f"{dst} already exists - choose an empty folder or untick 'move'")
+        for item in list(cur.iterdir()):
+            if item.name in MOVE_SKIP or item.resolve() == new: continue
+            shutil.move(str(item), str(new / item.name))
+    ptr = pointer_file(); ptr.parent.mkdir(parents=True, exist_ok=True)
+    natural = (exe_dir() / "data") if is_portable() else default_dir()
+    if new == natural.resolve():
+        if ptr.exists(): ptr.unlink()
+    else: ptr.write_text(json.dumps({"data_dir": str(new)}, indent=1), encoding="utf-8")
+    return new
 
 def free_port(host="127.0.0.1"):
     with socket.socket() as s: s.bind((host, 0)); return s.getsockname()[1]
@@ -46,29 +112,50 @@ def save_key(env_path, var, value):
 
 class App:
     def __init__(self, home=None):
-        self.home = Path(home).resolve() if home else data_dir()
-        self.home.mkdir(parents=True, exist_ok=True)
+        self.fixed_home = bool(home)
+        self.open = {}                           # workflow name -> (wf, server, url)
+        self.use_home(Path(home).resolve() if home else data_dir())
+        self.lock = threading.Lock()
+        self.launcher = ThreadingHTTPServer(("127.0.0.1", free_port()), self.handler())
+        self.url = f"http://127.0.0.1:{self.launcher.server_port}/"
+
+    def use_home(self, home):
+        self.home = Path(home); self.home.mkdir(parents=True, exist_ok=True)
         os.chdir(self.home)                      # relative config./state/ paths land in the data folder
         load_env(str(self.home / ".env"))
         self.prefs_path = self.home / "desktop.json"
         self.prefs = json.loads(self.prefs_path.read_text(encoding="utf-8")) if self.prefs_path.exists() else {}
-        self.open = {}                           # workflow name -> (wf, server, url)
-        self.lock = threading.Lock()
-        self.launcher = ThreadingHTTPServer(("127.0.0.1", free_port()), self.handler())
-        self.url = f"http://127.0.0.1:{self.launcher.server_port}/"
+
+    def close_workflows(self):
+        for wf, srv, _ in self.open.values():
+            wf.stop.set(); srv.shutdown(); srv.server_close()
+        self.open.clear()
+
+    def change_data(self, path, move):
+        if self.fixed_home: raise ValueError("data folder was given with --home")
+        with self.lock:
+            self.close_workflows(); old = self.home
+            os.chdir(Path.home())                # release the folder (Windows cannot move the cwd)
+            try: new = relocate(old, path, move)
+            except Exception: os.chdir(old); raise
+            self.use_home(new)
+        return dict(ok=True, data_dir=pretty(new), moved=bool(move))
 
     def save_prefs(self, **kw):
         self.prefs.update(kw); self.prefs_path.write_text(json.dumps(self.prefs, indent=1), encoding="utf-8")
 
     def info(self):
         return dict(first_run=not self.prefs.get("setup_done"), language=self.prefs.get("language", "en"), languages=LANGUAGES,
-                    last=self.prefs.get("last"), workflows=workflows(self.home), data_dir=str(self.home), version=__version__,
+                    last=self.prefs.get("last"), workflows=workflows(self.home), data_dir=pretty(self.home),
+                    data_source="fixed" if self.fixed_home else data_location()[1], version=__version__,
                     providers={k: dict(label=v.get("label", k), key_env=v.get("key_env")) for k, v in PROVIDERS.items()},
                     keys=key_status(), running=list(self.open))
 
     def setup(self, b):
         lang = b.get("language", "en")
         if lang not in LANGUAGES: raise ValueError("unknown language")
+        if b.get("data_dir") and Path(str(b["data_dir"])).expanduser().resolve() != self.home.resolve() and not self.fixed_home:
+            self.change_data(b["data_dir"], True)
         prov, key = b.get("provider"), (b.get("api_key") or "").strip()
         if key:
             env = PROVIDERS.get(prov, {}).get("key_env")
@@ -114,6 +201,7 @@ class App:
                 try:
                     b = json.loads(self.rfile.read(int(self.headers.get("Content-Length") or 0)) or b"{}")
                     if self.path == "/api/setup": return self.send(app.setup(b))
+                    if self.path == "/api/datadir": return self.send(app.change_data(b.get("path", ""), bool(b.get("move"))))
                     if self.path == "/api/open": return self.send(dict(ok=True, url=app.open_workflow(b["workflow"])))
                     self.send({"error": "not found"}, 404)
                 except (ValueError, KeyError, FileNotFoundError) as e: self.send(dict(ok=False, error=str(e)), 400)
@@ -124,9 +212,7 @@ class App:
         threading.Thread(target=self.launcher.serve_forever, daemon=True).start(); return self
 
     def stop(self):
-        for wf, srv, _ in self.open.values():
-            wf.stop.set(); srv.shutdown(); srv.server_close()
-        self.open.clear(); self.launcher.shutdown(); self.launcher.server_close()
+        self.close_workflows(); self.launcher.shutdown(); self.launcher.server_close()
 
 def gui_backend():
     """Linux: GTK if PyGObject is present, else Qt (bundled in the AppImage). Win/macOS: pywebview default."""

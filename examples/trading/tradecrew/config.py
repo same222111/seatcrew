@@ -57,6 +57,7 @@ DEFAULTS = {
         "earnings_calendar": True,
     },
     "broker": {"mode": "paper", "live_adapter": None},
+    "display": {"theme": "dark", "font_size": 13, "density": "normal"},
 }
 
 _lock = threading.Lock()
@@ -64,8 +65,11 @@ _lock = threading.Lock()
 
 
 class Config:
+    defaults = DEFAULTS
     def __init__(self, path="config.yaml"):
         self.path = Path(path); self.data = self.load()
+
+    def validate(self, c): validate(c)
 
     def load(self):
         user = yaml.safe_load(self.path.read_text(encoding="utf-8")) if self.path.exists() else {}
@@ -97,6 +101,7 @@ def validate(c):
     if c["risk_dial"] not in ("auto", "normal", "cautious", "defensive"): raise ValueError("risk_dial must be auto/normal/cautious/defensive")
     if c["data"]["price_source"] not in c["data"]["sources"]: raise ValueError("unknown price source")
     if c["broker"]["mode"] != "paper": raise ValueError("only paper mode is supported")
+    from seatcrew.profiles import validate_display; validate_display(c["display"])
 
 def migrate(d):
     """Map the old 'roles' layout (scanner/news/sizer/...) onto seats so older config files keep working."""

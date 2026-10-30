@@ -32,7 +32,8 @@ def base_defaults(seats, prompts=None, settings=None):
             "providers": {k: {"model": v["model"], "base_url": v["base_url"]} for k, v in PROVIDERS.items()},
             "llm_limits": dict(LLM_LIMITS),
             "seats": {s: {"provider": "rules", "model": "", "prompt": prompts.get(s, f"You are the {s.upper()} seat.")} for s in seats},
-            "settings": copy.deepcopy(settings or {})}
+            "settings": copy.deepcopy(settings or {}),
+            "display": {"theme": "dark", "font_size": 13, "density": "normal"}}
 
 class Config:
     """A YAML-backed settings dict. update() deep-merges a partial patch, validates and saves atomically."""
@@ -54,5 +55,7 @@ class Config:
             if s not in self.defaults["seats"]: raise ValueError(f"unknown seat {s}")
             if v["provider"] not in ["rules", *PROVIDERS]: raise ValueError(f"unknown provider {v['provider']} for seat {s}")
         if float(c.get("run_interval_sec", 1)) <= 0: raise ValueError("run_interval_sec must be > 0")
+        if "display" in c:
+            from .profiles import validate_display; validate_display(c["display"])
         if self._validate: self._validate(c)
     def __getitem__(self, k): return self.data[k]

@@ -114,5 +114,7 @@
  "cli_dashboard": "Panel: {url}  (Ctrl+C para detener)",
  "cli_nokeys": "No hay claves en el entorno/.env. Añade una (ver .env.example) o ejecuta: tradecrew test-ai ollama",
  "cli_bind": "No se puede usar {addr} ({err}). Prueba --port 8788",
- "cli_saved": "Guardado {path}. Pon las claves en .env (ver .env.example) y ejecuta: tradecrew start"
+ "cli_saved": "Guardado {path}. Pon las claves en .env (ver .env.example) y ejecuta: tradecrew start",
+ "back_home": "← Volver al inicio",
+ "home": "Inicio"
 }
