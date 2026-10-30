@@ -1,0 +1,12 @@
+{
+ "seat_chief": "commander",
+ "seat_draft": "writes the draft",
+ "seat_factcheck": "checks claims",
+ "seat_policy": "compliance",
+ "seat_approve": "human sign-off",
+ "seat_publish": "publishes",
+ "seat_review": "post-publish check",
+ "field_topic": "Topic",
+ "field_notes": "Notes / facts",
+ "field_sources": "Sources"
+}

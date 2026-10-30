@@ -1,0 +1,12 @@
+{
+ "seat_chief": "指揮官",
+ "seat_draft": "下書き作成",
+ "seat_factcheck": "事実確認",
+ "seat_policy": "コンプライアンス",
+ "seat_approve": "人による承認",
+ "seat_publish": "公開",
+ "seat_review": "公開後チェック",
+ "field_topic": "トピック",
+ "field_notes": "メモ / 事実",
+ "field_sources": "出典"
+}

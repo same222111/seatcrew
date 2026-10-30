@@ -1,0 +1,12 @@
+{
+ "seat_chief": "总指挥",
+ "seat_draft": "撰写草稿",
+ "seat_factcheck": "核查事实",
+ "seat_policy": "合规审查",
+ "seat_approve": "人工签核",
+ "seat_publish": "发布",
+ "seat_review": "发布后复核",
+ "field_topic": "主题",
+ "field_notes": "要点 / 事实",
+ "field_sources": "来源"
+}

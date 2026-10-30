@@ -1,0 +1,173 @@
+<!doctype html><html><head><meta charset="utf-8"><title>TradeCrew - multi-AI paper trading terminal</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+:root{--bg:#0b0f0c;--pn:#111812;--ln:#1f3324;--fg:#c8f5d0;--dim:#6f8f76;--acc:#3dff7a;--warn:#ffcc4d;--bad:#ff5c5c;--blue:#6cc4ff}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:13px/1.45 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+header{display:flex;gap:16px;align-items:center;padding:8px 14px;border-bottom:1px solid var(--ln);background:#07100a;flex-wrap:wrap}
+header b{color:var(--acc);font-size:15px}.pill{border:1px solid var(--ln);padding:1px 8px;border-radius:10px;color:var(--dim)}
+.pill.on{color:var(--acc);border-color:var(--acc)}.pill.warn{color:var(--warn);border-color:var(--warn)}
+nav button{background:none;border:1px solid var(--ln);color:var(--dim);padding:4px 12px;cursor:pointer;font:inherit}
+nav button.act{color:var(--bg);background:var(--acc);border-color:var(--acc)}
+.disc{background:#2a1f05;color:var(--warn);padding:4px 14px;font-size:12px;border-bottom:1px solid #4a3a10}
+main{padding:12px}.tab{display:none}.tab.act{display:block}
+.grid{display:grid;gap:12px}.g2{grid-template-columns:1fr 1fr}.g3{grid-template-columns:repeat(3,1fr)}
+@media(max-width:1000px){.g2,.g3{grid-template-columns:1fr}}
+.pn{background:var(--pn);border:1px solid var(--ln);padding:10px}.pn h3{margin:0 0 8px;font-size:12px;color:var(--dim);letter-spacing:.08em;text-transform:uppercase}
+.agent{border:1px solid var(--ln);padding:6px 8px;margin-bottom:6px}.agent .n{color:var(--acc);font-weight:bold}.agent .r{color:var(--blue);float:right;font-size:11px}
+.agent .s{color:var(--warn)}.agent .l{color:var(--dim);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+table{border-collapse:collapse;width:100%}td,th{padding:3px 6px;border-bottom:1px solid var(--ln);text-align:left}th{color:var(--dim);font-weight:normal}
+.up{color:var(--acc)}.dn{color:var(--bad)}.dim{color:var(--dim)}
+#log{height:420px;overflow:auto;font-size:12px}#log div{white-space:pre-wrap;border-bottom:1px dotted #15241a;padding:1px 0}
+.k-CHECK_OK{color:#ff8a2a}.k-FILL,.k-TRADE{color:var(--acc)}.k-CHECK_BLOCKED,.k-BLOCK,.k-VETO,.k-ERROR,.k-AI-ERR{color:var(--bad)}.k-AI{color:var(--blue)}.k-WAIT,.k-SKIP{color:var(--warn)}
+input,select,textarea{background:#060a07;color:var(--fg);border:1px solid var(--ln);padding:4px 6px;font:inherit}textarea{width:100%;height:58px}
+button.b{background:#123a1d;color:var(--acc);border:1px solid var(--acc);padding:4px 12px;cursor:pointer;font:inherit}button.b:hover{background:var(--acc);color:var(--bg)}
+button.sm{padding:2px 8px;font-size:12px}label{color:var(--dim)}.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:4px 0}
+.res{font-size:12px;padding:2px 6px}.res.ok{color:var(--acc)}.res.err{color:var(--bad)}
+#toast{position:fixed;bottom:16px;right:16px;background:var(--acc);color:var(--bg);padding:8px 14px;display:none}
+#wiz{position:fixed;inset:0;background:#000c;display:none;align-items:center;justify-content:center}#wiz .pn{width:560px;max-width:95vw}
+
+.seats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.seat>*{overflow:hidden;text-overflow:ellipsis}.seat{min-width:0;border:1px solid var(--ln);padding:8px;position:relative;min-height:84px;background:#0d140f}
+.seat .code{font-weight:bold;font-size:15px;letter-spacing:.05em}.seat .job{color:var(--dim)}.seat .ai{color:var(--blue);font-size:11px}.seat .st{color:var(--warn);font-size:11px}
+.seat .l{color:var(--dim);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.seat .dot{position:absolute;top:9px;right:9px;width:9px;height:9px;border-radius:50%;background:#2a3a2e}
+.seat.on .dot{background:var(--acc);box-shadow:0 0 8px var(--acc)}.seat.chief{background:#17110a;border-color:#ff8a2a}.seat.chief .code{color:#ff8a2a}.seat.on{border-color:var(--acc)}
+.runner{color:#ff8a2a;text-align:center;margin-top:8px}
+.orders{display:flex;gap:10px;overflow-x:auto;padding-bottom:6px}.ord{min-width:250px;border:1px solid var(--ln);padding:8px;background:#0d140f}
+.ord h4{margin:0 0 6px;font-size:12px}.tl{position:relative;margin-left:10px;padding-left:18px;border-left:3px solid #ff8a2a}
+.tl .st{position:relative;margin:0 0 10px}.tl .st:before{content:"";position:absolute;left:-26px;top:2px;width:13px;height:13px;border-radius:50%;background:#ff8a2a}
+.tl .st.bad:before{background:var(--bad)}.tl .st.pend{color:#3a4a3e}.tl .st.pend:before{background:#2a3a2e}.tl .ok{color:var(--dim)}.tl .bad b{color:var(--bad)}
+.tl .rs{font-size:11px;color:var(--dim)}.ord .stat.bad{color:var(--bad)}.ord .stat.good{color:var(--acc)}
+canvas{width:100%;height:260px;background:#060a07;border:1px solid var(--ln)}
+</style></head><body>
+<header><b>▌TradeCrew</b><span class="dim" data-i18n="app_sub"></span>
+<span id="sess" class="pill"></span><span id="src" class="pill"></span><span id="dialp" class="pill"></span><span id="clk" class="dim"></span>
+<select id="langSel" title="Language"></select>
+<nav style="margin-left:auto"><button data-t="dash" class="act" data-i18n="nav_dash"></button><button data-t="team" data-i18n="nav_team"></button><button data-t="set" data-i18n="nav_set"></button><button data-t="lab" data-i18n="nav_lab"></button></nav></header>
+<div class="disc" data-i18n="disclaimer"></div>
+<main>
+<section id="dash" class="tab act"><div class="grid g2">
+ <div class="pn"><h3 data-i18n="seats_title"></h3><div class="seats" id="seats"></div>
+  <div class="runner" id="runner"></div><div class="row" style="justify-content:center"><button class="b sm" id="runNow" data-i18n="scan_now"></button><span id="cyc" class="dim"></span></div></div>
+ <div class="pn"><h3 data-i18n="portfolios_title"></h3><table id="ports"></table></div></div>
+ <div class="pn" style="margin-top:12px"><h3><span data-i18n="chain_title"></span> <span class="dn" style="text-transform:none" data-i18n="single_point"></span></h3><div class="orders" id="orders"></div></div>
+ <div class="grid g2" style="margin-top:12px">
+ <div class="pn"><h3 data-i18n="activity_title"></h3><div id="log"></div></div>
+ <div class="pn"><h3 data-i18n="watchlist_title"></h3><table id="wl"></table><div id="posdetail" style="margin-top:10px"></div></div></div></section>
+
+<section id="team" class="tab"><div class="grid g2">
+ <div class="pn"><h3 data-i18n="providers_title"></h3><table id="provs"></table><p class="dim" data-i18n="custom_hint"></p></div>
+ <div class="pn"><h3 data-i18n="seat_assign_title"></h3><div id="roles"></div><button class="b" id="saveRoles" data-i18n="save_team"></button></div></div></section>
+
+<section id="set" class="tab"><div class="grid g2">
+ <div class="pn"><h3 data-i18n="general"></h3>
+  <div class="row"><label data-i18n="language"></label><select id="setLang"></select></div>
+  <div class="row"><label data-i18n="capital"></label><input id="capital" type="number" step="10" style="width:110px"><label data-i18n="scan_every"></label><input id="interval" type="number" style="width:80px"></div>
+  <div class="row"><label data-i18n="watchlist"></label><input id="watchlist" style="flex:1" placeholder="SPY, QQQ, NVDA"></div>
+  <h3 style="margin-top:12px" data-i18n="risk"></h3>
+  <div class="row"><label data-i18n="loss_cap"></label><input id="losscap" type="number" style="width:80px"><label data-i18n="max_orders"></label><input id="maxord" type="number" style="width:60px"></div>
+  <div class="row"><label><input type="checkbox" id="kill"> <span data-i18n="kill"></span></label><label data-i18n="risk_dial"></label><select id="dial"><option>auto</option><option>normal</option><option>cautious</option><option>defensive</option></select></div>
+  <h3 style="margin-top:12px" data-i18n="price_src"></h3><div id="psrc"></div>
+  <h3 style="margin-top:12px" data-i18n="news_src"></h3><div id="news"></div><button class="b sm" onclick="addFeed()" data-i18n="add_feed"></button>
+ </div>
+ <div class="pn"><h3 data-i18n="strategies_title"></h3><div id="strats"></div></div></div>
+ <div class="row" style="margin-top:12px"><button class="b" id="saveSet" data-i18n="save_settings"></button><button class="b sm" id="resetBtn" data-i18n="reset_pf"></button><button class="b sm" onclick="showWiz()" data-i18n="run_wizard"></button><span id="setmsg" class="res"></span></div></section>
+
+<section id="lab" class="tab"><div class="grid g2">
+ <div class="pn"><h3 data-i18n="lab_title"></h3>
+  <div class="row"><label data-i18n="strategy"></label><select id="labS"></select><label data-i18n="years"></label><input id="labY" type="number" value="5" style="width:60px"><label data-i18n="rounds"></label><input id="labR" type="number" value="4" style="width:50px"></div>
+  <div class="row"><button class="b" id="runBT" data-i18n="run_bt"></button><button class="b" id="runRS" data-i18n="run_rs"></button><span id="labst" class="dim"></span></div>
+  <p class="dim" data-i18n="lab_note"></p><div id="labout"></div></div>
+ <div class="pn"><h3 data-i18n="equity_title"></h3><canvas id="chart" width="900" height="300"></canvas><pre id="lablog" class="dim" style="white-space:pre-wrap;font-size:12px"></pre></div></div></section>
+</main>
+<div id="wiz"><div class="pn"><h3 data-i18n="wiz_title"></h3>
+ <p class="dim" data-i18n="wiz_note"></p>
+ <div class="row"><label data-i18n="language"></label><select id="wlang"></select></div>
+ <div class="row"><label data-i18n="capital"></label><input id="wcap" type="number" value="200" style="width:100px"></div>
+ <div class="row"><label data-i18n="watchlist"></label><input id="wwl" style="flex:1"></div>
+ <div class="row"><label data-i18n="wiz_ai"></label><select id="wprov"></select><span class="dim" data-i18n="wiz_nokey"></span></div>
+ <div class="row"><label data-i18n="price_src"></label><select id="wsrc"></select></div>
+ <div class="row"><button class="b" id="wsave" data-i18n="wiz_save"></button><button class="b sm" onclick="$('wiz').style.display='none'" data-i18n="skip"></button></div></div></div>
+<div id="toast"></div>
+<script>
+/* All visible strings come from tradecrew/locales/<lang>.json via T(key). Add a language: see README "Adding a language". */
+const $=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let C=null,META=null,LOC={},LANG='en';const T=(k,v={})=>(LOC[k]??k).replace(/\{(\w+)\}/g,(m,x)=>v[x]??m);
+const get=u=>fetch(u).then(r=>r.json()),post=(u,b)=>fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)}).then(r=>r.json());
+function toast(m){$('toast').textContent=m;$('toast').style.display='block';setTimeout(()=>$('toast').style.display='none',2500)}
+async function setLang(l,save){LANG=l;LOC=await get('/api/locale/'+l);document.documentElement.lang=l;
+ document.querySelectorAll('[data-i18n]').forEach(e=>e.textContent=T(e.dataset.i18n));['langSel','setLang','wlang'].forEach(i=>$(i).value=l);
+ if(save){await post('/api/config',{language:l});C.language=l}if(META){renderTeam();renderSet()}tick()}
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{document.querySelectorAll('nav button,.tab').forEach(x=>x.classList.remove('act'));b.classList.add('act');$(b.dataset.t).classList.add('act')});
+['langSel','setLang','wlang'].forEach(i=>$(i).onchange=e=>setLang(e.target.value,true));
+async function loadCfg(){META=await get('/api/config');C=META.config;
+ const lo=Object.entries(META.languages).map(([k,v])=>`<option value="${k}">${v}</option>`).join('');['langSel','setLang','wlang'].forEach(i=>$(i).innerHTML=lo);
+ await setLang(C.language||'en',false);
+ $('labS').innerHTML=Object.entries(META.strategies).map(([k,v])=>`<option value=${k}>${v}</option>`).join('');
+ $('wprov').innerHTML=['rules',...Object.keys(META.providers)].map(p=>`<option>${p}</option>`).join('');
+ $('wsrc').innerHTML=Object.keys(C.data.sources).map(s=>`<option>${s}</option>`).join('');$('wwl').value=C.watchlist.join(', ');
+ if(!C.setup_complete)showWiz()}
+function showWiz(){$('wcap').value=C.capital;$('wsrc').value=C.data.price_source;$('wiz').style.display='flex'}
+$('wsave').onclick=async()=>{const p=$('wprov').value,seats={};META.seats.forEach(r=>seats[r]={provider:p});
+ const r=await post('/api/config',{setup_complete:true,language:$('wlang').value,capital:+$('wcap').value,watchlist:$('wwl').value.split(',').map(s=>s.trim()).filter(Boolean),seats,data:{price_source:$('wsrc').value}});
+ if(r.ok){$('wiz').style.display='none';toast(T('saved'));loadCfg()}else alert(r.error)};
+function renderTeam(){
+ $('provs').innerHTML=`<tr><th>${T('th_provider')}</th><th>${T('th_key')}</th><th>${T('th_model')}</th><th>${T('th_base')}</th><th></th></tr>`+Object.entries(META.providers).map(([n,p])=>`<tr><td>${n}</td>
+ <td class="${META.keys[n]?'up':'dim'}">${p.key_env?(META.keys[n]?'✓ ':'✗ ')+p.key_env:T('no_key_needed')}</td>
+ <td><input data-pm="${n}" value="${esc(C.providers[n]?.model||p.model)}" style="width:150px"></td><td><input data-pb="${n}" value="${esc(C.providers[n]?.base_url||p.base_url)}" style="width:220px"></td>
+ <td><button class="b sm" data-test="${n}">${T('test_conn')}</button> <span class="res" id="tr-${n}"></span></td></tr>`).join('');
+ document.querySelectorAll('[data-test]').forEach(b=>b.onclick=async()=>{const n=b.dataset.test,el=$('tr-'+n);el.className='res';el.textContent=T('testing');
+  await post('/api/config',{providers:{[n]:{model:document.querySelector(`[data-pm=${n}]`).value,base_url:document.querySelector(`[data-pb=${n}]`).value}}});
+  const r=await post('/api/test-connection',{provider:n});el.className='res '+(r.ok?'ok':'err');el.textContent=r.ok?`✓ ${r.model} ${T('replied')} "${r.reply}" ${r.latency_ms}ms`:`✗ ${r.error}`});
+ const popts=sel=>['rules',...Object.keys(META.providers)].map(p=>`<option ${p==sel?'selected':''}>${p}</option>`).join('');
+ $('roles').innerHTML=META.seats.map(r=>{const v=C.seats[r];return `<div class="agent"><span class="n">${r.toUpperCase()}</span> <span class="dim">— ${T('seat_'+r)}</span>
+ <div class="row"><label>${T('ai_label')}</label><select data-rp="${r}">${popts(v.provider)}</select><label>${T('model_hint')}</label><input data-rm="${r}" value="${esc(v.model)}" style="width:170px"></div>
+ <textarea data-rpr="${r}">${esc(v.prompt)}</textarea></div>`}).join('')}
+$('saveRoles').onclick=async()=>{const seats={};META.seats.forEach(r=>seats[r]={provider:document.querySelector(`[data-rp=${r}]`).value,model:document.querySelector(`[data-rm=${r}]`).value.trim(),prompt:document.querySelector(`[data-rpr=${r}]`).value});
+ const r=await post('/api/config',{seats});r.ok?(toast(T('saved')),loadCfg()):alert(r.error)};
+function renderSet(){$('capital').value=C.capital;$('interval').value=C.scan_interval_sec;$('watchlist').value=C.watchlist.join(', ');$('losscap').value=C.risk.daily_loss_cap;$('maxord').value=C.risk.max_orders_per_day;$('kill').checked=C.risk.kill_switch;$('dial').value=C.risk_dial;
+ $('psrc').innerHTML=Object.entries(C.data.sources).map(([n,s])=>`<div class="row"><label><input type="radio" name="psrc" value="${n}" ${C.data.price_source==n?'checked':''}> ${T('primary')}</label><label><input type="checkbox" data-se="${n}" ${s.enabled?'checked':''}> ${T('enabled_fb')}</label><b>${n}</b><span class="dim">${s.key_env?T('needs')+' '+s.key_env+(s.secret_env?' + '+s.secret_env:''):n=='demo'?T('demo_note'):T('free_nokey')}</span></div>`).join('');
+ $('news').innerHTML=C.data.news.map(f=>feedRow(f)).join('');
+ $('strats').innerHTML=Object.entries(C.strategies).map(([n,p])=>`<div class="agent"><label><input type="checkbox" data-sen="${n}" ${p.enabled?'checked':''}> <span class="n">${META.strategies[n]}</span></label>
+ <div class="row">${Object.entries(p).filter(([k])=>k!='enabled').map(([k,v])=>`<label>${k}</label><input data-sp="${n}" data-k="${k}" value="${esc(Array.isArray(v)?v.join(', '):v)}" style="width:${Array.isArray(v)?220:70}px">`).join('')}</div></div>`).join('')}
+function feedRow(f){return `<div class="row feed"><input type="checkbox" class="fe" ${f.enabled?'checked':''}><input class="fn" value="${esc(f.name)}" style="width:120px"><input class="fu" value="${esc(f.url)}" style="flex:1"><button class="b sm" onclick="this.parentNode.remove()">✕</button></div>`}
+function addFeed(){$('news').insertAdjacentHTML('beforeend',feedRow({name:'My feed',url:'https://',enabled:true}))}
+$('resetBtn').onclick=()=>{if(confirm(T('confirm_reset')))post('/api/reset',{}).then(()=>toast(T('saved')))};
+$('saveSet').onclick=async()=>{const strategies={};document.querySelectorAll('[data-sen]').forEach(c=>strategies[c.dataset.sen]={enabled:c.checked});
+ document.querySelectorAll('[data-sp]').forEach(i=>{const o=C.strategies[i.dataset.sp][i.dataset.k];strategies[i.dataset.sp][i.dataset.k]=Array.isArray(o)?i.value.split(',').map(s=>s.trim().toUpperCase()).filter(Boolean):typeof o=='number'?+i.value:i.value});
+ const sources={};document.querySelectorAll('[data-se]').forEach(c=>sources[c.dataset.se]={enabled:c.checked});
+ const news=[...document.querySelectorAll('.feed')].map(r=>({name:r.querySelector('.fn').value,url:r.querySelector('.fu').value,enabled:r.querySelector('.fe').checked}));
+ const r=await post('/api/config',{language:$('setLang').value,capital:+$('capital').value,scan_interval_sec:+$('interval').value,watchlist:$('watchlist').value.split(',').map(s=>s.trim()).filter(Boolean),risk_dial:$('dial').value,
+  risk:{daily_loss_cap:+$('losscap').value,max_orders_per_day:+$('maxord').value,kill_switch:$('kill').checked},strategies,data:{price_source:document.querySelector('[name=psrc]:checked').value,sources,news}});
+ $('setmsg').className='res '+(r.ok?'ok':'err');$('setmsg').textContent=r.ok?T('saved_applied'):'✗ '+r.error;if(r.ok)loadCfg()};
+$('runNow').onclick=()=>post('/api/scan',{}).then(()=>toast(T('running')));
+const f2=x=>(x>=0?'+':'')+x.toFixed(2),CHAIN=['scan','judge','risk','size','fills','review'];
+const SEATORDER=['chief','quant','stocks','scan','judge','risk','size','fills','review'];
+async function tick(){if(!LOC.app_sub)return;let s;try{s=await get('/api/state')}catch(e){return}
+ $('sess').textContent=T('session')+': '+s.session+' · '+(s.fractional?T('fractional_ok'):T('whole_shares'));$('sess').className='pill '+(s.session=='regular'?'on':s.session=='closed'?'':'warn');
+ $('src').textContent=T('data')+': '+(s.source||'…');$('dialp').textContent=T('dial_lbl')+': '+s.dial;$('clk').textContent=s.time.replace('T',' ')+' ET';
+ $('cyc').textContent=` ${T('cycle')} ${s.cycle} · ${T('last')} ${s.last_cycle?s.last_cycle.slice(11,19):'—'}${s.kill_switch?' · '+T('kill_on'):''}`;
+ $('runner').textContent=T('runner',{n:s.runner.interval});
+ $('seats').innerHTML=SEATORDER.map(k=>{const a=s.seats[k];return `<div class="seat ${k=='chief'?'chief':''} ${a.active?'on':''}" data-seat="${k}"><span class="dot"></span><div class="code">${k.toUpperCase()}</div><div class="job">${T('seat_'+k)}</div>
+  <div class="ai">AI: ${esc(a.ai)}</div><div class="st">${esc(a.status)} <span class="dim">${esc(a.ts)}</span></div><div class="l" title="${esc(a.last)}">${esc(a.last)}</div></div>`}).join('');
+ $('ports').innerHTML=`<tr><th>${T('th_portfolio')}</th><th>${T('th_equity')}</th><th>${T('th_return')}</th><th>${T('th_cash')}</th><th>${T('th_positions')}</th><th>${T('th_why')}</th></tr>`+Object.entries(s.portfolios).map(([n,p])=>`<tr><td>${p.label}${p.enabled?'':' <span class=dim>('+T('off')+')</span>'}</td><td>$${p.equity.toFixed(2)}</td><td class="${p.ret>=0?'up':'dn'}">${f2(p.ret)}%</td><td>$${p.cash.toFixed(2)}</td><td>${Object.entries(p.pos).map(([k,v])=>`${k} ${(+v.qty).toFixed(4)}`).join('<br>')||'<span class=dim>'+T('cash')+'</span>'}</td><td class="dim" style="max-width:300px">${esc(p.reason)}</td></tr>`).join('');
+ $('orders').innerHTML=s.orders.length?s.orders.slice(0,12).map(o=>{const ch=o.chain||[];const blocked=ch.find(c=>!c.ok);
+  return `<div class="ord" data-order="${o.id}"><h4>#${o.id} ${o.side.toUpperCase()} ${esc(o.sym)} $${Math.abs(o.dollars).toFixed(2)} <span class="dim">· ${esc(o.label)}</span></h4>
+  <div class="stat ${blocked?'bad':'good'}">${blocked?T('blocked_at')+' '+blocked.seat.toUpperCase():o.status=='filled'?'✓ '+T('status_filled'):'…'}</div><div class="tl" style="margin-top:8px">`+
+  CHAIN.map(k=>{const c=ch.find(x=>x.seat==k);if(!c)return `<div class="st pend"><b>${k.toUpperCase()}</b> <span class="rs">${T('seat_'+k)}</span></div>`;
+   return `<div class="st ${c.ok?'':'bad'}"><b>${k.toUpperCase()}</b> <span class="${c.ok?'ok':'bad'}">${c.ok?T('check_ok'):'<b>'+T('check_blocked')+'</b>'}</span><div class="rs">${esc(c.reason)}</div></div>`}).join('')+'</div></div>'}).join(''):`<span class="dim">${T('chain_empty')}</span>`;
+ const tr=Object.values(s.portfolios).flatMap(p=>p.trades.map(t=>({...t,pf:p.label}))).sort((a,b)=>b.ts.localeCompare(a.ts)).slice(0,6);
+ $('posdetail').innerHTML=tr.length?`<table><tr><th>${T('th_time')}</th><th>${T('th_portfolio')}</th><th>${T('th_trade')}</th></tr>`+tr.map(t=>`<tr><td>${t.ts.slice(5,16).replace('T',' ')}</td><td>${t.pf}</td><td class="${t.side=='buy'?'up':'dn'}">${t.side} ${t.qty} ${t.sym} @ ${t.price}</td></tr>`).join('')+'</table>':`<span class=dim>${T('no_trades')}</span>`;
+ $('log').innerHTML=s.events.slice().reverse().map(e=>`<div class="k-${e.kind}"><span class=dim>${e.ts.slice(11,19)}</span> ${e.agent.padEnd(7)} ${e.kind.padEnd(13)} ${esc(e.sym)} ${esc(e.msg)}</div>`).join('');
+ $('wl').innerHTML=`<tr><th>${T('th_symbol')}</th><th>${T('th_price')}</th><th>${T('th_day')}</th><th>5d</th><th>&gt;MA20</th><th>&gt;MA50</th></tr>`+Object.entries(s.stats).map(([k,v])=>`<tr><td>${k}</td><td>${v.price}</td><td class="${v.chg>=0?'up':'dn'}">${f2(v.chg)}%</td><td class="${v.ret5>=0?'up':'dn'}">${f2(v.ret5)}%</td><td>${v.ma20?'✓':'·'}</td><td>${v.ma50?'✓':'·'}</td></tr>`).join('')}
+async function lab(kind){const r=await post('/api/'+kind,{strategy:$('labS').value,years:+$('labY').value,rounds:+$('labR').value});if(!r.ok)return alert(r.error);$('labst').textContent=T('running');pollLab()}
+$('runBT').onclick=()=>lab('backtest');$('runRS').onclick=()=>lab('research');
+const st=x=>x?`CAGR ${x.cagr}% · maxDD ${x.max_dd}% · Sharpe ${x.sharpe}`:'—';
+async function pollLab(){const L=await get('/api/lab');$('lablog').textContent=L.log.join('\n');if(L.running)return setTimeout(pollLab,1000);
+ $('labst').textContent=L.error?T('error'):T('done');$('labst').dataset.state=L.error?'error':'done';if(L.error){$('labout').innerHTML=`<span class=dn>${esc(L.error)}</span>`;return}const R=L.result;if(!R)return;
+ if(R.rounds){$('labout').innerHTML=`<table><tr><th>#</th><th>${T('params')}</th><th>TEST</th><th>QQQ TEST</th><th>${T('verdict')}</th></tr>`+R.rounds.map((h,i)=>`<tr><td>${i+1}</td><td>${esc(JSON.stringify(h.params))}</td><td>${st(h.test)}</td><td>${st(h.benchmark_test)}</td><td class="${h.verdict=='pass'?'up':'dn'}">${h.verdict}</td></tr>`).join('')+`</table><p>${R.any_passed?'<span class=up>'+T('robust_found')+'</span>':'<span class=warn>'+T('nothing_passed')+'</span>'}</p>`;return}
+ $('labout').innerHTML=`<table><tr><th></th><th>${META.strategies[R.strategy]}</th><th>${R.benchmark?.symbol||''} buy&amp;hold</th></tr>`+['full','train','test'].map(k=>`<tr><td>${k.toUpperCase()}</td><td>${st(R[k])}</td><td>${st(R.benchmark?.[k])}</td></tr>`).join('')+`</table><p class=dim>${R.start} → ${R.end} · ${T('data')}: ${R.source} · ${R.trades_per_year}/yr</p>`;
+ draw(R.equity,R.benchmark_equity||[])}
+function draw(a,b){const c=$('chart'),x=c.getContext('2d'),W=c.width,H=c.height;x.clearRect(0,0,W,H);const all=[...a,...b].map(p=>p[1]),mn=Math.min(...all),mx=Math.max(...all);
+ [[b,'#6f8f76'],[a,'#3dff7a']].forEach(([s,col])=>{x.strokeStyle=col;x.lineWidth=2;x.beginPath();s.forEach((p,i)=>{const X=i/(s.length-1)*(W-60)+50,Y=H-20-(p[1]-mn)/(mx-mn||1)*(H-40);i?x.lineTo(X,Y):x.moveTo(X,Y)});x.stroke()});
+ x.fillStyle='#6f8f76';x.font='12px monospace';x.fillText('$'+mx.toFixed(0),2,16);x.fillText('$'+mn.toFixed(0),2,H-22);x.fillStyle='#3dff7a';x.fillText(T('strategy'),W-150,16);x.fillStyle='#6f8f76';x.fillText('QQQ',W-60,16)}
+loadCfg();setInterval(tick,2000);
+</script></body></html>

@@ -1,0 +1,12 @@
+{
+ "seat_chief": "總指揮",
+ "seat_draft": "撰寫草稿",
+ "seat_factcheck": "核查事實",
+ "seat_policy": "合規審查",
+ "seat_approve": "人工簽核",
+ "seat_publish": "發布",
+ "seat_review": "發布後複核",
+ "field_topic": "主題",
+ "field_notes": "要點 / 事實",
+ "field_sources": "來源"
+}

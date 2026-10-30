@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=SeatCrew
+Comment=Multi-AI seat workflows with a check chain
+Exec=SeatCrew
+Icon=seatcrew
+Categories=Office;Development;
+Terminal=false

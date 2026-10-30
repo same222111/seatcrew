@@ -1,0 +1,58 @@
+# Example 3: customer-support reply triage - defined in YAML only, no Python.
+#   seatcrew ui support_triage     |    seatcrew run support_triage --yes
+# Chain: INTAKE -> PRIVACY -> DRAFT -> TONE -> APPROVE (human) -> REVIEW. CHIEF (commander) is added automatically.
+name: support_triage
+title: Support reply triage
+interval: 120
+title_field: message
+subject_field: customer
+submit:
+  - {name: customer, label: Customer}
+  - {name: message, label: Message, type: textarea}
+settings:
+  approve_auto_approve: false
+  load_samples: true
+seats:
+  - name: intake
+    job: reads & classifies
+    rules:
+      - require: [message]
+      - max_len: {field: message, max: 4000}
+      - classify: {field: message, into: category, default: general,
+                   keywords: {billing: [refund, charge, invoice, billing], bug: [error, crash, broken, bug], account: [password, login, locked]}}
+    ai: {labels: [ok, escalate], block: [escalate], prompt: "Customer message: {message}\nIs this safe for a routine reply (ok) or does it need a senior agent (escalate: legal threat, safety, VIP)?"}
+  - name: privacy
+    job: no secrets in tickets
+    rules:
+      - block_if_match: {field: message, pattern: '\b(?:\d[ -]?){13,16}\b', reason: "card number in message - move to the secure channel"}
+      - block_if_match: {field: message, pattern: 'password\s*[:=]', reason: "customer pasted a password - reset it, don't reply in thread"}
+  - name: draft
+    job: drafts the reply
+    kind: producer
+    rules:
+      - template:
+          into: reply
+          by: category
+          templates:
+            billing: "Hi {customer}, thanks for reaching out about billing. I've opened a review of your charges and will confirm the outcome within 2 business days."
+            bug: "Hi {customer}, sorry about the trouble. Could you share the steps to reproduce and a screenshot? I've logged this with our engineers."
+            account: "Hi {customer}, for your security please use the 'Forgot password' link. If you're still locked out, reply here and I'll verify your account."
+            default: "Hi {customer}, thanks for your message. A teammate will get back to you shortly."
+  - name: tone
+    job: tone & promises
+    rules:
+      - block_if_match: {field: reply, pattern: 'guarantee|lawsuit|our fault', reason: "reply makes a promise or admission legal must review"}
+    ai: {labels: [ok, rewrite], block: [rewrite], prompt: "Draft reply: {reply}\nIs it polite and free of promises we can't keep? ok or rewrite."}
+  - name: approve
+    job: agent sign-off
+    human: true
+  - name: review
+    job: final replay
+    rules:
+      - require: [reply, customer]
+      - min_len: {field: reply, min: 40}
+chain: [intake, privacy, draft, tone, approve, review]
+sample_items:
+  - {customer: Ana, message: "I was charged twice for my subscription this month, can I get a refund?"}
+  - {customer: Ben, message: "The app shows an error and crashes when I upload a photo."}
+  - {customer: Chloe, message: "Here is my card 4111 1111 1111 1111, please update billing."}

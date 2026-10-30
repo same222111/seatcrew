@@ -1,0 +1,33 @@
+# {name}: a SeatCrew workflow defined in YAML (no code). Edit me, then:  seatcrew ui {path}
+# Rule types: require, max_len, min_len, block_if_match, require_match, classify, template, set  (see seatcrew/yamlflow.py)
+name: {name}
+title: {title}
+interval: 300            # Runner period in seconds (the dashboard "Run now" button runs it immediately)
+title_field: request
+submit:                  # fields of the "new item" form in the dashboard
+  - {{name: request, label: Request, type: textarea}}
+  - {{name: owner, label: Owner}}
+settings:
+  approve_auto_approve: false
+  load_samples: true
+seats:
+  - name: intake
+    job: checks the request is complete
+    rules:
+      - require: [request, owner]
+      - max_len: {{field: request, max: 2000}}
+  - name: judge
+    job: an idea is not a trigger
+    rules:
+      - block_if_match: {{field: request, pattern: 'urgent!!!|asap!!!', reason: "pressure language - slow down and re-check"}}
+    ai: {{labels: [approve, reject], block: [reject], prompt: "Request: {{request}}\\nShould this go ahead? approve or reject."}}
+  - name: approve
+    job: human sign-off
+    human: true
+  - name: review
+    job: final replay
+    rules:
+      - require: [request]
+chain: [intake, judge, approve, review]
+sample_items:
+  - {{request: "Example request - replace me", owner: me}}

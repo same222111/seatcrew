@@ -1,0 +1,70 @@
+# Build desktop apps on a version tag (git tag v0.4.0 && git push --tags) and attach them to a GitHub Release.
+# Windows: SeatCrew-<v>-windows-setup.exe (Inno Setup, desktop shortcut) + portable .zip
+# macOS:   SeatCrew-<v>-macos.dmg (unsigned)      Linux: SeatCrew-<v>-x86_64.AppImage
+name: release
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-22.04]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: Install
+        shell: bash
+        run: |
+          python -m pip install --upgrade pip
+          pip install ".[desktop,dev]" pyinstaller
+          if [ "$RUNNER_OS" = Linux ]; then pip install qtpy "PyQt6==6.11.*" "PyQt6-Qt6==6.11.*" "PyQt6-WebEngine==6.11.*" "PyQt6-WebEngine-Qt6==6.11.*"; fi
+      - name: Tests
+        shell: bash
+        run: python -m pytest -q
+      - name: Version
+        id: v
+        shell: bash
+        run: echo "v=$(python -c 'import seatcrew;print(seatcrew.__version__)')" >> "$GITHUB_OUTPUT"
+      - name: Linux AppImage
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update && sudo apt-get install -y libfuse2 file libxkbcommon-x11-0 libxcb-cursor0 libegl1 xvfb
+          bash packaging/build_appimage.sh
+          APPIMAGE_EXTRACT_AND_RUN=1 xvfb-run -a dist/SeatCrew-*.AppImage --smoke 8
+      - name: macOS dmg
+        if: runner.os == 'macOS'
+        run: bash packaging/build_macos.sh
+      - name: Windows installer + portable zip
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          pyinstaller packaging/seatcrew.spec --noconfirm --distpath dist --workpath build
+          choco install innosetup -y --no-progress
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" "/DMyVersion=${{ steps.v.outputs.v }}" packaging\seatcrew.iss
+          Compress-Archive -Path dist\SeatCrew\* -DestinationPath "dist\SeatCrew-${{ steps.v.outputs.v }}-windows-portable.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: seatcrew-${{ matrix.os }}
+          path: |
+            dist/*.AppImage
+            dist/*.dmg
+            dist/*-setup.exe
+            dist/*-portable.zip
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with: { path: out, merge-multiple: true }
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: out/*
+          generate_release_notes: true

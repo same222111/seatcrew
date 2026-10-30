@@ -1,0 +1,12 @@
+{
+ "seat_chief": "comandante",
+ "seat_draft": "redacta el borrador",
+ "seat_factcheck": "verifica datos",
+ "seat_policy": "cumplimiento",
+ "seat_approve": "aprobación humana",
+ "seat_publish": "publica",
+ "seat_review": "control tras publicar",
+ "field_topic": "Tema",
+ "field_notes": "Notas / datos",
+ "field_sources": "Fuentes"
+}
