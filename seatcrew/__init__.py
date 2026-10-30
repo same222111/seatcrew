@@ -6,5 +6,5 @@ rules or by any LLM you assign to it, and AI can only make a decision more cauti
 
 Trading (examples/trading, the TradeCrew app) is the flagship showcase; content review and support triage show the
 same engine on other domains. Start with ARCHITECTURE.md and AGENTS.md."""
-__version__ = "0.7.0"
+__version__ = "0.7.1"
 from .core import Seat, HumanSeat, Chief, Workflow, Runner  # noqa: E402,F401
