@@ -2,7 +2,7 @@
 so the workflow can send the item back (VISUALS / VOICE / EDITOR / WRITER).
 
 checks: format (resolution, H.264, yuv420p, fps), duration (vs plan and template range), source resolution (upscaling),
-sharpness (Laplacian variance per shot), black frames, frozen frames, audio clipping (true peak), loudness (-14 LUFS +-1),
+sharpness (Laplacian variance per shot), continuity (characters vs locked refs, set sheet, drift, glitches, stray text - see continuity.py), black frames, frozen frames, audio clipping (true peak), loudness (-14 LUFS +-1),
 narration silence gaps, subtitle-voice sync (each cue starts on speech; cues inside the video), character voice consistency, draft label."""
 from pathlib import Path
 import re, subprocess
@@ -69,7 +69,8 @@ def check(manifest, plan=None, **opts):
     R.append(_chk("clipping", tp <= o["max_true_peak"], "editor", f"true peak {tp:.1f} dBTP (max {o['max_true_peak']:g})", tp))
     # narration: silence gaps + subtitle sync on the voice stem
     vs = manifest.get("voice_stem"); words = manifest.get("words") or []
-    if vs and words:
+    if manifest.get("external"): R.append(_chk("voice_present", True, "voice", "external video - narration checks skipped", severity="info"))
+    elif vs and words:
         err = ff.run(["-i", vs, "-af", "silencedetect=noise=-38dB:d=0.12", "-f", "null", "-"])
         sil = [(a_, b_ if b_ is not None else manifest["total"]) for a_, b_ in _intervals(err, "silence_start", "silence_end")]
         first, last = words[0]["start"], words[-1]["end"]
@@ -96,6 +97,11 @@ def check(manifest, plan=None, **opts):
         clash = [" = ".join(v) for v in same.values() if len(v) > 1]
         R.append(_chk("voice_consistency", not bad, "voice", ("; ".join(bad)) if bad else f"{len(per)} character(s), one voice each" + (f" (same voice id: {', '.join(clash)} - differ by pitch/rate only)" if clash else ""),
                       {sp: sorted(map(list, k)) for sp, k in per.items()}))
+    cont = manifest.get("continuity")
+    if cont:
+        from . import continuity as CT
+        for c in CT.analyse(path, cont.get("shots") or shots, cont.get("refs"), cont.get("set_sheet"), cont.get("thresholds")):
+            R.append(_chk(c["name"], c["ok"], c["seat"], c["detail"], c["value"], c["severity"]))
     R.append(_chk("final_quality", not manifest.get("draft"), "visuals", "final backends" if not manifest.get("draft") else
                   "DRAFT PREVIEW - offline voice/visuals; not final quality", severity="draft"))
     fails = [c for c in R if not c["ok"] and c["severity"] == "fail"]
@@ -103,3 +109,14 @@ def check(manifest, plan=None, **opts):
     back = min((c["seat"] for c in fails), key=order.index) if fails else None
     return dict(passed=not fails, draft=bool(manifest.get("draft")), send_back=back, checks=R,
                 summary=("PASS" if not fails else f"FAIL -> {back.upper()}: " + "; ".join(f"{c['name']}: {c['detail']}" for c in fails if c["seat"] == back)) + (" [DRAFT]" if manifest.get("draft") else ""))
+
+def check_external(video, storyboard=None, refs=None, set_sheet=None, **opts):
+    """QC a finished video that was not assembled by EDITOR (e.g. made by hand): format, loudness, black/frozen, sharpness
+    and the continuity checks. storyboard gives shot timing + who is in each shot."""
+    from . import continuity as CT
+    d = ff.probe(video); v = next(s for s in d["streams"] if s["codec_type"] == "video"); total = float(d["format"]["duration"])
+    fps = (lambda n, m: n / m if m else 0)(*map(int, v.get("r_frame_rate", "0/1").split("/")))
+    shots = CT.storyboard_shots(storyboard, total) if storyboard else [dict(id="s01", start=0.0, dur=total, characters=[])]
+    man = dict(output=str(video), size=(int(v["width"]), int(v["height"])), fps=fps, total=total, external=True,
+               shots=[dict(s, transition="cut") for s in shots], continuity=dict(shots=shots, refs=refs, set_sheet=set_sheet))
+    return check(man, dict(total_sec=(1, 600)), **opts)

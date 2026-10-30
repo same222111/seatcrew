@@ -13,7 +13,8 @@ def frames(video, times, w=W, h=H):
     out = []
     for t in times:
         try:
-            r = subprocess.run(["ffmpeg", "-v", "error", "-ss", f"{max(0.0, t):.3f}", "-i", str(video), "-frames:v", "1", "-vf", f"scale={w}:{h}",
+            seek = ["-ss", f"{t:.3f}"] if t and t > 0 else []
+            r = subprocess.run(["ffmpeg", "-v", "error", *seek, "-i", str(video), "-frames:v", "1", "-vf", f"scale={w}:{h}",
                                 "-f", "rawvideo", "-pix_fmt", "rgb24", "-"], capture_output=True, timeout=60)
         except (OSError, subprocess.TimeoutExpired): r = None
         out.append(np.frombuffer(r.stdout, np.uint8).reshape(h, w, 3) if r and len(r.stdout) == w * h * 3 else None)

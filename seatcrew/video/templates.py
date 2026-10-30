@@ -18,4 +18,12 @@ TEMPLATES = {
         bgm_gain_db=-15, max_words_per_sentence=12,
         arc=["hook: the problem in one line", "meet the product", "key benefit 1", "key benefit 2", "proof / detail", "call to action"],
         visual_style="premium product photography, studio lighting, sharp focus, minimal set, high-end commercial look"),
+    "dialogue_scene": dict(
+        label="Dialogue scene (cast)", wpm=180, shots=(4, 14), shot_sec=(1.5, 7.0), total_sec=(10, 120), camera="static",
+        cameras=["static", "push_in", "static", "static"], transition="cut", transition_sec=0.0,
+        bgm_gain_db=-18, no_music=True, max_words_per_sentence=22, aspect="16:9", room_tone_db=-42, reverb=0.12, needs_cast=True,
+        coverage=["establishing wide: everyone at the table", "over-the-shoulder on the speaker", "reverse shot: the listener reacts",
+                  "close-up on the speaker", "two-shot", "reaction close-up", "wide for the punchline"],
+        arc=["establishing wide", "the question", "the deflection", "the reveal", "the reactions", "the twist / punchline"],
+        visual_style="naturalistic film look, motivated practical lighting, 35mm, shallow depth of field, consistent set and wardrobe, no on-screen text"),
 }
