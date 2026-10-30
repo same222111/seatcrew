@@ -272,6 +272,10 @@ class Assistant:
                 "Never ask for or repeat API keys - tell users to use the setup wizard or AI Seats tab. "
                 "You may call ONE tool. Reply ONLY with JSON: {\"reply\": \"...\", \"tool\": null | \"who_decides\" | \"troubleshoot\" | \"create_workflow\" | \"set_config\" | \"run_sample\", \"args\": {}}. "
                 "create_workflow args: {\"yaml\": \"<SeatCrew workflow.yaml: name (snake_case), title, submit [{name,label}], seats [{name, job, rules:[{require:[f]}|{max_len:{field,max}}|{min_len:{field,min}}|{block_if_match:{field,pattern,reason}}|{require_match:{field,pattern,reason}}], ai:{labels,block,prompt}} or {name, job, human: true}], chain [seat names], sample_items [..]>\"}. "
+                + ("This is a VIDEO STUDIO workflow: to make a video call run_sample with args {\"data\": {\"topic\": \"...\", \"notes\": \"optional script\", \"template\": \"emotional_story|knowledge_explainer|product_promo\", \"aspect\": \"9:16|16:9\"}}; "
+                   "to adjust it use set_config on settings (template, aspect, tts_backend, visuals_backend, video_model, clips_dir, bgm_path, crf...). Quality matters: offline/draft output is labeled DRAFT PREVIEW and is not final; "
+                   "final quality needs ElevenLabs/OpenAI/edge-tts voice and real clips (own folder, Replicate video model, or OpenAI/Stability images). "
+                   if getattr(wf, "studio", None) == "video" else "") +
                 "set_config args: {\"patch\": {partial config, e.g. {\"display\":{\"theme\":\"light\"}} or {\"seats\":{\"risk\":{\"provider\":\"ollama\"}}} or {\"settings\":{...}}}}. "
                 "run_sample args: {} or {\"data\": {...}}. Changing tools are only PROPOSED; the user confirms in the UI. Context: " + json.dumps(ctx, ensure_ascii=False, default=str)[:6000])
 
@@ -314,10 +318,32 @@ class Assistant:
         ql = q.lower()
         if re.search(r"who decides|who.*decid|谁.*(决|定)|誰.*(決|定)|誰が|quién decide|assign|分工|分配", ql): return "who_decides", {}, ""
         if re.search(r"error|not work|broken|fail|troubleshoot|missing|key missing|报错|错误|不工作|失败|故障|エラー|error|falla", ql) and not re.search(r"create|创建|新建", ql): return "troubleshoot", {}, ""
+        vi = self.video_intent(q, ql)
+        if vi: return vi
         if re.search(r"(create|new|make|build).{0,20}(workflow|flow|pipeline)|创建|新建.*(工作流|流程)|建立.*流程|作って|crea(r)? un flujo", ql):
             return "create_workflow", dict(description=re.sub(r"^(please\s+)?(create|make|build)\s+(a|an)?\s*(new\s+)?(workflow|flow)\s*(that|to|for)?\s*", "", q, flags=re.I)), ""
         if re.search(r"run.*sample|try.*sample|运行.*(样例|示例)|試.*サンプル|ejecuta", ql): return "run_sample", {}, ""
         return None, {}, tx(self.lang, "offline") + "\n" + self.faq(q) if not self.hist[:-1] or len(self.hist) < 3 else self.faq(q)
+
+    def video_intent(self, q, ql):
+        """Video studio workflows: "make a video about X", "switch to 16:9", "use the product promo template"."""
+        wf = self.ctx.get("wf")
+        if getattr(wf, "studio", None) != "video": return None
+        tpl = ("product_promo" if re.search(r"promo|product|广告|宣传|產品|宣傳|プロモ|商品|producto", ql) else
+               "emotional_story" if re.search(r"story|emotional|故事|情感|ストーリー|物語|historia", ql) else
+               "knowledge_explainer" if re.search(r"explain|knowledge|science|讲解|知识|科普|講解|知識|解説|explica", ql) else None)
+        m = (re.search(r"(?:video|short|clip|reel)\s+(?:about|on|explaining|for)\s+(.+)", q, re.I) or re.search(r"(?:关于|關於)(.+?)的(?:短)?(?:视频|影片)", q)
+             or re.search(r"(.+?)(?:についての|について|の)(?:動画|ショート)", q) or re.search(r"(?:vídeo|video)\s+sobre\s+(.+)", q, re.I)
+             or re.search(r"(?:做|生成|制作|製作)(?:一个|一支|一條|一条)?(.+?)(?:的)?(?:短)?(?:视频|影片)", q))
+        if m and re.search(r"make|create|generate|produce|做|生成|制作|製作|作って|作成|haz|crea|genera|video|vídeo|视频|影片|動画", ql):
+            topic = m.group(1).strip(" .?!。？！\"'")[:200]
+            if topic: return "run_sample", dict(data=dict(topic=topic, notes="", template=tpl or self.ctx["config"].data["settings"]["template"], aspect=self.ctx["config"].data["settings"]["aspect"])), ""
+        patch = {}
+        if re.search(r"16:9|landscape|horizontal|横屏|橫式|横向|横長|horizontal", ql): patch["aspect"] = "16:9"
+        elif re.search(r"9:16|vertical|portrait|竖屏|直式|縦|vertical", ql): patch["aspect"] = "9:16"
+        if tpl and re.search(r"template|style|模板|範本|风格|テンプレ|plantilla|default|默认", ql): patch["template"] = tpl
+        if patch: return "set_config", dict(patch=dict(settings=patch)), ""
+        return None
 
     def confirm(self, mid, approve):
         with self.lock:

@@ -3,7 +3,7 @@ from seatcrew import llm
 
 @pytest.fixture(autouse=True)
 def no_keys(monkeypatch):
-    for k in ["OPENAI_API_KEY", "ANTHROPIC_API_KEY", "GEMINI_API_KEY", "XAI_API_KEY", "DEEPSEEK_API_KEY", "CUSTOM_API_KEY"]: monkeypatch.delenv(k, raising=False)
+    for k in ["OPENAI_API_KEY", "ANTHROPIC_API_KEY", "GEMINI_API_KEY", "XAI_API_KEY", "DEEPSEEK_API_KEY", "CUSTOM_API_KEY", "ELEVENLABS_API_KEY", "REPLICATE_API_TOKEN", "STABILITY_API_KEY"]: monkeypatch.delenv(k, raising=False)
     llm.BUDGET.__init__()
 
 @pytest.fixture

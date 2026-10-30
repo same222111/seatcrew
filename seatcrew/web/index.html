@@ -179,7 +179,8 @@ document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{document.query
 async function load(){META=await get('/api/config');DEF=META.definition;document.title=DEF.title+' · SeatCrew';$('title').textContent='▌'+DEF.title;$('heroTitle').textContent=DEF.title;$('heroVer').textContent='v'+META.version;$('crumbWf').textContent=DEF.title;$('wfname').textContent=DEF.name;
  const lo=Object.entries(META.languages).map(([k,v])=>`<option value="${k}">${v}</option>`).join('');['langSel','setLang'].forEach(i=>$(i).innerHTML=lo);
  $('submitPn').style.display=DEF.submit.length?'':'none';
- $('form').innerHTML=DEF.submit.map(f=>`<div class="row" style="display:block"><label>${esc(LOC['field_'+f.name]||f.label||f.name)}</label>${f.type=='textarea'?`<textarea data-f="${f.name}"></textarea>`:`<input data-f="${f.name}" style="width:100%">`}</div>`).join('');
+ $('form').innerHTML=DEF.submit.map(f=>`<div class="row" style="display:block"><label>${esc(LOC['field_'+f.name]||f.label||f.name)}</label>${f.type=='textarea'?`<textarea data-f="${f.name}"></textarea>`:f.type=='select'?`<select data-f="${f.name}" style="width:100%">${(f.options||[]).map(o=>`<option value="${esc(o)}">${esc(LOC['opt_'+o]||o)}</option>`).join('')}</select>`:`<input data-f="${f.name}" style="width:100%">`}</div>`).join('');
+ if(DEF.studio&&!window.STUDIO_LOADED){window.STUDIO_LOADED=1;const sc=document.createElement('script');sc.src='/studio.js';document.body.appendChild(sc)}
  await setLang(META.language||'en',false)}
 function renderCfg(){if(!META)return;const P=['rules',...Object.keys(META.providers)];
  $('form').querySelectorAll('[data-f]').forEach(e=>{const f=DEF.submit.find(x=>x.name==e.dataset.f);e.previousElementSibling.textContent=LOC['field_'+f.name]||f.label||f.name});
@@ -191,7 +192,7 @@ function renderCfg(){if(!META)return;const P=['rules',...Object.keys(META.provid
   const r=await post('/api/test-connection',{provider:p,model:document.querySelector(`[data-sm=${n}]`).value});$('tr-'+n).textContent=r.ok?`✓ ${r.model} "${r.reply}" ${r.latency_ms}ms`:'✗ '+r.error});
  $('keys').innerHTML=Object.entries(META.keys).map(([k,ok])=>`<span class="pill" style="margin-right:6px;color:${ok?'var(--acc)':'var(--dim)'}">${k}: ${ok?T('key_set'):T('key_missing')}</span>`).join('');
  $('interval').value=META.interval;$('autorun').checked=META.auto_run!==false;$('autorun').parentElement.style.display=META.auto_run==null?'none':'';
- $('wfset').innerHTML=Object.entries(META.settings||{}).map(([k,v])=>`<div class="row"><label style="min-width:200px">${esc(LOC['set_'+k]||k)}</label>${typeof v=='boolean'?`<input type=checkbox data-ws="${k}" data-ty="b" ${v?'checked':''}>`:Array.isArray(v)?`<input data-ws="${k}" data-ty="l" value="${esc(v.join(', '))}" style="width:420px">`:`<input data-ws="${k}" data-ty="${typeof v=='number'?'n':'s'}" value="${esc(v)}">`}</div>`).join('')}
+ $('wfset').innerHTML=Object.entries(META.settings||{}).map(([k,v])=>`<div class="row"><label style="min-width:200px">${esc(LOC['set_'+k]||k)}</label>${(DEF.choices||{})[k]?`<select data-ws="${k}" data-ty="s">${DEF.choices[k].map(o=>`<option value="${esc(o)}" ${o==v?'selected':''}>${esc(LOC['opt_'+o]||o)}</option>`).join('')}</select>`:typeof v=='boolean'?`<input type=checkbox data-ws="${k}" data-ty="b" ${v?'checked':''}>`:Array.isArray(v)?`<input data-ws="${k}" data-ty="l" value="${esc(v.join(', '))}" style="width:420px">`:`<input data-ws="${k}" data-ty="${typeof v=='number'?'n':'s'}" value="${esc(v)}">`}</div>`).join('')}
 $('saveSeats').onclick=async()=>{const seats={};DEF.seats.forEach(s=>seats[s.name]={provider:document.querySelector(`[data-sp=${s.name}]`).value,model:document.querySelector(`[data-sm=${s.name}]`).value.trim(),prompt:document.querySelector(`[data-spr=${s.name}]`).value});
  const r=await post('/api/config',{seats});$('seatmsg').textContent=r.ok?T('saved'):'✗ '+r.error;if(r.ok){META=await get('/api/config');renderCfg()}};
 $('saveSet').onclick=async()=>{const settings={};document.querySelectorAll('[data-ws]').forEach(e=>{const t=e.dataset.ty;settings[e.dataset.ws]=t=='b'?e.checked:t=='l'?e.value.split(',').map(x=>x.trim()).filter(Boolean):t=='n'?+e.value:e.value});
@@ -199,7 +200,7 @@ $('saveSet').onclick=async()=>{const settings={};document.querySelectorAll('[dat
  const r=await post('/api/config',b);$('setmsg').textContent=r.ok?T('saved'):'✗ '+r.error;if(r.ok){META=await get('/api/config');renderCfg()}};
 $('runNow').onclick=()=>post('/api/run',{}).then(()=>toast(T('run_now')+' ✓'));
 $('submitBtn').onclick=async()=>{const data={};$('form').querySelectorAll('[data-f]').forEach(e=>data[e.dataset.f]=e.value);const r=await post('/api/submit',{data});
- if(r.ok){$('form').querySelectorAll('[data-f]').forEach(e=>e.value='');toast('#'+r.id+' ✓')}else toast('✗ '+r.error)};
+ if(r.ok){$('form').querySelectorAll('input[data-f],textarea[data-f]').forEach(e=>e.value='');toast('#'+r.id+' ✓')}else toast('✗ '+r.error)};
 async function decide(id,ok){const r=await post('/api/decide',{id,approve:ok,note:(document.querySelector(`[data-note="${id}"]`)||{}).value||''});if(!r.ok)toast('✗ '+r.error);tick()}
 function itemCard(o){const ch=o.chain||[],bl=ch.find(c=>!c.ok),wait=o.pending!=null,ws=wait?DEF.chain[o.pending]:null;
  const st=bl?`<div class="stat bad">${T('blocked_at')} ${bl.seat.toUpperCase()}</div>`:wait?`<div class="stat wait">${T('waiting_at')} ${ws.toUpperCase()}</div>`:/^(done|filled)$/.test(o.status)?`<div class="stat good">✓ ${T('status_done')}</div>`:`<div class="dim">${esc(o.status)}</div>`;

@@ -46,7 +46,34 @@ def make_handler(wf):
                 return self.send(dict(profiles=PF.list_profiles(wf.name), current=PF.current(cfg), defaults=PF.defaults(cfg),
                                       folder=str(PF.folder(wf.name)), schema=PF.SCHEMA, themes=PF.THEMES, densities=PF.DENSITIES))
             if p.startswith("/api/locale/"): return self.send(i18n.load(p.rsplit("/", 1)[1], wf.locale_dirs))
+            if p.startswith("/media/") and hasattr(wf, "media_file") and p.count("/") == 3:
+                _, _, iid, name = p.split("/"); f = wf.media_file(iid, name)
+                if f: return self.send_file(f)
+            if p == "/studio.js" and getattr(wf, "studio", None): return self.send((WEB / "studio.js").read_bytes(), ctype="application/javascript; charset=utf-8")
             self.send({"error": "not found"}, 404)
+        def send_file(self, f):
+            """Static file with HTTP Range support (video seeking)."""
+            size = f.stat().st_size; ct = {".mp4": "video/mp4", ".json": "application/json"}.get(f.suffix, "application/octet-stream")
+            rng = self.headers.get("Range"); start, end = 0, size - 1
+            m = __import__("re").match(r"bytes=(\d*)-(\d*)", rng or "")
+            if m and (m.group(1) or m.group(2)):
+                if m.group(1): start = int(m.group(1)); end = int(m.group(2)) if m.group(2) else size - 1
+                else: start = max(0, size - int(m.group(2)))
+                end = min(end, size - 1)
+                if start > end: self.send_response(416); self.send_header("Content-Range", f"bytes */{size}"); self.end_headers(); return
+                self.send_response(206); self.send_header("Content-Range", f"bytes {start}-{end}/{size}")
+            else: self.send_response(200)
+            self.send_header("Content-Type", ct); self.send_header("Accept-Ranges", "bytes"); self.send_header("Content-Length", str(end - start + 1)); self.send_header("Cache-Control", "no-store")
+            if "download" in (self.path.split("?", 1) + [""])[1]: self.send_header("Content-Disposition", f'attachment; filename="{f.name}"')
+            self.end_headers()
+            with open(f, "rb") as fh:
+                fh.seek(start); left = end - start + 1
+                while left > 0:
+                    b = fh.read(min(1 << 16, left))
+                    if not b: break
+                    try: self.wfile.write(b)
+                    except (BrokenPipeError, ConnectionResetError): return
+                    left -= len(b)
         def do_POST(self):
             p = self.path
             try:

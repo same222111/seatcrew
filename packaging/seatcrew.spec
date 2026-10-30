@@ -7,9 +7,9 @@ from PyInstaller.utils.hooks import collect_submodules, collect_data_files
 ROOT = Path(SPECPATH).parent
 ICON = {"win32": "icon.ico", "darwin": "icon.icns"}.get(sys.platform, "icon.png")
 
-datas = [(str(ROOT / "seatcrew" / d), f"seatcrew/{d}") for d in ("web", "locales", "templates", "assets")]
+datas = [(str(ROOT / "seatcrew" / d), f"seatcrew/{d}") for d in ("web", "locales", "templates", "assets", "video/fonts")]
 datas += [(str(ROOT / "examples" / "trading" / "tradecrew" / d), f"tradecrew/{d}") for d in ("web", "locales")]
-for ex in ("trading", "content_review", "support_triage"):  # workflow files are loaded by path at runtime
+for ex in ("trading", "content_review", "support_triage", "short_video"):  # workflow files are loaded by path at runtime
     for f in (ROOT / "examples" / ex).rglob("*"):
         if f.is_file() and "tests" not in f.parts and "__pycache__" not in f.parts and f.suffix in (".py", ".yaml", ".json", ".md"):
             datas.append((str(f), str(Path("seatcrew_examples") / f.relative_to(ROOT / "examples").parent)))
