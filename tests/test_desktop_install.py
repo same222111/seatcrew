@@ -72,9 +72,9 @@ def test_gui_backend():
 # ---------- installers ----------
 def sh(*args, home):
     env = {**os.environ, "HOME": str(home)}; env.pop("XDG_DATA_HOME", None)
-    return subprocess.run(["bash", str(ROOT / "install.sh"), *args], capture_output=True, text=True, env=env, timeout=60)
+    return subprocess.run(["bash", str(ROOT / "install.sh"), *args], capture_output=True, text=True, encoding="utf-8", env=env, timeout=60)
 
-@pytest.mark.skipif(not shutil.which("bash"), reason="bash missing")
+@pytest.mark.skipif(sys.platform == "win32" or not shutil.which("bash"), reason="install.sh is for macOS/Linux")
 @pytest.mark.parametrize("osname,shortcut", [("Linux", "Desktop/seatcrew.desktop"), ("Darwin", "Desktop/SeatCrew.app")])
 def test_install_sh_dry_run_plans_everything_and_writes_nothing(tmp_path, osname, shortcut):
     r = sh("--dry-run", "--os", osname, home=tmp_path)
@@ -86,6 +86,7 @@ def test_install_sh_dry_run_plans_everything_and_writes_nothing(tmp_path, osname
     else: assert "Applications/SeatCrew.app/Contents/Info.plist" in o
     assert list(tmp_path.iterdir()) == []                                      # nothing written
 
+@pytest.mark.skipif(sys.platform == "win32" or not shutil.which("bash"), reason="install.sh is for macOS/Linux")
 def test_install_sh_options(tmp_path):
     r = sh("--dry-run", "--no-shortcut", "--source", str(ROOT), home=tmp_path)
     assert r.returncode == 0 and "shortcuts=0" in r.stdout and f"{ROOT}[desktop]" in r.stdout
@@ -95,7 +96,7 @@ def test_install_sh_options(tmp_path):
 def test_install_ps1_dry_run(tmp_path):
     pw = shutil.which("pwsh") or "/tmp/pwsh/pwsh"
     env = {**os.environ, "LOCALAPPDATA": str(tmp_path / "local"), "HOME": str(tmp_path)}
-    r = subprocess.run([pw, "-NoProfile", "-File", str(ROOT / "install.ps1"), "-DryRun"], capture_output=True, text=True, env=env, timeout=120)
+    r = subprocess.run([pw, "-NoProfile", "-File", str(ROOT / "install.ps1"), "-DryRun"], capture_output=True, text=True, encoding="utf-8", env=env, timeout=120)
     assert r.returncode == 0, r.stdout + r.stderr
     assert "SeatCrew.lnk" in r.stdout and "shortcuts=2 dry_run=1" in r.stdout and "pythonw.exe -m seatcrew.desktop" in r.stdout
     assert not (tmp_path / "local").exists()

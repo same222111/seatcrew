@@ -45,7 +45,7 @@ run mkdir -p "$APPDIR"
 run "$PY" -m venv "$VENV"
 say "3/4 installing $SPEC"
 run "$VENV/bin/python" -m pip install --upgrade --quiet pip
-run "$VENV/bin/python" -m pip install --upgrade --quiet "$SPEC" "${EXTRA[@]}"
+run "$VENV/bin/python" -m pip install --upgrade --quiet "$SPEC" ${EXTRA[@]+"${EXTRA[@]}"}
 LAUNCHER="$VENV/bin/seatcrew-desktop"
 ICON_DIR="$APPDIR/icon"
 run mkdir -p "$ICON_DIR"
