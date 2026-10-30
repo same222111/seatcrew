@@ -16,6 +16,7 @@ from .llm import PROVIDERS, key_status
 APP = "SeatCrew"
 HERE = Path(__file__).parent
 ICON = HERE / "assets" / "icon.png"
+NEON = HERE / "web" / "neon.css"
 
 def default_dir():
     """Platform default data folder (also where the pointer file lives)."""
@@ -149,7 +150,7 @@ class App:
                     last=self.prefs.get("last"), workflows=workflows(self.home), data_dir=pretty(self.home),
                     data_source="fixed" if self.fixed_home else data_location()[1], version=__version__,
                     providers={k: dict(label=v.get("label", k), key_env=v.get("key_env")) for k, v in PROVIDERS.items()},
-                    keys=key_status(), running=list(self.open))
+                    keys=key_status(), running=list(self.open), animations=self.prefs.get("animations", True))
 
     def setup(self, b):
         lang = b.get("language", "en")
@@ -194,6 +195,7 @@ class App:
             def do_GET(self):
                 p = self.path.split("?")[0]
                 if p in ("/", "/index.html"): return self.send(page, ctype="text/html; charset=utf-8")
+                if p == "/neon.css": return self.send(NEON.read_bytes(), ctype="text/css; charset=utf-8")
                 if p == "/icon.png": return self.send(ICON.read_bytes(), ctype="image/png")
                 if p == "/api/home": return self.send(app.info())
                 self.send({"error": "not found"}, 404)
@@ -201,6 +203,9 @@ class App:
                 try:
                     b = json.loads(self.rfile.read(int(self.headers.get("Content-Length") or 0)) or b"{}")
                     if self.path == "/api/setup": return self.send(app.setup(b))
+                    if self.path == "/api/prefs":
+                        if not isinstance(b.get("animations"), bool): raise ValueError("animations must be true or false")
+                        app.save_prefs(animations=b["animations"]); return self.send(dict(ok=True, animations=b["animations"]))
                     if self.path == "/api/datadir": return self.send(app.change_data(b.get("path", ""), bool(b.get("move"))))
                     if self.path == "/api/open": return self.send(dict(ok=True, url=app.open_workflow(b["workflow"])))
                     self.send({"error": "not found"}, 404)

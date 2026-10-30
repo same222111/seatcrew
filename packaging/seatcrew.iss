@@ -1,7 +1,7 @@
 ; Inno Setup script - Windows installer with Start-menu + optional desktop shortcut.
 ;   pyinstaller packaging\seatcrew.spec --noconfirm   then   iscc /DMyVersion=0.4.0 packaging\seatcrew.iss
 #ifndef MyVersion
-  #define MyVersion "0.5.0"
+  #define MyVersion "0.6.0"
 #endif
 [Setup]
 AppId={{6B0E2F3C-5EA7-4C2E-9A1D-5EA7C2E00001}

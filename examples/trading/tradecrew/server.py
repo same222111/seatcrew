@@ -10,6 +10,7 @@ from .strategies import STRATEGIES
 from . import backtest as BT
 
 WEB = Path(__file__).parent / "web"
+from seatcrew.server import NEON  # shared "Night Shift" stylesheet
 
 def make_handler(cfg, team):
     lab = dict(running=False, result=None, error=None, log=[])
@@ -33,6 +34,7 @@ def make_handler(cfg, team):
         def do_GET(self):
             p = self.path.split("?")[0]
             if p in ("/", "/index.html"): return self.send((WEB / "index.html").read_bytes(), ctype="text/html; charset=utf-8")
+            if p == "/neon.css": return self.send(NEON.read_bytes(), ctype="text/css; charset=utf-8")
             if p == "/api/state": return self.send(team.snapshot())
             if p == "/api/config": return self.send(dict(config=cfg.data, keys=key_status(), providers=PROVIDERS, seats=SEATS, languages=LANGUAGES,
                                                           default_prompts=DEFAULT_PROMPTS, strategies={k: v["label"] for k, v in STRATEGIES.items()}, version=__version__))

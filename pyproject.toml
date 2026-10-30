@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "seatcrew"
-version = "0.5.0"
+version = "0.6.0"
 description = "A framework for multi-AI seat workflows: every job gets a seat, every item walks a check chain, any LLM (or plain rules) per seat. Flagship example: TradeCrew paper-trading terminal."
 readme = "README.md"
 license = {text = "MIT"}
@@ -32,7 +32,7 @@ packages = ["seatcrew", "tradecrew", "seatcrew_examples"]
 package-dir = {"tradecrew" = "examples/trading/tradecrew", "seatcrew_examples" = "examples"}
 
 [tool.setuptools.package-data]
-seatcrew = ["web/*.html", "locales/*.json", "templates/*", "assets/*"]
+seatcrew = ["web/*.html", "web/*.css", "locales/*.json", "templates/*", "assets/*"]
 tradecrew = ["web/*.html", "locales/*.json"]
 seatcrew_examples = ["*/*.py", "*/*.yaml", "*/locales/*.json"]
 

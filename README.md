@@ -4,7 +4,9 @@
 
 > **Trading is the showcase, not the point.** The flagship example, [TradeCrew](examples/trading/README.md), is a complete multi-AI paper-trading terminal built on this engine. The same engine runs a content-review pipeline and a support-triage flow written in YAML only.
 
-![SeatCrew demo: seats light up, an item gets blocked](docs/demo.gif)
+![SeatCrew demo: home, open trading, the live check flow, a BLOCKED stamp, customize and share code](docs/demo.gif)
+
+*v0.6 "Night Shift" UI: seat cards with status badges, an animated check chain, live log. Animations follow `prefers-reduced-motion` and can be switched off (Settings → display → animations, or the **motion** button). [Watch the MP4](docs/demo.mp4).*
 
 ## Install (pick one)
 
@@ -88,6 +90,14 @@ Each workflow keeps its settings in `config.<name>.yaml` and its state in `state
 This repo is a **template**. Hand it to Codex, Claude, ChatGPT or Cursor together with a prompt from [CUSTOMIZE.md](CUSTOMIZE.md). [AGENTS.md](AGENTS.md) gives your AI the architecture map, the extension points and the rules it must keep. [ARCHITECTURE.md](ARCHITECTURE.md) explains how the engine works.
 
 ## Screenshots
+| Home | Live flow | Blocked check |
+|---|---|---|
+| ![](docs/screenshot-home.png) | ![](docs/screenshot-dashboard.png) | ![](docs/screenshot-blocked.png) |
+
+| Light theme | TradeCrew terminal | Share code |
+|---|---|---|
+| ![](docs/screenshot-light.png) | ![](docs/screenshot-tradecrew.png) | ![](docs/screenshot-share.png) |
+
 | Content review (human gate) | Support triage (YAML) | Trading on the generic dashboard | TradeCrew terminal |
 |---|---|---|---|
 | ![](docs/framework_content_review.png) | ![](docs/framework_support_triage.png) | ![](docs/framework_trading.png) | ![](docs/seats.png) |
@@ -124,6 +134,10 @@ MIT licensed. See [CONTRIBUTING.md](CONTRIBUTING.md).
 ---
 
 ## 中文说明
+![SeatCrew 演示](docs/demo.gif)
+
+v0.6 全新「Night Shift」界面:席位卡片带状态徽章,检查链动画实时流动,被拦截的项目会盖上 BLOCKED 印章。动画遵循系统「减少动态效果」设置,也可在设置里或点 **motion** 按钮关闭。
+
 **安装(三选一)**:① 把上面那段英文提示词复制给 Codex / Claude Code / Cursor,让它按 [INSTALL_WITH_AI.md](INSTALL_WITH_AI.md) 自动安装并在桌面放一个 SeatCrew 快捷方式;② 到 Releases 下载安装包(Windows `.exe`、macOS `.dmg`、Linux `.AppImage`),双击即可打开独立窗口,首次启动有向导;③ 终端一行命令 `install.sh` / `install.ps1`,或 `pipx install`。
 
 给 AI 的中文提示词(直接复制):

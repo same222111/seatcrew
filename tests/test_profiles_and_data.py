@@ -130,3 +130,14 @@ def test_installer_lets_user_pick_folder_without_admin():
     iss = (ROOT / "packaging/seatcrew.iss").read_text(encoding="utf-8")
     for s in ("PrivilegesRequired=lowest", "DisableDirPage=no", "UsePreviousAppDir=yes"): assert s in iss
     assert "portable.txt" in (ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8")
+
+def test_animations_toggle_validated_and_ui_respects_reduced_motion():
+    assert PF.DISPLAY_DEFAULTS["animations"] is True
+    PF.validate_display({**PF.DISPLAY_DEFAULTS, "animations": False})
+    for bad in ("no", 0, None):
+        with pytest.raises(ValueError): PF.validate_display({**PF.DISPLAY_DEFAULTS, "animations": bad})
+    root = Path(__file__).resolve().parent.parent
+    css = (root / "seatcrew/web/neon.css").read_text(encoding="utf-8")
+    assert "prefers-reduced-motion" in css and "body.noanim" in css
+    for page in ("seatcrew/web/index.html", "examples/trading/tradecrew/web/index.html"):
+        h = (root / page).read_text(encoding="utf-8"); assert "motionBtn" in h and "/neon.css" in h and "noanim" in h

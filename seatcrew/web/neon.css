@@ -1,0 +1,29 @@
+/* SeatCrew "Night Shift" look - shared by the launcher, the generic dashboard and the TradeCrew terminal.
+   Pure CSS, system fonts, no external assets. Motion is disabled by prefers-reduced-motion or body.noanim. */
+:root{--bg:#07090d;--pn:#0d1118;--pn2:#111725;--ln:#1e2736;--fg:#dbe7f3;--dim:#7d8ba1;--acc:#3dffa0;--warn:#ffc94d;--bad:#ff4f6d;--blue:#5cc8ff;--vio:#b18cff;--or:#ff9a3d;
+ --glow:0 0 18px;--r:12px;--sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans","PingFang SC","Microsoft YaHei",sans-serif;--mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace}
+body{background:radial-gradient(1200px 600px at 70% -10%,#12203a55,transparent),radial-gradient(900px 500px at -10% 110%,#0f2e2255,transparent),var(--bg);color:var(--fg);font-family:var(--mono)}
+body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:50;background:repeating-linear-gradient(0deg,#ffffff06 0 1px,transparent 1px 3px);mix-blend-mode:overlay}
+.nx-card{background:linear-gradient(180deg,var(--pn2),var(--pn));border:1px solid var(--ln);border-radius:var(--r);transition:border-color .35s,box-shadow .35s,transform .35s}
+.nx-h{font:600 11px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin:0 0 10px;display:flex;align-items:center;gap:8px}
+.nx-badge{font:700 10px var(--mono);letter-spacing:.08em;padding:2px 7px;border-radius:5px;border:1px solid currentColor;text-transform:uppercase;white-space:nowrap}
+.b-idle{color:var(--dim)}.b-live{color:var(--blue);box-shadow:var(--glow) #5cc8ff44}.b-pass{color:var(--acc)}.b-block{color:var(--bad);box-shadow:var(--glow) #ff4f6d44}.b-wait{color:var(--warn)}.b-human{color:var(--vio)}
+.nx-dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--acc);box-shadow:0 0 10px var(--acc);animation:nxPulse 1.6s ease-in-out infinite}
+.nx-dot.off{background:var(--dim);box-shadow:none;animation:none}
+.nx-big{font:700 clamp(26px,3.2vw,42px)/1 var(--sans);letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.nx-cursor{display:inline-block;width:8px;height:14px;background:var(--acc);vertical-align:-2px;animation:nxBlink 1s steps(1) infinite}
+.nx-stamp{position:absolute;font:800 18px var(--mono);letter-spacing:.12em;color:var(--bad);border:3px solid var(--bad);padding:3px 12px;border-radius:6px;transform:rotate(-9deg);
+ text-shadow:0 0 10px #ff4f6d99;box-shadow:0 0 18px #ff4f6d55,inset 0 0 10px #ff4f6d33;background:#1a070c;pointer-events:none;animation:nxStamp .45s cubic-bezier(.2,1.6,.4,1) both}
+@keyframes nxPulse{50%{opacity:.45;transform:scale(.85)}}@keyframes nxBlink{50%{opacity:0}}
+@keyframes nxStamp{from{opacity:0;transform:rotate(-9deg) scale(2.2)}to{opacity:1;transform:rotate(-9deg) scale(1)}}
+@keyframes nxRing{from{transform:scale(1);opacity:.75}to{transform:scale(1.7);opacity:0}}
+@keyframes nxDash{to{stroke-dashoffset:-48}}@keyframes nxIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.nx-in{animation:nxIn .4s ease both}
+/* light + high contrast stay readable: glows off, solid surfaces */
+body[data-theme=light]{--bg:#eef2f7;--pn:#ffffff;--pn2:#ffffff;--ln:#cdd6e2;--fg:#132033;--dim:#56657a;--acc:#0a8f55;--warn:#a46a00;--bad:#c8233f;--blue:#0f6db8;--vio:#6b43c9;--or:#c35a00;--glow:0 0 0}
+body[data-theme=light]::after,body[data-theme=contrast]::after{display:none}
+body[data-theme=light]{background:var(--bg)}body[data-theme=light] .nx-stamp{background:#fff;text-shadow:none;box-shadow:none}
+body[data-theme=contrast]{--bg:#000;--pn:#000;--pn2:#000;--ln:#a0a0a0;--fg:#fff;--dim:#e0e0e0;--acc:#00ff6a;--warn:#ffe100;--bad:#ff3b3b;--blue:#4fd2ff;--vio:#d2b8ff;--glow:0 0 0;background:#000}
+/* motion off: user toggle (body.noanim) or OS setting */
+body.noanim *,body.noanim *::before,body.noanim *::after{animation:none!important;transition:none!important}body.noanim .nx-packet{display:none}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}.nx-packet{display:none}}

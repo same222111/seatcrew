@@ -116,5 +116,12 @@
  "cli_bind": "無法綁定 {addr}（{err}）。試試 --port 8788",
  "cli_saved": "已儲存 {path}。把 API Key 放進 .env（參考 .env.example），然後執行：tradecrew start",
  "back_home": "← 返回首頁",
- "home": "首頁"
+ "home": "首頁",
+ "tc_flow": "即時檢查鏈 · 最新訂單",
+ "tc_equity": "權益",
+ "tc_orders": "訂單",
+ "tc_filled": "已成交",
+ "tc_blocked": "被攔截",
+ "motion": "動效",
+ "stamp_blocked": "已攔截"
 }

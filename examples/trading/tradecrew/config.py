@@ -57,7 +57,7 @@ DEFAULTS = {
         "earnings_calendar": True,
     },
     "broker": {"mode": "paper", "live_adapter": None},
-    "display": {"theme": "dark", "font_size": 13, "density": "normal"},
+    "display": {"theme": "dark", "font_size": 13, "density": "normal", "animations": True},
 }
 
 _lock = threading.Lock()

@@ -116,5 +116,12 @@
  "cli_bind": "{addr} にバインドできません（{err}）。--port 8788 をお試しください",
  "cli_saved": "{path} を保存しました。APIキーを .env に入れて（.env.example 参照）、tradecrew start を実行",
  "back_home": "← ホームに戻る",
- "home": "ホーム"
+ "home": "ホーム",
+ "tc_flow": "ライブチェックチェーン · 最新注文",
+ "tc_equity": "資産",
+ "tc_orders": "注文",
+ "tc_filled": "約定",
+ "tc_blocked": "ブロック",
+ "motion": "モーション",
+ "stamp_blocked": "ブロック"
 }

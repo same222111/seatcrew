@@ -116,5 +116,12 @@
  "cli_bind": "无法绑定 {addr}（{err}）。试试 --port 8788",
  "cli_saved": "已保存 {path}。把 API Key 放进 .env（参考 .env.example），然后运行：tradecrew start",
  "back_home": "← 返回首页",
- "home": "首页"
+ "home": "首页",
+ "tc_flow": "实时检查链 · 最新订单",
+ "tc_equity": "权益",
+ "tc_orders": "订单",
+ "tc_filled": "已成交",
+ "tc_blocked": "被拦截",
+ "motion": "动效",
+ "stamp_blocked": "已拦截"
 }

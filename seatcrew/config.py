@@ -33,7 +33,7 @@ def base_defaults(seats, prompts=None, settings=None):
             "llm_limits": dict(LLM_LIMITS),
             "seats": {s: {"provider": "rules", "model": "", "prompt": prompts.get(s, f"You are the {s.upper()} seat.")} for s in seats},
             "settings": copy.deepcopy(settings or {}),
-            "display": {"theme": "dark", "font_size": 13, "density": "normal"}}
+            "display": {"theme": "dark", "font_size": 13, "density": "normal", "animations": True}}
 
 class Config:
     """A YAML-backed settings dict. update() deep-merges a partial patch, validates and saves atomically."""

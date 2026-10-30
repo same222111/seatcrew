@@ -116,5 +116,12 @@
  "cli_bind": "No se puede usar {addr} ({err}). Prueba --port 8788",
  "cli_saved": "Guardado {path}. Pon las claves en .env (ver .env.example) y ejecuta: tradecrew start",
  "back_home": "← Volver al inicio",
- "home": "Inicio"
+ "home": "Inicio",
+ "tc_flow": "cadena de control en vivo · última orden",
+ "tc_equity": "capital",
+ "tc_orders": "órdenes",
+ "tc_filled": "ejecutadas",
+ "tc_blocked": "bloqueadas",
+ "motion": "animación",
+ "stamp_blocked": "BLOQUEADO"
 }

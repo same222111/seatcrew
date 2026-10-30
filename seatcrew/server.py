@@ -8,6 +8,7 @@ from .config import LANGUAGES
 from .llm import PROVIDERS, key_status, test_connection
 
 WEB = Path(__file__).parent / "web"
+NEON = WEB / "neon.css"
 
 def make_handler(wf):
     cfg = wf.cfg
@@ -21,6 +22,7 @@ def make_handler(wf):
         def do_GET(self):
             p = self.path.split("?")[0]
             if p in ("/", "/index.html"): return self.send((WEB / "index.html").read_bytes(), ctype="text/html; charset=utf-8")
+            if p == "/neon.css": return self.send(NEON.read_bytes(), ctype="text/css; charset=utf-8")
             if p == "/api/state": return self.send(wf.snapshot())
             if p == "/api/config":
                 c = cfg.data

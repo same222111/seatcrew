@@ -108,3 +108,12 @@ def test_packaging_files_are_consistent():
     rel = (ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8")
     for s in ("tags:", "windows-latest", "macos-latest", "ubuntu-", "build_appimage.sh", "seatcrew.iss", "build_macos.sh"): assert s in rel
     for f in ("icon.png", "icon.ico", "icon.icns"): assert (ROOT / "seatcrew/assets" / f).stat().st_size > 1000
+
+def test_launcher_animation_pref_and_shared_css(app):
+    assert json.loads(get(app.url + "api/home"))["animations"] is True
+    assert ".nx-card" in get(app.url + "neon.css")
+    assert post(app.url + "api/prefs", {"animations": "off"})[0] == 400
+    code, _ = post(app.url + "api/prefs", {"animations": False}); assert code == 200
+    assert json.loads(get(app.url + "api/home"))["animations"] is False
+    base = post(app.url + "api/open", {"workflow": "content_review"})[1]["url"].split("?")[0]
+    assert "prefers-reduced-motion" in get(base + "neon.css")

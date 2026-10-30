@@ -116,5 +116,12 @@
  "cli_bind": "Cannot bind {addr} ({err}). Try --port 8788",
  "cli_saved": "Saved {path}. Put API keys in .env (see .env.example), then run: tradecrew start",
  "back_home": "← Back to home",
- "home": "Home"
+ "home": "Home",
+ "tc_flow": "live check chain · latest order",
+ "tc_equity": "equity",
+ "tc_orders": "orders",
+ "tc_filled": "filled",
+ "tc_blocked": "blocked",
+ "motion": "motion",
+ "stamp_blocked": "BLOCKED"
 }
