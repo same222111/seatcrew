@@ -29,7 +29,7 @@ def _clean_text(v, n=400): return re.sub(r"[\x00-\x08\x0b-\x1f]", "", str(v or "
 
 def _scrub(text):
     """Never let a key-looking string into a character/cast file or an export."""
-    return re.sub(r"\b(sk-[A-Za-z0-9_\-]{12,}|r8_[A-Za-z0-9]{12,}|AIza[0-9A-Za-z_\-]{20,}|tsk_[A-Za-z0-9_\-]{12,}|msy_[A-Za-z0-9_\-]{12,}|eyJ[A-Za-z0-9_\-]{20,}\.[A-Za-z0-9_\-]+)", "[removed]", text)
+    return re.sub(r"\b(sk-[A-Za-z0-9_\-]{12,}|r8_[A-Za-z0-9]{12,}|AIza[0-9A-Za-z_\-]{20,}|tsk_[A-Za-z0-9_\-]{12,}|msy_[A-Za-z0-9_\-]{12,}|eyJ[A-Za-z0-9_\-]{20,}\.[A-Za-z0-9_\-]+)", "REMOVED_KEY", text)
 
 class Store:
     def __init__(self, root=None, casts=None, voices=None):
@@ -52,10 +52,10 @@ class Store:
         d = self.path(c["name"]); d.mkdir(parents=True, exist_ok=True)
         c = {k: v for k, v in c.items() if k != "slug"}
         (d / "character.yaml").write_text(_scrub(yaml.safe_dump(c, allow_unicode=True, sort_keys=False)), encoding="utf-8"); return self._read(d)
-    def create(self, name, description="", gender="", age="", personality="", refs=(), overwrite=False):
+    def create(self, name, description="", gender="", age="", personality="", refs=(), overwrite=False, photos=0):
         name = str(name).strip(); d = self.path(name)
         if (d / "character.yaml").is_file() and not overwrite: raise ValueError(f"character '{name}' already exists")
-        if not description and not refs: raise ValueError("give a text description or at least one reference photo")
+        if not description and not refs and not photos: raise ValueError("give a text description or at least one reference photo")
         if gender and gender not in VO.GENDERS: raise ValueError(f"gender must be one of {VO.GENDERS}")
         if age and age not in VO.AGES: raise ValueError(f"age must be one of {VO.AGES}")
         c = dict(name=name, description=_clean_text(description, 800), personality=_clean_text(personality), gender=gender or "", age=age or "",

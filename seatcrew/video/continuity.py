@@ -20,6 +20,19 @@ def frames(video, times, w=W, h=H):
         out.append(np.frombuffer(r.stdout, np.uint8).reshape(h, w, 3) if r and len(r.stdout) == w * h * 3 else None)
     return out
 
+def frame_diffs(video, w=64, h=36, max_s=600):
+    """Every decoded frame (tiny grey) -> (fps, [mean abs diff to previous frame]). Catches 1-5 frame flashes that sparse samples miss."""
+    try:
+        r = subprocess.run(["ffmpeg", "-v", "error", "-t", str(max_s), "-i", str(video), "-vf", f"scale={w}:{h},format=gray", "-f", "rawvideo", "-"], capture_output=True, timeout=300)
+        fps = 24.0
+        p = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", "stream=avg_frame_rate", "-of", "csv=p=0", str(video)], capture_output=True, text=True, timeout=30)
+        a, _, b = p.stdout.strip().partition("/"); fps = float(a) / float(b or 1) if a and float(b or 1) else fps
+    except (OSError, subprocess.TimeoutExpired, ValueError): return 24.0, []
+    n = len(r.stdout) // (w * h)
+    if n < 2: return fps, []
+    f = np.frombuffer(r.stdout[: n * w * h], np.uint8).reshape(n, h, w).astype(np.int16)
+    return fps, [0.0] + [float(x) for x in np.abs(np.diff(f, axis=0)).mean(axis=(1, 2))]
+
 def image(path, w=W, h=H):
     return frames(path, [0], w, h)[0]
 
@@ -95,7 +108,7 @@ def ocr_text(a):
 def analyse(video, shots, refs=None, set_sheet=None, thresholds=None):
     """shots: [{id, start, dur, characters:[..], shot_type}] in the final video. refs: {character: [image paths]}.
     Returns a list of check dicts (name, ok, seat, detail, value, severity)."""
-    t = dict(identity=0.62 if engine() == "fallback" else 0.22, set=0.40, drift=0.45, jump=0.38, glitch=60.0)
+    t = dict(identity=0.62 if engine() == "fallback" else 0.22, set=0.40, drift=0.45, jump=0.38, glitch=60.0, local=55.0, flash=25.0)
     t.update(thresholds or {}); eng = engine(); out = []
     def chk(name, ok, detail, value=None, sev="fail", seat="visuals"):
         out.append(dict(name=name, ok=bool(ok), seat=seat, detail=detail, value=value, severity=sev))
@@ -104,7 +117,7 @@ def analyse(video, shots, refs=None, set_sheet=None, thresholds=None):
         st, du = float(s["start"]), float(s["dur"]); n = max(4, min(10, int(du * 2)))
         ts = [st + du * (i + .5) / n for i in range(n)]; fr = frames(video, ts); big[s["id"]] = fr
     # 1) intra-shot drift + glitch/jump: compare consecutive samples; a person/prop vanishing or a morph shows as a dip
-    bad_drift, bad_glitch, vals = [], [], {}
+    bad_drift, bad_glitch, bad_local, vals = [], [], [], {}
     for s in shots:
         fr = [f for f in big[s["id"]] if f is not None]
         if len(fr) < 2: bad_glitch.append(f"{s['id']}(unreadable)"); continue
@@ -112,9 +125,25 @@ def analyse(video, shots, refs=None, set_sheet=None, thresholds=None):
         diffs = [float(np.abs(fr[i].astype(int) - fr[i + 1].astype(int)).mean()) for i in range(len(fr) - 1)]
         vals[s["id"]] = dict(min_step=min(sims), first_last=end, max_diff=round(max(diffs), 1))
         moving = s.get("camera") in ("pan", "orbit", "tracking", "dolly")
+        a, b = fr[0].astype(float), fr[-1].astype(float); gh, gw = a.shape[0] // 6, a.shape[1] // 6
+        cells = [float(np.abs(a[y:y + gh, x:x + gw] - b[y:y + gh, x:x + gw]).mean()) for y in range(0, gh * 6, gh) for x in range(0, gw * 6, gw)]
+        loc = max(cells) - float(np.median(cells)); vals[s["id"]]["local_max"] = round(loc, 1)
+        if loc > t["local"] and not moving: bad_local.append(f"{s['id']}(one area changed by {loc:.0f})")
         if end < t["drift"] and not moving: bad_drift.append(f"{s['id']}(first↔last {end:.2f})")
         if min(sims) < t["jump"] or (max(diffs) > t["glitch"] and max(diffs) > 3 * (np.median(diffs) + 1)): bad_glitch.append(f"{s['id']}(step {min(sims):.2f}, Δ{max(diffs):.0f})")
     chk("shot_drift", not bad_drift, "large change inside shot (person/prop vanished or scene morphed): " + ", ".join(bad_drift) if bad_drift else "no large change inside any shot", vals, "fail")
+    fps, fd = frame_diffs(video)
+    if fd:
+        for s in shots:
+            m = max(3, int(0.3 * fps))  # real cuts land a few frames off the planned boundary - ignore them
+            a, b = int(float(s["start"]) * fps) + m, int((float(s["start"]) + float(s["dur"])) * fps) - m
+            seg = fd[a:b]
+            if len(seg) < 6: continue
+            med = float(np.median(seg)); i = int(np.argmax(seg)); pk = seg[i]
+            if pk > t["flash"] and pk > 6 * (med + 1) and f"{s['id']}(" not in " ".join(bad_glitch):
+                bad_glitch.append(f"{s['id']}(flash/jump at {(a + i) / fps:.2f}s, Δ{pk:.0f})")
+    chk("local_change", not bad_local, "one region changed a lot inside a static shot (prop/hand/accessory appeared or vanished?): " + ", ".join(bad_local)
+        if bad_local else "no isolated region change inside shots", None, "warn")
     chk("glitch_jump", not bad_glitch, "glitch / jump cut inside shot: " + ", ".join(bad_glitch) if bad_glitch else "no glitches or jumps inside shots", None, "fail")
     # 2) character consistency vs locked refs (best ref, best frame)
     if refs:
@@ -154,7 +183,7 @@ def analyse(video, shots, refs=None, set_sheet=None, thresholds=None):
             if len(txt) >= 4: st.append(f"{s['id']}('{txt[:12]}')")
         chk("stray_text", not st, ("stray text/watermark in frame: " + ", ".join(st)) if st else "no stray text", None, "fail")
     else:
-        chk("stray_text", True, "tesseract not installed - stray-text check skipped (install tesseract-ocr to enable)", None, "warn")
+        chk("stray_text", False, "tesseract not installed - stray-text check skipped (install tesseract-ocr to enable)", None, "warn")
     return out
 
 def storyboard_shots(storyboard, total=None):

@@ -19,7 +19,7 @@ from .profiles import SECRET_KEY_RE, SECRET_VAL_RE
 KEY_LINKS = {"openai": "https://platform.openai.com/api-keys", "anthropic": "https://console.anthropic.com/settings/keys",
              "gemini": "https://aistudio.google.com/apikey", "xai": "https://console.x.ai", "deepseek": "https://platform.deepseek.com/api_keys",
              "custom": "https://openrouter.ai/keys", "ollama": "https://ollama.com/download"}
-ACTION_TOOLS = ("create_workflow", "set_config", "run_sample", "set_voice")
+ACTION_TOOLS = ("create_workflow", "set_config", "run_sample", "set_voice", "create_character", "create_cast")
 READ_TOOLS = ("who_decides", "troubleshoot", "explain")
 RULE_OPS = {"require", "max_len", "min_len", "block_if_match", "require_match", "classify", "template", "set"}
 SLUG = re.compile(r"[a-z][a-z0-9_]{1,39}")
@@ -257,6 +257,23 @@ class Assistant:
             new = VO.clean_profile(name, dict({k: v for k, v in (cur or {}).items() if not ch.get("preset") or k in ("description", "color")}, **ch))
             d = [f"{k}: {json.dumps((cur or {}).get(k), ensure_ascii=False)} -> {json.dumps(new[k], ensure_ascii=False)}" for k in new if (cur or {}).get(k) != new[k] and k != "preset"]
             return dict(tool=tool, args=dict(name=name, changes=ch), preview=f"{name}\n" + "\n".join(d), title=f"voice for {name}")
+        if tool in ("create_character", "create_cast"):
+            if getattr(wf, "studio", None) != "video": raise ValueError("characters and casts exist only in the video studio")
+            from .video import characters as CH
+            if scrub(json.dumps(args, ensure_ascii=False))[1]: raise ValueError("looks like a key")
+            st = CH.Store(); name = str(args.get("name") or "").strip(); CH.slug(name)
+            if tool == "create_character":
+                desc = str(args.get("description") or "").strip()[:800]
+                if not desc: raise ValueError("describe the character (look, age, outfit) - or upload photos in Character Studio")
+                if (st.path(name) / "character.yaml").is_file(): raise ValueError(f"character '{name}' already exists")
+                return dict(tool=tool, args=dict(name=name, description=desc, personality=str(args.get("personality") or "")[:300]),
+                            preview=f"{name}: {desc}", title=f"new character {name}")
+            mem = [m if isinstance(m, dict) else dict(character=str(m)) for m in args.get("members") or []]
+            if not mem or len(mem) > CH.MAX_CAST: raise ValueError(f"a cast needs 1-{CH.MAX_CAST} characters")
+            have = {c["name"] for c in st.list()}; miss = [m["character"] for m in mem if m["character"] not in have]
+            if miss: raise ValueError("create these characters first: " + ", ".join(miss))
+            return dict(tool=tool, args=dict(name=name, members=mem, plot=str(args.get("plot") or "")[:1500]),
+                        preview=f"{name}: " + ", ".join(f"{m['character']} ({m.get('role') or 'supporting'})" for m in mem), title=f"new cast {name}")
         raise ValueError(f"unknown tool {tool}")
 
     def execute(self, p):
@@ -274,6 +291,16 @@ class Assistant:
             pr = VO.Library().set(a["name"], **a["changes"])
             if wf: wf.log("chief", "CONFIG", f"voice for {a['name']} changed from CHIEF chat (confirmed): {pr['voice']} {pr['rate']:+d}% {pr['pitch']:+d}Hz {pr['style']}")
             return f"{a['name']}: {pr['voice']} rate {pr['rate']:+d}% pitch {pr['pitch']:+d}Hz {pr['style']} - used for every line of {a['name']} from now on"
+        if p["tool"] in ("create_character", "create_cast"):
+            from .video import characters as CH
+            st = CH.Store()
+            if p["tool"] == "create_character":
+                st.create(a["name"], a["description"], personality=a.get("personality", ""))
+                if wf: wf.log("chief", "STUDIO", f"character {a['name']} created from CHIEF chat (confirmed)")
+                return f"created {a['name']} - open Character Studio (/characters) to make the sheet, lock it and bind a voice"
+            st.save_cast(a["name"], a["members"], a.get("plot", ""))
+            if wf: wf.log("chief", "STUDIO", f"cast {a['name']} created from CHIEF chat (confirmed)")
+            return f"cast {a['name']} saved - open Character Studio > Cast and press 'Shoot with this cast'"
         if p["tool"] == "run_sample":
             if a.get("data") is not None and getattr(wf, "submit_fields", None) is not None and hasattr(wf, "submit"):
                 it = wf.submit(data=a["data"]); wf.wake.set(); return f"submitted item #{it['id']} and started a cycle - watch the live flow"
@@ -296,6 +323,7 @@ class Assistant:
                    "to adjust it use set_config on settings (template, aspect, tts_backend, visuals_backend, video_model, clips_dir, bgm_path, crf...). Quality matters: offline/draft output is labeled DRAFT PREVIEW and is not final; "
                    "To help pick providers: video best quality = kling (kling-3.0) / runway (gen4.5) / gemini (gemini-omni-1.1-flash); best value = minimax (MiniMax-H3) / luma (ray-3.2); free = draft. Voice best quality = elevenlabs / minimax; value = doubao / azure (real SSML styles) / openai; free = edge. Sora API is discontinued. Set visuals_backend / tts_backend with set_config; the Recommended models panel has links and a Test key button; prices are rough, tell the user to check the official pricing page. "
                    "final quality needs ElevenLabs/OpenAI/edge-tts voice and real clips (own folder, Replicate video model, or OpenAI/Stability images). "
+                   "Character Studio (/characters): create_character args {\"name\": ..., \"description\": \"look, age, outfit\", \"personality\": ...}; create_cast args {\"name\": ..., \"members\": [{\"character\": ..., \"role\": \"lead|supporting|comic|antagonist|narrator|cameo\", \"notes\": ...}] (max 5, existing characters), \"plot\": ...}. "
                    "Each character has ONE saved voice (character voice library). To change one call set_voice with args {\"name\": \"<character>\", \"adjust\": \"older|younger|slower|faster|lower|higher|softer|louder\"} "
                    "or {\"name\": ..., \"changes\": {\"preset\": \"zh-CN/elderly_woman\", \"style\": \"gentle|sad|tender|cheerful|calm|...\", \"rate\": -10, \"pitch\": -6, \"voice\": \"zh-CN-XiaoxiaoNeural\", \"openai_voice\": \"sage\"}}. "
                    if getattr(wf, "studio", None) == "video" else "") +
@@ -381,6 +409,8 @@ class Assistant:
         if m and re.search(r"make|create|generate|produce|做|生成|制作|製作|作って|作成|haz|crea|genera|video|vídeo|视频|影片|動画", ql):
             topic = m.group(1).strip(" .?!。？！\"'")[:200]
             if topic: return "run_sample", dict(data=dict(topic=topic, notes="", template=tpl or self.ctx["config"].data["settings"]["template"], aspect=self.ctx["config"].data["settings"]["aspect"])), ""
+        cc = self.character_intent(q, ql)
+        if cc: return cc
         vv = self.voice_intent(q, ql)
         if vv: return vv
         patch = {}
@@ -388,6 +418,23 @@ class Assistant:
         elif re.search(r"9:16|vertical|portrait|竖屏|直式|縦|vertical", ql): patch["aspect"] = "9:16"
         if tpl and re.search(r"template|style|模板|範本|风格|テンプレ|plantilla|default|默认", ql): patch["template"] = tpl
         if patch: return "set_config", dict(patch=dict(settings=patch)), ""
+        return None
+
+    def character_intent(self, q, ql):
+        """"create a character named Mia: a 30-year-old nurse..." / "创建角色 小美：..." -> create_character;
+        "make a cast called Family with Mia, Leo and Ann" / "组建剧组 一家人：小美、小宇" -> create_cast."""
+        m = (re.search(r"(?:create|make|new|add)\s+(?:a\s+)?character\s+(?:named\s+|called\s+)?([^\s:,，：]{1,40})\s*[:,，：-]\s*(.+)", q, re.I)
+             or re.search(r"(?:创建|新建|添加|建立|新增)角色\s*[「“\"]?([^\s:,，：」”\"]{1,40})[」”\"]?\s*[:,，：]\s*(.+)", q)
+             or re.search(r"キャラ(?:クター)?\s*[「]?([^\s:,，：」]{1,40})[」]?\s*(?:を作成|を作って)?\s*[:：]\s*(.+)", q)
+             or re.search(r"(?:crea|nuevo)\s+(?:un\s+)?personaje\s+(?:llamado\s+)?([^\s:,]{1,40})\s*[:,]\s*(.+)", q, re.I))
+        if m: return "create_character", dict(name=m.group(1).strip(), description=m.group(2).strip(" .。")), ""
+        m = (re.search(r"(?:create|make|build|new)\s+(?:a\s+)?cast\s+(?:named\s+|called\s+)?([^\s:,]{1,40})\s*(?:with|:)\s*(.+)", q, re.I)
+             or re.search(r"(?:组建|创建|新建|組建|建立)(?:剧组|劇組)\s*[「“\"]?([^\s:,，：」”\"]{1,40})[」”\"]?\s*[:,，：]\s*(.+)", q)
+             or re.search(r"キャスト\s*[「]?([^\s:,，：」]{1,40})[」]?\s*[:：]\s*(.+)", q)
+             or re.search(r"(?:crea|nuevo)\s+(?:un\s+)?elenco\s+(?:llamado\s+)?([^\s:,]{1,40})\s*(?:con|:)\s*(.+)", q, re.I))
+        if m:
+            names = [x.strip(" .。") for x in re.split(r",|，|、|\band\b|\by\b|和|と", m.group(2)) if x.strip(" .。")]
+            return "create_cast", dict(name=m.group(1).strip(), members=[dict(character=n) for n in names[:6]]), ""
         return None
 
     VOICE_ADJ = [("older", r"older|老一[点些]|更老|苍老|年纪大|老けて|年上|mayor|más viej"), ("younger", r"younger|年轻一?[点些]|更年轻|嫩一[点些]|若く|más joven"),

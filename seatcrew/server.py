@@ -5,7 +5,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 import os
 from . import __version__, i18n, profiles as PF, assistant as AS, loader
-from .video import voices as VR
+from .video import voices as VR, characters as CHS, studio_api as SA
 from .config import LANGUAGES
 from .llm import PROVIDERS, key_status, test_connection
 
@@ -51,11 +51,19 @@ def make_handler(wf):
                 _, _, iid, name = p.split("/"); f = wf.media_file(iid, name)
                 if f: return self.send_file(f)
             if p == "/api/voices" and getattr(wf, "studio", None) == "video": return self.send(VR.api_state(cfg.data.get("language")))
+            if getattr(wf, "studio", None) == "video":
+                if p in ("/characters", "/characters.html"): return self.send((WEB / "characters.html").read_bytes(), ctype="text/html; charset=utf-8")
+                if p == "/characters.js": return self.send((WEB / "characters.js").read_bytes(), ctype="application/javascript; charset=utf-8")
+                if p == "/vendor/model-viewer.min.js": return self.send((WEB / "vendor" / "model-viewer.min.js").read_bytes(), ctype="application/javascript; charset=utf-8")
+                if p == "/api/characters": return self.send(SA.state(CHS.Store(), cfg.data.get("language")))
+                if p.startswith("/cfile/"):
+                    f = SA.get_file(CHS.Store(), p)
+                    if f: return self.send_file(f)
             if p == "/studio.js" and getattr(wf, "studio", None): return self.send((WEB / "studio.js").read_bytes(), ctype="application/javascript; charset=utf-8")
             self.send({"error": "not found"}, 404)
         def send_file(self, f):
             """Static file with HTTP Range support (video seeking)."""
-            size = f.stat().st_size; ct = {".mp4": "video/mp4", ".json": "application/json"}.get(f.suffix, "application/octet-stream")
+            size = f.stat().st_size; ct = {".mp4": "video/mp4", ".json": "application/json", ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp", ".glb": "model/gltf-binary"}.get(f.suffix, "application/octet-stream")
             rng = self.headers.get("Range"); start, end = 0, size - 1
             m = __import__("re").match(r"bytes=(\d*)-(\d*)", rng or "")
             if m and (m.group(1) or m.group(2)):
@@ -121,9 +129,14 @@ def make_handler(wf):
                         f = VR.audition_file(lib, b.get("name"), b.get("preset"), b.get("text"), b.get("emotion"), cfg.data.get("language"))
                         return self.send(f.read_bytes(), ctype="audio/mpeg")
                     return self.send({"error": "not found"}, 404)
+                if (p.startswith("/api/characters/") or p.startswith("/api/casts/")) and getattr(wf, "studio", None) == "video":
+                    _, _, kind, op = p.split("/", 3); r = SA.post(CHS.Store(), kind, op, b, wf, cfg.data.get("language"))
+                    if isinstance(r, tuple): return self.send(r[1], ctype="audio/mpeg")
+                    if op in ("create", "sheet", "3d", "lock", "voice", "clone", "save", "import", "shoot"): wf.log("chief", "STUDIO", f"{kind[:-1]} {op}: {b.get('name', '')}")
+                    return self.send(r)
                 if p == "/api/run": wf.wake.set(); return self.send(dict(ok=True))
                 self.send({"error": "not found"}, 404)
-            except (ValueError, KeyError, TypeError) as e: self.send(dict(ok=False, error=str(e)), 400)
+            except (ValueError, KeyError, TypeError, FileNotFoundError) as e: self.send(dict(ok=False, error=str(e)), 400)
             except Exception as e: self.send(dict(ok=False, error=f"{type(e).__name__}: {e}"), 500)
     return H
 

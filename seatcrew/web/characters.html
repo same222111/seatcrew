@@ -1,0 +1,35 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<!-- Character Studio: gallery, create wizard, character sheet, 3D viewer (bundled model-viewer, no CDN), voice binding, cast builder.
+     Talks to /api/characters* and /api/casts* on this local server. All strings from /api/locale/<code>. -->
+<title>Character Studio · SeatCrew</title><link rel="stylesheet" href="/neon.css">
+<style>
+body{margin:0;font-size:13px}a{color:var(--blue)}.wrap{max-width:1380px;margin:0 auto;padding:14px 18px 40px}
+header{display:flex;align-items:center;gap:12px;margin-bottom:14px}header h1{font:800 22px var(--sans);margin:0;letter-spacing:-.01em;color:var(--fg);text-shadow:0 0 18px #3dffa055}
+header h1 b{color:var(--acc)}.sp{flex:1}.b{background:var(--pn2);border:1px solid var(--ln);color:var(--fg);border-radius:8px;padding:6px 12px;cursor:pointer;font:600 12px var(--sans)}
+.b:hover{border-color:var(--acc)}.b.pri{border-color:var(--acc);color:var(--acc);box-shadow:0 0 12px #3dffa033}.b.vio{border-color:var(--vio);color:var(--vio)}.b.sm{padding:3px 8px;font-size:11px}.b:disabled{opacity:.45;cursor:default}
+.tabs{display:flex;gap:6px;margin-bottom:12px}.tabs .b.on{border-color:var(--acc);color:var(--acc);box-shadow:0 0 12px #3dffa044}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px}.card{padding:10px;cursor:pointer;position:relative}.card:hover{border-color:var(--acc);box-shadow:0 0 18px #3dffa022}
+.card img,.ph{width:100%;aspect-ratio:1;object-fit:cover;border-radius:9px;background:#05070b;display:grid;place-items:center;color:var(--dim);font-size:40px}
+.card .nm{font:700 15px var(--sans);margin:8px 0 2px}.card .ds{color:var(--dim);font-size:11px;height:30px;overflow:hidden}.lk{position:absolute;top:16px;right:16px;font:800 10px var(--mono);color:#000;background:var(--acc);padding:2px 6px;border-radius:5px;box-shadow:0 0 12px var(--acc)}
+.chips{display:flex;gap:4px;flex-wrap:wrap;margin-top:6px}.chip{font:600 10px var(--mono);border:1px solid var(--ln);border-radius:5px;padding:1px 5px;color:var(--dim)}.chip.on{color:var(--acc);border-color:#3dffa077}.chip.vio{color:var(--vio);border-color:#b18cff77}
+.pane{padding:14px}.two{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:14px}@media(max-width:1000px){.two{grid-template-columns:1fr}}
+.sheet{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.sheet figure{margin:0}.sheet img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;border:1px solid var(--ln)}.sheet figcaption{font:600 10px var(--mono);color:var(--dim);text-transform:uppercase;letter-spacing:.1em;margin-top:3px}
+.expr{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-top:8px}.expr img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:7px;border:1px solid var(--ln)}
+model-viewer{width:100%;height:380px;background:radial-gradient(circle at 50% 40%,#16233a,#05070b);border-radius:12px;border:1px solid var(--ln);--poster-color:transparent}
+.angles{display:flex;gap:6px;margin-top:8px}.angles img{width:64px;height:64px;object-fit:cover;border-radius:6px;border:1px solid var(--ln)}
+label{display:block;font:600 11px var(--mono);color:var(--dim);letter-spacing:.08em;text-transform:uppercase;margin:10px 0 4px}
+input,textarea,select{width:100%;box-sizing:border-box;background:#05070b;border:1px solid var(--ln);color:var(--fg);border-radius:8px;padding:7px 9px;font:13px var(--sans)}textarea{min-height:70px}
+.steps{display:flex;gap:6px;margin-bottom:10px}.steps span{flex:1;text-align:center;font:700 10px var(--mono);padding:5px;border-radius:6px;border:1px solid var(--ln);color:var(--dim)}.steps span.on{color:var(--acc);border-color:var(--acc)}
+.slots{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}.slot{min-height:210px;border:1.5px dashed var(--ln);border-radius:12px;padding:8px;display:flex;flex-direction:column;gap:5px;align-items:stretch;transition:border-color .2s}
+.slot.over{border-color:var(--acc);box-shadow:0 0 18px #3dffa044}.slot.full{border-style:solid;border-color:#3dffa055}.slot img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px}.slot .n{font:700 13px var(--sans)}.slot .e{color:var(--dim);margin:auto;text-align:center;font-size:11px}
+.pool{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}.pool .p{display:flex;align-items:center;gap:6px;border:1px solid var(--ln);border-radius:20px;padding:3px 10px 3px 3px;cursor:grab;background:var(--pn2)}.pool .p img{width:28px;height:28px;border-radius:50%;object-fit:cover}
+.qm{display:inline-grid;place-items:center;width:15px;height:15px;border-radius:50%;border:1px solid var(--dim);color:var(--dim);font-size:10px;cursor:help}
+.toast{position:fixed;bottom:18px;right:18px;background:var(--pn2);border:1px solid var(--acc);padding:9px 14px;border-radius:9px;display:none;z-index:60}.muted{color:var(--dim);font-size:11px}
+.vrow{display:grid;grid-template-columns:1fr 1fr;gap:8px}.wave{height:36px;border-radius:8px;background:repeating-linear-gradient(90deg,#3dffa055 0 2px,transparent 2px 6px);mask:linear-gradient(90deg,#000,#0008 60%,#000)}
+body.simple .adv{display:none!important}
+</style></head><body class="simple">
+<div class="wrap"><header><h1>◆ <b data-i18n="cs_title">Character Studio</b></h1><span class="muted" data-i18n="cs_sub"></span><span class="sp"></span>
+<a class="b sm" href="/" data-i18n="cs_back">← Studio</a><button class="b sm" id="simpleBtn" onclick="toggleSimple()"></button><select id="langSel" style="width:auto"></select></header>
+<div class="tabs"><button class="b on" data-tab="gallery" data-i18n="cs_gallery">Gallery</button><button class="b" data-tab="create" data-i18n="cs_create">+ New character</button><button class="b" data-tab="cast" data-i18n="cs_cast">Cast</button></div>
+<div id="main"></div></div><div class="toast" id="toast"></div>
+<script src="/vendor/model-viewer.min.js" type="module"></script><script src="/characters.js"></script></body></html>

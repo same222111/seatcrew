@@ -18,7 +18,7 @@ from pathlib import Path
 from seatcrew import Seat, HumanSeat, Chief, Workflow, llm
 from seatcrew.config import Config, base_defaults
 from seatcrew.video import TEMPLATES, SIZES, validate_storyboard, key_status, tts as TTS, visuals as VIS, editor as ED, qc as QC, voices as VO, providers as PV
-from seatcrew.video import characters as CH, imagegen as IG, lipsync as LS
+from seatcrew.video import characters as CH, imagegen as IG, lipsync as LS, storyboard as SB
 from seatcrew.video.ff import have_ffmpeg, FFError
 
 SEATS = ["chief", "topic", "writer", "scriptcheck", "voice", "visuals", "lipsync", "editor", "qc", "approve"]
@@ -232,7 +232,7 @@ class LipSync(Seat):
         if b == "none": return True, "off (shots keep their original mouths)"
         work = self.wf.item_dir(it) / "lipsync"; work.mkdir(parents=True, exist_ok=True); done, kept = [], []
         for sh in d["storyboard"]["shots"]:
-            if not sh.get("audio") or not sh.get("clip_path") or VIS.is_image(sh["clip_path"]) or sh.get("shot_type") == "wide": continue
+            if not sh.get("audio") or not sh.get("clip_path") or SB.is_image(sh["clip_path"]) or sh.get("shot_type") == "wide": continue
             if sh.get("lipsync") == sh["clip_path"]: continue
             p, info = LS.apply(sh["clip_path"], sh["audio"], work / f"{sh['id']}.mp4", b)
             if info.get("lipsync") == b: sh["clip_path"] = sh["lipsync"] = str(p); done.append(sh["id"])
