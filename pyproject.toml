@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "seatcrew"
-version = "0.7.1"
+version = "0.8.0"
 description = "A framework for multi-AI seat workflows: every job gets a seat, every item walks a check chain, any LLM (or plain rules) per seat. Flagship example: TradeCrew paper-trading terminal."
 readme = "README.md"
 license = {text = "MIT"}
@@ -21,6 +21,7 @@ Releases = "https://github.com/same222111/seatcrew/releases"
 [project.optional-dependencies]
 dev = ["pytest>=7"]
 desktop = ["pywebview>=5.0"]
+video = ["edge-tts>=7"]
 
 [project.scripts]
 seatcrew = "seatcrew.cli:main"
@@ -32,9 +33,9 @@ packages = ["seatcrew", "tradecrew", "seatcrew_examples"]
 package-dir = {"tradecrew" = "examples/trading/tradecrew", "seatcrew_examples" = "examples"}
 
 [tool.setuptools.package-data]
-seatcrew = ["web/*.html", "web/*.css", "web/*.js", "locales/*.json", "templates/*", "assets/*"]
+seatcrew = ["web/*.html", "web/*.css", "web/*.js", "locales/*.json", "templates/*", "assets/*", "video/fonts/*"]
 tradecrew = ["web/*.html", "locales/*.json"]
-seatcrew_examples = ["*/*.py", "*/*.yaml", "*/locales/*.json"]
+seatcrew_examples = ["*/*.py", "*/*.yaml", "*/locales/*.json", "*/profiles/*.json"]
 
 [tool.pytest.ini_options]
 addopts = "--import-mode=importlib"

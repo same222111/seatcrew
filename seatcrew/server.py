@@ -5,6 +5,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 import os
 from . import __version__, i18n, profiles as PF, assistant as AS, loader
+from .video import voices as VR
 from .config import LANGUAGES
 from .llm import PROVIDERS, key_status, test_connection
 
@@ -46,7 +47,35 @@ def make_handler(wf):
                 return self.send(dict(profiles=PF.list_profiles(wf.name), current=PF.current(cfg), defaults=PF.defaults(cfg),
                                       folder=str(PF.folder(wf.name)), schema=PF.SCHEMA, themes=PF.THEMES, densities=PF.DENSITIES))
             if p.startswith("/api/locale/"): return self.send(i18n.load(p.rsplit("/", 1)[1], wf.locale_dirs))
+            if p.startswith("/media/") and hasattr(wf, "media_file") and p.count("/") == 3:
+                _, _, iid, name = p.split("/"); f = wf.media_file(iid, name)
+                if f: return self.send_file(f)
+            if p == "/api/voices" and getattr(wf, "studio", None) == "video": return self.send(VR.api_state(cfg.data.get("language")))
+            if p == "/studio.js" and getattr(wf, "studio", None): return self.send((WEB / "studio.js").read_bytes(), ctype="application/javascript; charset=utf-8")
             self.send({"error": "not found"}, 404)
+        def send_file(self, f):
+            """Static file with HTTP Range support (video seeking)."""
+            size = f.stat().st_size; ct = {".mp4": "video/mp4", ".json": "application/json"}.get(f.suffix, "application/octet-stream")
+            rng = self.headers.get("Range"); start, end = 0, size - 1
+            m = __import__("re").match(r"bytes=(\d*)-(\d*)", rng or "")
+            if m and (m.group(1) or m.group(2)):
+                if m.group(1): start = int(m.group(1)); end = int(m.group(2)) if m.group(2) else size - 1
+                else: start = max(0, size - int(m.group(2)))
+                end = min(end, size - 1)
+                if start > end: self.send_response(416); self.send_header("Content-Range", f"bytes */{size}"); self.end_headers(); return
+                self.send_response(206); self.send_header("Content-Range", f"bytes {start}-{end}/{size}")
+            else: self.send_response(200)
+            self.send_header("Content-Type", ct); self.send_header("Accept-Ranges", "bytes"); self.send_header("Content-Length", str(end - start + 1)); self.send_header("Cache-Control", "no-store")
+            if "download" in (self.path.split("?", 1) + [""])[1]: self.send_header("Content-Disposition", f'attachment; filename="{f.name}"')
+            self.end_headers()
+            with open(f, "rb") as fh:
+                fh.seek(start); left = end - start + 1
+                while left > 0:
+                    b = fh.read(min(1 << 16, left))
+                    if not b: break
+                    try: self.wfile.write(b)
+                    except (BrokenPipeError, ConnectionResetError): return
+                    left -= len(b)
         def do_POST(self):
             p = self.path
             try:
@@ -77,9 +106,20 @@ def make_handler(wf):
                     if op == "import":
                         pv = PF.preview(wf, b.get("text", "")); nm = PF.safe_name(name or pv["name"])
                         PF.save(wf, nm, pv["data"])
+                        if pv.get("voices"): VR.Library().merge_in(pv["voices"], overwrite=bool(b.get("overwrite_voices")))
                         if b.get("apply"): PF.apply(wf, pv["data"])
                         wf.log("chief", "CONFIG", f"profile '{nm}' imported" + (" + applied" if b.get("apply") else ""))
                         return self.send(dict(ok=True, name=nm, applied=bool(b.get("apply")), profiles=PF.list_profiles(wf.name)))
+                    return self.send({"error": "not found"}, 404)
+                if p.startswith("/api/voices/") and getattr(wf, "studio", None) == "video":
+                    op = p.rsplit("/", 1)[1]; lib = VR.Library()
+                    if op == "set":
+                        f = {k: b.get(k) for k in VR.FIELDS if k in b}; pr = lib.set(str(b.get("name") or ""), **f)
+                        wf.log("chief", "CONFIG", f"voice for {b.get('name')}: {pr['voice']} {pr['rate']:+d}% {pr['pitch']:+d}Hz {pr['style']}"); return self.send(dict(ok=True, profile=pr))
+                    if op == "delete": lib.delete(str(b.get("name") or "")); return self.send(dict(ok=True))
+                    if op == "audition":
+                        f = VR.audition_file(lib, b.get("name"), b.get("preset"), b.get("text"), b.get("emotion"), cfg.data.get("language"))
+                        return self.send(f.read_bytes(), ctype="audio/mpeg")
                     return self.send({"error": "not found"}, 404)
                 if p == "/api/run": wf.wake.set(); return self.send(dict(ok=True))
                 self.send({"error": "not found"}, 404)

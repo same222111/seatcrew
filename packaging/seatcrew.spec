@@ -7,9 +7,9 @@ from PyInstaller.utils.hooks import collect_submodules, collect_data_files
 ROOT = Path(SPECPATH).parent
 ICON = {"win32": "icon.ico", "darwin": "icon.icns"}.get(sys.platform, "icon.png")
 
-datas = [(str(ROOT / "seatcrew" / d), f"seatcrew/{d}") for d in ("web", "locales", "templates", "assets")]
+datas = [(str(ROOT / "seatcrew" / d), f"seatcrew/{d}") for d in ("web", "locales", "templates", "assets", "video/fonts")]
 datas += [(str(ROOT / "examples" / "trading" / "tradecrew" / d), f"tradecrew/{d}") for d in ("web", "locales")]
-for ex in ("trading", "content_review", "support_triage"):  # workflow files are loaded by path at runtime
+for ex in ("trading", "content_review", "support_triage", "short_video"):  # workflow files are loaded by path at runtime
     for f in (ROOT / "examples" / ex).rglob("*"):
         if f.is_file() and "tests" not in f.parts and "__pycache__" not in f.parts and f.suffix in (".py", ".yaml", ".json", ".md"):
             datas.append((str(f), str(Path("seatcrew_examples") / f.relative_to(ROOT / "examples").parent)))
@@ -28,4 +28,4 @@ exe = EXE(pyz, a.scripts, [], exclude_binaries=True, name="SeatCrew", console=Fa
 coll = COLLECT(exe, a.binaries, a.datas, name="SeatCrew")
 if sys.platform == "darwin":
     app = BUNDLE(coll, name="SeatCrew.app", icon=str(ROOT / "packaging" / "icon.icns"), bundle_identifier="io.github.seatcrew",
-                 info_plist={"CFBundleShortVersionString": "0.7.1", "NSHighResolutionCapable": True})
+                 info_plist={"CFBundleShortVersionString": "0.8.0", "NSHighResolutionCapable": True})

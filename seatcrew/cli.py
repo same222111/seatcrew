@@ -14,6 +14,7 @@ def main(argv=None):
     sp = ap.add_subparsers(dest="cmd", required=True)
     sp.add_parser("list", help="list bundled example workflows")
     sp.add_parser("app", help="open the desktop app (launcher window)", add_help=False)
+    sp.add_parser("video", help="short-video tools: init / assemble / qc (see: seatcrew video -h)", add_help=False)
     n = sp.add_parser("new", help="scaffold a new workflow folder"); n.add_argument("name"); n.add_argument("--python", action="store_true", help="Python instead of YAML"); n.add_argument("--dir", default="workflows")
     for c in ("run", "ui"):
         x = sp.add_parser(c, help="run cycles headless" if c == "run" else "start the dashboard + Runner")
@@ -22,6 +23,8 @@ def main(argv=None):
         else: x.add_argument("--host", default="127.0.0.1"); x.add_argument("--port", type=int, default=8800); x.add_argument("--open", action="store_true")
     ta = sp.add_parser("test-ai", help="real minimal call to a provider"); ta.add_argument("provider", nargs="?"); ta.add_argument("--model")
     argv = sys.argv[1:] if argv is None else argv
+    if argv[:1] == ["video"]:
+        load_env(".env"); from .video.cli import main as vid; return vid(argv[1:])
     if argv[:1] == ["app"]:
         from .desktop import main as desk; return desk(argv[1:])
     a = ap.parse_args(argv); load_env(a.env)

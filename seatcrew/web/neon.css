@@ -27,3 +27,4 @@ body[data-theme=contrast]{--bg:#000;--pn:#000;--pn2:#000;--ln:#a0a0a0;--fg:#fff;
 /* motion off: user toggle (body.noanim) or OS setting */
 body.noanim *,body.noanim *::before,body.noanim *::after{animation:none!important;transition:none!important}body.noanim .nx-packet{display:none}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}.nx-packet{display:none}}
+table.models{width:100%;border-collapse:collapse;font-size:13px}table.models td,table.models th{padding:6px;border-bottom:1px solid rgba(255,255,255,.08);vertical-align:top;text-align:left}

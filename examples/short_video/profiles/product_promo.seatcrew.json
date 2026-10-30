@@ -1,0 +1,15 @@
+{
+ "seatcrew_profile": 1,
+ "workflow": "short_video",
+ "name": "Product Promo",
+ "author": "SeatCrew",
+ "app_version": "0.7.1",
+ "created": "2026-10-30T00:00:00+00:00",
+ "data": {
+  "settings": {
+   "template": "product_promo",
+   "aspect": "9:16",
+   "bgm_gain_db": -15.0
+  }
+ }
+}

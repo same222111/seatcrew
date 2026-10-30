@@ -34,7 +34,7 @@ body[data-theme=light] select,body[data-theme=light] input{background:#fff}
   <g><circle class="n" cx="90" cy="30" r="12"/><text x="90" y="62">IDEA</text></g><g><circle class="n" cx="300" cy="30" r="12"/><text x="300" y="62">CHECK</text></g><g><circle class="n x" cx="500" cy="30" r="12"/><text x="500" y="62">CHECK</text></g><g><circle class="n" cx="700" cy="30" r="12"/><text x="700" y="62">HUMAN</text></g><g><circle class="n" cx="910" cy="30" r="12"/><text x="910" y="62">DONE</text></g>
   <circle class="nx-packet" r="4"><animateMotion dur="3s" repeatCount="indefinite" path="M90 30 H910"/></circle><circle class="nx-packet" r="4"><animateMotion dur="3s" begin="-1.5s" repeatCount="indefinite" path="M90 30 H910"/></circle></svg></div>
 <div class="card nx-card" id="wizard" style="display:none"><h2 id="wzT"></h2>
- <div class="steps"><span data-st="1">1 · <b id="s1"></b></span><i></i><span data-st="2">2 · <b id="s2"></b></span><i></i><span data-st="3">3 · <b id="s3"></b></span></div>
+ <div class="steps"><span data-st="1">1 · <b id="s1"></b></span><i></i><span data-st="2">2 · <b id="s2"></b></span><i></i><span data-st="3">3 · <b id="s3"></b></span><i></i><span data-st="4">4 · <b id="s4"></b></span></div>
  <div class="wstep" id="st1"><p class="dim" id="wzP"></p><label id="lLang"></label><select id="lang"></select>
   <label id="lData"></label><input id="dataIn"><p class="dim" id="dHint"></p><button id="n1"></button></div>
  <div class="wstep" id="st2" style="display:none"><p class="dim" id="aiP"></p>
@@ -46,7 +46,8 @@ body[data-theme=light] select,body[data-theme=light] input{background:#fff}
   <div id="olBox" style="display:none"><p class="dim" id="olHelp"></p><p><a href="https://ollama.com/download" target="_blank" rel="noopener">ollama.com/download</a></p></div>
   <button class="ghost" id="test" style="display:none"></button> <span id="testOut"></span>
   <p class="dim" id="wzK"></p><button class="ghost" id="b2"></button> <button id="n2"></button></div>
- <div class="wstep" id="st3" style="display:none"><p class="dim" id="stP"></p><div class="grid" id="starters"></div><button class="ghost" id="b3"></button> <button class="ghost" id="skip"></button></div>
+ <div class="wstep" id="st3" style="display:none"><div id="models"></div><button class="ghost" id="b3m"></button> <button id="n3"></button></div>
+ <div class="wstep" id="st4" style="display:none"><p class="dim" id="stP"></p><div class="grid" id="starters"></div><button class="ghost" id="b3"></button> <button class="ghost" id="skip"></button></div>
  <span id="wzErr" class="err"></span></div>
 <div class="card nx-card" id="pick" style="display:none"><h2 id="pkT"></h2><div class="grid" id="wfs"></div><p class="dim" id="pkH"></p><span id="pkErr" class="err"></span>
  <button class="ghost" id="redo"></button></div>
@@ -55,6 +56,7 @@ body[data-theme=light] select,body[data-theme=light] input{background:#fff}
  <button id="chg"></button> <span id="dMsg"></span></div><p class="dim" id="envLock" style="display:none"></p></div>
 <p class="dim" id="foot"></p><button class="ghost" id="anim" style="margin-top:0"></button></div>
 <span hidden id="lKeyHolder"></span>
+<script src="/models.js"></script>
 <script>
 const T={en:{anim:"animations",on:"on",off:"off",ready:"ready",lWf:"workflows",lLn:"languages",lKey:"AI keys set",sub:"Multi-AI seat workflows - every job gets a seat, every item walks a check chain.",wzT:"Welcome - first-time setup",wzP:"Pick a language. An AI key is optional: every workflow also runs on plain rules.",lLang:"Language",lProv:"AI provider (optional)",lKey:"API key (stays on this computer)",wzK:"You can change seats, providers and keys later in each dashboard.",go:"Save & continue",skip:"Skip - rules only",pkT:"Open a workflow",pkH:"Your own workflows go in the data folder's workflows/ folder (seatcrew new <name> --dir workflows).",redo:"Setup again",none:"rules only",example:"example",mine:"mine",d:{trading:"Paper-trading terminal - 8 seats, strategy lab (flagship showcase)",content_review:"Topic → draft → fact-check → policy → human approval → publish",support_triage:"Ticket → privacy → reply draft → tone → approval (YAML only)"},data:"Data folder",lData:"Data folder",dHint:"Settings, profiles, history and keys are stored here. Any folder works, e.g. D:\\SeatCrewData.",chg:"Change data folder",mv:"move my existing data there",envLock:"Set by the SEATCREW_DATA_DIR environment variable - change it there.",dOk:"Data folder changed",src:{default:"default",custom:"custom",portable:"portable",env:"env",fixed:"--home"}},
 "zh-CN":{anim:"动画效果",on:"开",off:"关",ready:"就绪",lWf:"个工作流",lLn:"种语言",lKey:"个 AI 密钥",sub:"多 AI 席位工作流 - 每个岗位一个席位,每个事项走一遍检查链。",wzT:"欢迎 - 首次设置",wzP:"选择语言。AI 密钥可选:所有工作流都能只靠规则运行。",lLang:"语言",lProv:"AI 服务商(可选)",lKey:"API 密钥(只保存在本机)",wzK:"之后可以在每个看板里修改席位、服务商和密钥。",go:"保存并继续",skip:"跳过 - 只用规则",pkT:"打开一个工作流",pkH:"自己的工作流放在数据文件夹的 workflows/ 里。",redo:"重新设置",none:"只用规则",example:"示例",mine:"我的",d:{trading:"模拟交易终端 - 8 个席位 + 策略实验室(成品展示)",content_review:"选题 → 草稿 → 事实核查 → 合规 → 人工审批 → 发布",support_triage:"工单 → 隐私 → 回复草稿 → 语气 → 审批(纯 YAML)"},data:"数据文件夹",lData:"数据文件夹",dHint:"设置、配置方案、历史记录和密钥都存在这里。可以选任意文件夹,例如 D:\\SeatCrewData。",chg:"更改数据文件夹",mv:"把现有数据一起搬过去",envLock:"由环境变量 SEATCREW_DATA_DIR 指定,请在那里修改。",dOk:"数据文件夹已更改"},
@@ -90,7 +92,7 @@ let H,L="en",STEP=1;const $=id=>document.getElementById(id);
 const tr=k=>(W[L]&&W[L][k])||(T[L]&&T[L][k])||W.en[k]||T.en[k];
 async function api(p,b){const r=await fetch(p,b?{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(b)}:{});return r.json()}
 function paint(){for(const k of["s1","s2","s3","aiP","oKey","oKeyD","oOl","oOlD","oDemo","oDemoD","lKey2","getKey","olHelp","test","stP","sub","wzT","wzP","lLang","lProv","lKey","wzK","skip","pkT","pkH","redo","lData","dHint","chg","envLock","ready","lWf","lLn","lKey"])$(k).textContent=tr(k);
- $("n1").textContent=$("n2").textContent=tr("n");$("b2").textContent=$("b3").textContent=tr("b");
+ $("n1").textContent=$("n2").textContent=$("n3").textContent=tr("n");$("b2").textContent=$("b3").textContent=$("b3m").textContent=tr("b");$("s4").textContent=$("s3").textContent;$("s3").textContent=(window.SCModels&&(SCModels.T[L]||SCModels.T.en).title)||"Models";if(window.SCModels)SCModels.render($("models"),L);
  const C=["#3dffa0","#ffc94d","#5cc8ff","#b18cff","#ff9a3d","#ff4f6d"],G=["◆","▲","●","■","✦","⬢"];
  $("wfs").innerHTML=H.workflows.map((w,i)=>`<div class="wf nx-in ${w.name==H.last?"last":""}" tabindex="0" data-wf="${w.name}" style="animation-delay:${i*60}ms"><div class="ic" style="background:${C[i%C.length]}">${G[i%G.length]}</div><span class="go">OPEN →</span><b>${w.name}</b><span class="tag">${tr(w.kind)}</span>${w.name==H.last?`<span class="tag lastt">last</span>`:""}<div class="dim" style="margin-top:8px">${(T[L].d||{})[w.name]||T.en.d[w.name]||""}</div></div>`).join("");
  $("ver").textContent="v"+H.version;$("nWf").textContent=H.workflows.length;document.querySelectorAll(".hstats .nx-big")[2].textContent=Object.entries(H.keys||{}).filter(([k,v])=>v&&k!="ollama"&&k!="custom").length;
@@ -105,7 +107,7 @@ async function changeData(){$("dMsg").className="";$("dMsg").textContent="…";c
 async function openWf(n){$("pkErr").textContent="…";const r=await api("/api/open",{workflow:n});if(r.ok)location.href=r.url;else $("pkErr").textContent=r.error}
 function show(w){if(w)setTimeout(()=>step(STEP),0);$("wizard").style.display=w?"block":"none";$("pick").style.display=$("dcard").style.display=w?"none":"block"}
 const mode=()=>(document.querySelector('input[name=mode]:checked')||{}).value||"demo";
-function step(n){STEP=n;for(const i of[1,2,3])$("st"+i).style.display=i==n?"block":"none";document.querySelectorAll("[data-st]").forEach(e=>e.classList.toggle("on",+e.dataset.st<=n));$("wzErr").textContent="";paintMode()}
+function step(n){STEP=n;for(const i of[1,2,3,4])$("st"+i).style.display=i==n?"block":"none";document.querySelectorAll("[data-st]").forEach(e=>e.classList.toggle("on",+e.dataset.st<=n));$("wzErr").textContent="";paintMode()}
 function paintMode(){const m=mode();document.querySelectorAll(".opt").forEach(o=>o.classList.toggle("sel",o.dataset.mode==m));$("keyBox").style.display=m=="key"?"block":"none";$("olBox").style.display=m=="ollama"?"block":"none";
  $("test").style.display=m=="demo"?"none":"inline-block";const p=$("prov").value;$("getKey").href=(H.links||{})[p]||"#";$("getKey").style.display=p?"inline":"none";
  $("starters").innerHTML=H.workflows.filter(w=>w.kind=="example").map((w,i)=>`<div class="wf" tabindex="0" data-start="${w.name}"><div class="ic" style="background:${["#3dffa0","#ffc94d","#5cc8ff"][i%3]}">${["◆","▲","●"][i%3]}</div><b>${w.name}</b><div class="dim" style="margin-top:8px">${(tr("st")||{})[w.name]||""}</div></div>`).join("");
@@ -118,7 +120,7 @@ async function finish(name){if(await setup(true))openWf(name)}
 (async()=>{H=await api("/api/home");L=H.language;
  $("lang").innerHTML=Object.entries(H.languages).map(([c,n])=>`<option value="${c}">${n}</option>`).join("");$("lang").value=L;
  $("prov").innerHTML=Object.entries(H.providers).filter(([k,v])=>v.key_env&&k!="custom").map(([k,v])=>`<option value="${k}">${v.label}${H.keys[k]?" ✓":""}</option>`).join("");
- $("lang").onchange=()=>{L=$("lang").value;paint()};$("n1").onclick=()=>step(2);$("n2").onclick=()=>step(3);$("b2").onclick=()=>step(1);$("b3").onclick=()=>step(2);$("skip").onclick=()=>setup(false);$("test").onclick=testConn;document.querySelectorAll("input[name=mode]").forEach(r=>r.onchange=paintMode);$("prov").onchange=paintMode;$("redo").onclick=()=>{show(true);step(1)};$("chg").onclick=changeData;$("anim").onclick=async()=>{await api("/api/prefs",{animations:H.animations===false});H=await api("/api/home");paint()};$("dataIn").value=$("dataNew").value=H.data_dir;
+ $("lang").onchange=()=>{L=$("lang").value;paint()};$("n1").onclick=()=>step(2);$("n2").onclick=()=>step(3);$("n3").onclick=()=>step(4);$("b3m").onclick=()=>step(2);$("b2").onclick=()=>step(1);$("b3").onclick=()=>step(3);$("skip").onclick=()=>setup(false);$("test").onclick=testConn;document.querySelectorAll("input[name=mode]").forEach(r=>r.onchange=paintMode);$("prov").onchange=paintMode;$("redo").onclick=()=>{show(true);step(1)};$("chg").onclick=changeData;$("anim").onclick=async()=>{await api("/api/prefs",{animations:H.animations===false});H=await api("/api/home");paint()};$("dataIn").value=$("dataNew").value=H.data_dir;
  if(H.ai_mode&&document.querySelector(`input[value=${H.ai_mode}]`))document.querySelector(`input[value=${H.ai_mode}]`).checked=true;
  const wz=new URLSearchParams(location.search).get("wizard");show(H.first_run||!!wz);paint();step(1)})();
 setInterval(()=>{const c=document.getElementById("clock");if(c)c.textContent=new Date().toLocaleTimeString()},1000);
