@@ -93,13 +93,36 @@ def voices(a):
         return 0
     if not a.name: raise ValueError("name a character (or a preset id for audition)")
     if a.op == "delete": lib.delete(a.name); print(f"deleted {a.name}"); return 0
+    if a.op == "clone":
+        from . import tts_cloud as TC, providers as PV
+        if a.backend not in ("elevenlabs", "minimax", "doubao") or not a.sample: raise ValueError("clone needs --backend elevenlabs|minimax|doubao and --sample your_recording.wav (with the speaker's consent)")
+        try: vid = TC.clone(a.backend, a.name, a.sample, a.voice_id)
+        except PV.ProviderError as e: raise ValueError(str(e))
+        p = lib.set(a.name, backend=a.backend, **{f"{a.backend}_voice": vid}); print(f"{a.name}: cloned {a.backend} voice {vid} saved (no key stored)"); return 0
     if a.op == "set":
         p = lib.set(a.name, preset=a.preset, voice=a.voice, backend=a.backend, rate=a.rate, pitch=a.pitch, volume=a.volume, style=a.style, description=a.description,
-                    gender=a.gender, age=a.age, color=a.color, openai_voice=a.openai_voice, elevenlabs_voice=a.elevenlabs_voice, lang=a.lang)
+                    gender=a.gender, age=a.age, color=a.color, openai_voice=a.openai_voice, elevenlabs_voice=a.elevenlabs_voice, lang=a.lang,
+                    minimax_voice=a.minimax_voice, doubao_voice=a.doubao_voice, azure_voice=a.azure_voice, ref_image=a.ref_image)
         print(f"{a.name}: {p}"); return 0
     prof = VO.preset(a.name) if "/" in a.name else lib.get(a.name)
     out, inf = VO.audition(VO.clean_profile("x", prof) if "/" in a.name else prof, a.output or f"audition_{a.name.replace('/', '_')}.wav", a.text, a.lang, a.emotion)
     print(f"{out}  ({inf[0]['backend']} {inf[0]['voice']})"); return 0
+
+def models(a):
+    from . import providers as PV
+    if a.test: r = PV.test_key(a.test); print(("ok: " if r["ok"] else "failed: ") + r["message"]); return 0 if r["ok"] else 1
+    rec = PV.recommended(); print(f"Recommended models (checked {PV.CHECKED}; prices are rough - check current pricing)")
+    for k, tiers in rec.items():
+        print(f"\n[{k}]")
+        for t, es in tiers.items():
+            for e in es: print(f"  {t:<13} {e['provider']:<28} {e['model']:<26} env {'+'.join(e['env']) or '-':<36} {'set' if e['configured'] and e['env'] else ''}\n                docs {e['docs']}\n                key  {e['key_url']}\n                price {e['pricing']}")
+    return 0
+
+def estimate(a):
+    from . import providers as PV
+    sb = load_storyboard(Path(a.folder) / "storyboard.yaml")
+    e = PV.estimate(sb["shots"], a.backend)
+    print(f"{a.backend}: {e['shots']} shots, {e['seconds']}s of video, ~${e['usd'] if e['usd'] is not None else '?'} , ~{e['minutes'] or '?'} min ({e['note']}: {e['pricing']})"); return 0
 
 def main(argv):
     ap = argparse.ArgumentParser(prog="seatcrew video", description="Short-video tools: init a storyboard folder, assemble a finished video, quality-check it.")
@@ -108,20 +131,25 @@ def main(argv):
     i.add_argument("--template", choices=list(TEMPLATES), default="knowledge_explainer"); i.add_argument("--aspect", choices=["9:16", "16:9"], default="9:16")
     s = sp.add_parser("assemble", help="folder (storyboard.yaml + clips/) -> final.mp4 + quality_report.json"); s.add_argument("folder")
     s.add_argument("--storyboard"); s.add_argument("-o", "--output"); s.add_argument("--aspect", choices=["9:16", "16:9"])
-    s.add_argument("--tts", default="auto", choices=["auto", "elevenlabs", "openai", "edge", "draft"]); s.add_argument("--tts-voice"); s.add_argument("--tts-rate", help="edge-tts speaking rate, e.g. -8%%"); s.add_argument("--tts-pitch", help="edge-tts pitch, e.g. -2Hz"); s.add_argument("--fonts-dir", help="extra fonts (e.g. Noto Sans SC for Chinese subtitles)")
+    s.add_argument("--tts", default="auto", choices=["auto", "elevenlabs", "minimax", "doubao", "azure", "openai", "edge", "draft"]); s.add_argument("--tts-voice"); s.add_argument("--tts-rate", help="edge-tts speaking rate, e.g. -8%%"); s.add_argument("--tts-pitch", help="edge-tts pitch, e.g. -2Hz"); s.add_argument("--fonts-dir", help="extra fonts (e.g. Noto Sans SC for Chinese subtitles)")
     s.add_argument("--voices-lib", help="character voice library (default voices/characters.yaml in the data folder)"); s.add_argument("--speaker-colors", action="store_true", help="color subtitles per speaker")
     s.add_argument("--voice", help="your own narration file (instead of TTS)"); s.add_argument("--words", help="word timings JSON [{w,start,end}] for --voice")
     s.add_argument("--bgm", help="background music (ducked under the voice)"); s.add_argument("--bgm-gain-db", type=float)
     s.add_argument("--crf", type=int, default=18); s.add_argument("--preset", default="slow"); s.add_argument("--allow-draft", action="store_true", help=f"fill gaps offline; output is labeled {DRAFT_LABEL}")
     q = sp.add_parser("qc", help="re-run the quality check (video folder, final.mp4 or work/manifest.json)"); q.add_argument("manifest")
     v = sp.add_parser("voices", help="character voice library: presets, characters, audition")
-    v.add_argument("op", choices=["presets", "list", "set", "delete", "audition"]); v.add_argument("name", nargs="?")
+    v.add_argument("op", choices=["presets", "list", "set", "delete", "audition", "clone"]); v.add_argument("name", nargs="?")
     v.add_argument("--lang"); v.add_argument("--preset"); v.add_argument("--voice"); v.add_argument("--backend"); v.add_argument("--rate"); v.add_argument("--pitch")
     v.add_argument("--volume"); v.add_argument("--style"); v.add_argument("--description"); v.add_argument("--gender"); v.add_argument("--age"); v.add_argument("--color")
     v.add_argument("--openai-voice"); v.add_argument("--elevenlabs-voice"); v.add_argument("--text"); v.add_argument("--emotion"); v.add_argument("-o", "--output")
-    v.add_argument("--lib", help="library file (default voices/characters.yaml)")
+    v.add_argument("--lib", help="library file (default voices/characters.yaml)"); v.add_argument("--minimax-voice"); v.add_argument("--doubao-voice")
+    v.add_argument("--azure-voice"); v.add_argument("--ref-image", help="character reference image (for image-to-video consistency)")
+    v.add_argument("--sample", help="clone: your recording of the speaker (with consent)"); v.add_argument("--voice-id", help="clone: voice id to create (minimax) / S_ speaker id (doubao)")
+    m = sp.add_parser("models", help="recommended video + voice models (links, env vars); --test ID checks a key"); m.add_argument("--test")
+    e = sp.add_parser("estimate", help="rough cost/time of generating a folder's shots with a video API"); e.add_argument("folder")
+    e.add_argument("--backend", required=True, choices=["kling", "runway", "gemini", "minimax", "luma", "replicate"])
     a = ap.parse_args(argv)
-    try: return {"init": init, "assemble": assemble, "qc": qc, "voices": voices}[a.c](a)
+    try: return {"init": init, "assemble": assemble, "qc": qc, "voices": voices, "models": models, "estimate": estimate}[a.c](a)
     except (ValueError, FFError) as e: print(f"error: {e}"); return 1
 
 if __name__ == "__main__": sys.exit(main(sys.argv[1:]))

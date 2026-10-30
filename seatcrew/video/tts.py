@@ -17,7 +17,7 @@ OPENAI_VOICE, OPENAI_MODEL = "alloy", "gpt-4o-mini-tts"
 OPENAI_VOICES = ("alloy", "ash", "ballad", "coral", "echo", "fable", "nova", "onyx", "sage", "shimmer", "verse")
 ELEVEN_VOICE, ELEVEN_MODEL = "21m00Tcm4TlvDq8ikWAM", "eleven_multilingual_v2"
 CJK = re.compile(r"[\u3040-\u30ff\u3400-\u9fff\uf900-\ufaff]")
-FINAL = ("elevenlabs", "openai", "edge")
+FINAL = ("elevenlabs", "minimax", "doubao", "azure", "openai", "edge")
 
 class TTSError(RuntimeError): pass
 
@@ -55,7 +55,7 @@ def _need(env):
 
 def elevenlabs(text, out, voice=None, lang="en", model=None, stability=None):
     key = _need("ELEVENLABS_API_KEY"); vid = voice or ELEVEN_VOICE
-    body = dict(text=text, model_id=model or ELEVEN_MODEL)
+    body = dict(text=text, model_id=model or os.environ.get("SEATCREW_ELEVEN_MODEL") or ELEVEN_MODEL)
     if stability is not None: body["voice_settings"] = dict(stability=float(stability), similarity_boost=0.8)
     raw, _ = _http(f"https://api.elevenlabs.io/v1/text-to-speech/{vid}/with-timestamps?output_format=mp3_44100_192",
                    {"xi-api-key": key, "Content-Type": "application/json"}, body)
@@ -162,19 +162,26 @@ def mock(text, out, voice=None, lang="en", model=None):
     ff.run(["-f", "lavfi", "-i", f"sine=frequency=440:sample_rate=48000:duration={dur:.2f}", "-af", "volume=0.25", "-ac", "1", out])
     return out, [dict(w=w, start=round(0.1 + i * per, 3), end=round(0.1 + i * per + per * 0.9, 3)) for i, w in enumerate(ws)], dict(backend="mock", voice="sine", sync="exact")
 
-BACKENDS = dict(elevenlabs=elevenlabs, openai=openai, edge=edge, draft=draft, mock=mock)
+from . import tts_cloud as TC
+BACKENDS = dict(elevenlabs=elevenlabs, minimax=TC.minimax, doubao=TC.doubao, azure=TC.azure, openai=openai, edge=edge, draft=draft, mock=mock)
 
 def auto_order(pref="auto"):
     if pref and pref != "auto": return [pref]
-    order = [b for b, env in (("elevenlabs", "ELEVENLABS_API_KEY"), ("openai", "OPENAI_API_KEY")) if os.getenv(env)]
+    order = [b for b, env in (("elevenlabs", "ELEVENLABS_API_KEY"), ("minimax", "MINIMAX_API_KEY"), ("doubao", "VOLC_TTS_API_KEY"),
+                              ("azure", "AZURE_SPEECH_KEY"), ("openai", "OPENAI_API_KEY")) if os.getenv(env)]
     try:
         import edge_tts  # noqa: F401
         order.append("edge")
     except ImportError: pass
     return order
 
+def _pct(x):
+    try: return int(str(x or "0").rstrip("%Hz").replace("Hz", "") or 0)
+    except ValueError: return 0
+
 def synth(text, out, pref="auto", voice=None, lang="en", allow_draft=True, model=None, rate=None, pitch=None, volume=None,
-          instructions=None, openai_voice=None, elevenlabs_voice=None, stability=None):
+          instructions=None, openai_voice=None, elevenlabs_voice=None, stability=None, style=None, minimax_voice=None, doubao_voice=None,
+          azure_voice=None, base=None):
     """Try backends in order. Returns (path, words, info). Falls back to the labeled draft voice only if allowed."""
     errs = []
     for b in auto_order(pref):
@@ -184,6 +191,13 @@ def synth(text, out, pref="auto", voice=None, lang="en", allow_draft=True, model
             kw, v = {}, voice                       # each backend gets its own voice id + emotion controls
             if b == "edge": kw = {k: x for k, x in dict(rate=rate, pitch=pitch, volume=volume).items() if x}
             elif b == "openai": v = openai_voice or (voice if voice in OPENAI_VOICES else None); kw = dict(instructions=instructions) if instructions else {}
+            elif b == "minimax":
+                v = minimax_voice; r = _pct(rate) if base is None else base[0]
+                kw = dict(style=style, speed=1 + r / 100, pitch=round((_pct(pitch) if base is None else base[1]) / 4))
+            elif b == "doubao": v = doubao_voice; kw = dict(style=style, speed=_pct(rate) if base is None else base[0])
+            elif b == "azure":
+                v = azure_voice or (voice if voice and voice.endswith("Neural") else None)
+                kw = dict(style=style, **(dict(rate=base[0], pitch=base[1], volume=base[2]) if base else {}))
             elif b == "elevenlabs": v = elevenlabs_voice or (None if voice and voice.endswith("Neural") else voice); kw = dict(stability=stability) if stability is not None else {}
             return BACKENDS[b](text, str(Path(out).with_suffix(ext)), voice=v, lang=lang, model=model, **kw)
         except (TTSError, ff.FFError) as e: errs.append(f"{b}: {e}")

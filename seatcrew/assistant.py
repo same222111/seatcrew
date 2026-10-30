@@ -294,6 +294,7 @@ class Assistant:
                 "create_workflow args: {\"yaml\": \"<SeatCrew workflow.yaml: name (snake_case), title, submit [{name,label}], seats [{name, job, rules:[{require:[f]}|{max_len:{field,max}}|{min_len:{field,min}}|{block_if_match:{field,pattern,reason}}|{require_match:{field,pattern,reason}}], ai:{labels,block,prompt}} or {name, job, human: true}], chain [seat names], sample_items [..]>\"}. "
                 + ("This is a VIDEO STUDIO workflow: to make a video call run_sample with args {\"data\": {\"topic\": \"...\", \"notes\": \"optional script\", \"template\": \"emotional_story|knowledge_explainer|product_promo\", \"aspect\": \"9:16|16:9\"}}; "
                    "to adjust it use set_config on settings (template, aspect, tts_backend, visuals_backend, video_model, clips_dir, bgm_path, crf...). Quality matters: offline/draft output is labeled DRAFT PREVIEW and is not final; "
+                   "To help pick providers: video best quality = kling (kling-3.0) / runway (gen4.5) / gemini (gemini-omni-1.1-flash); best value = minimax (MiniMax-H3) / luma (ray-3.2); free = draft. Voice best quality = elevenlabs / minimax; value = doubao / azure (real SSML styles) / openai; free = edge. Sora API is discontinued. Set visuals_backend / tts_backend with set_config; the Recommended models panel has links and a Test key button; prices are rough, tell the user to check the official pricing page. "
                    "final quality needs ElevenLabs/OpenAI/edge-tts voice and real clips (own folder, Replicate video model, or OpenAI/Stability images). "
                    "Each character has ONE saved voice (character voice library). To change one call set_voice with args {\"name\": \"<character>\", \"adjust\": \"older|younger|slower|faster|lower|higher|softer|louder\"} "
                    "or {\"name\": ..., \"changes\": {\"preset\": \"zh-CN/elderly_woman\", \"style\": \"gentle|sad|tender|cheerful|calm|...\", \"rate\": -10, \"pitch\": -6, \"voice\": \"zh-CN-XiaoxiaoNeural\", \"openai_voice\": \"sage\"}}. "
@@ -340,12 +341,32 @@ class Assistant:
         ql = q.lower()
         if re.search(r"who decides|who.*decid|谁.*(决|定)|誰.*(決|定)|誰が|quién decide|assign|分工|分配", ql): return "who_decides", {}, ""
         if re.search(r"error|not work|broken|fail|troubleshoot|missing|key missing|报错|错误|不工作|失败|故障|エラー|error|falla", ql) and not re.search(r"create|创建|新建", ql): return "troubleshoot", {}, ""
+        if re.search(r"(recommend|which|best|cheap|free).{0,30}(model|provider|video api|tts|voice api)|(model|provider)s?.{0,20}(recommend|should i)|推荐.{0,6}模型|哪个模型|哪個模型|推薦.{0,6}模型|用什么模型|おすすめ.{0,6}モデル|どのモデル|qué modelo|recomienda.{0,10}modelo", ql):
+            return None, {}, self.models_answer(ql)
         vi = self.video_intent(q, ql)
         if vi: return vi
         if re.search(r"(create|new|make|build).{0,20}(workflow|flow|pipeline)|创建|新建.*(工作流|流程)|建立.*流程|作って|crea(r)? un flujo", ql):
             return "create_workflow", dict(description=re.sub(r"^(please\s+)?(create|make|build)\s+(a|an)?\s*(new\s+)?(workflow|flow)\s*(that|to|for)?\s*", "", q, flags=re.I)), ""
         if re.search(r"run.*sample|try.*sample|运行.*(样例|示例)|試.*サンプル|ejecuta", ql): return "run_sample", {}, ""
         return None, {}, tx(self.lang, "offline") + "\n" + self.faq(q) if not self.hist[:-1] or len(self.hist) < 3 else self.faq(q)
+
+    def models_answer(self, ql=""):
+        """Recommended video + voice models in three tiers, with links (same data as the Recommended models panel)."""
+        from .video import providers as PV
+        H = {"en": ("Recommended models", "Best quality", "Best value", "Free / draft", "Video", "Voice / TTS", "key set", "prices are rough - check the official pricing page"),
+             "zh-CN": ("推荐模型", "最佳画质", "最高性价比", "免费 / 草稿", "视频", "配音", "已设置密钥", "价格仅供参考，请以官方定价页为准"),
+             "zh-TW": ("推薦模型", "最佳畫質", "最高性價比", "免費 / 草稿", "影片", "配音", "已設定金鑰", "價格僅供參考，請以官方定價頁為準"),
+             "ja": ("おすすめモデル", "最高品質", "コスパ重視", "無料 / 下書き", "動画", "音声", "キー設定済み", "価格は目安です。公式料金ページを確認してください"),
+             "es": ("Modelos recomendados", "Mejor calidad", "Mejor valor", "Gratis / borrador", "Vídeo", "Voz", "clave configurada", "precios aproximados: revisa la página oficial")}
+        h = H.get(self.lang) or H["en"]; rec = PV.recommended(); out = [f"{h[0]} ({PV.CHECKED}) - {h[7]}"]
+        kinds = ["tts"] if re.search(r"tts|voice|配音|语音|語音|声|音声|voz", ql) and not re.search(r"video|视频|影片|動画|vídeo", ql) else \
+                ["video"] if re.search(r"video|视频|影片|動画|vídeo", ql) and not re.search(r"tts|voice|配音|语音|音声|voz", ql) else ["video", "tts"]
+        for k in kinds:
+            out.append(f"\n{h[4] if k == 'video' else h[5]}")
+            for t, lab in (("best_quality", h[1]), ("best_value", h[2]), ("free_draft", h[3])):
+                out.append(f"- {lab}: " + "; ".join(f"{e['provider']} {e['model']}" + (f" ({', '.join(e['env'])}{' ✓ ' + h[6] if e['configured'] and e['env'] else ''})" if e['env'] else "")
+                                                   + (f" {e['docs']}" if e['docs'] else "") for e in rec[k][t]))
+        return "\n".join(out)
 
     def video_intent(self, q, ql):
         """Video studio workflows: "make a video about X", "switch to 16:9", "use the product promo template"."""
@@ -407,6 +428,14 @@ class Assistant:
 
 def route(asst, method, path, body=None):
     """Shared HTTP routes. Returns (obj, code) or None when the path is not a chat route."""
+    if path == "/api/models" and method == "GET":
+        from .video import providers as PV
+        return dict(tiers=PV.recommended(), checked=PV.CHECKED), 200
+    if path == "/api/models/test" and method == "POST":
+        from .video import providers as PV
+        i = str((body or {}).get("id", ""))
+        if not any(e["id"] == i for e in PV.CATALOG): return {"error": "unknown model"}, 404
+        return PV.test_key(i), 200
     if not path.startswith("/api/chat"): return None
     if method == "GET" and path == "/api/chat": return asst.status(), 200
     if method == "POST" and path == "/api/chat": return asst.send((body or {}).get("message", "")), 200
@@ -417,6 +446,7 @@ def route(asst, method, path, body=None):
 WEB = Path(__file__).parent / "web"
 def static(path):
     """chat.js / chat page shared by every server."""
+    if path == "/models.js": return (WEB / "models.js").read_bytes(), "application/javascript; charset=utf-8"
     if path == "/chat.js": return (WEB / "chat.js").read_bytes(), "application/javascript; charset=utf-8"
     if path == "/chat": return (WEB / "chat.html").read_bytes(), "text/html; charset=utf-8"
     return None

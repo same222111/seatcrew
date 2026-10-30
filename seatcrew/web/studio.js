@@ -75,3 +75,9 @@ function render(){if(!V)return;const sig=JSON.stringify([LOC.app_sub,V.character
  vb.querySelectorAll('[data-vdel]').forEach(b=>b.onclick=async()=>{if(!confirm(L('v_confirm_del','Delete this character voice?')))return;await post('/api/voices/delete',{name:b.dataset.vdel});await load()})}
 async function load(){try{V=await get('/api/voices');SIGV='';render()}catch(e){}}
 load();setInterval(()=>{if(!EDIT&&!vb.contains(document.activeElement))load()},10000);setInterval(render,1500)})();
+// Recommended models panel (video + voice tiers, docs / key / pricing links, Test key)
+(()=>{const mb=document.createElement('div');mb.className='nx-card studio';mb.id='models';const v=document.getElementById('voices')||document.getElementById('studio');
+ v.parentNode.insertBefore(mb,v.nextSibling);let lang='';
+ const go=async()=>{if(!window.SCModels){const s=document.createElement('script');s.src='/models.js';s.onload=go;document.body.appendChild(s);return}
+  const l=(await fetch('/api/voices').then(r=>r.json()).catch(()=>({}))).lang||'en';if(l!=lang){lang=l;SCModels.render(mb,l)}};
+ go();setInterval(go,15000)})();

@@ -1,19 +1,23 @@
 """Pluggable visuals: one image or video clip per shot.
 
   local       final  - your own clip/image in the clips folder (<shot id>.mp4/.mov/.png/.jpg/.webp). Always preferred.
+  kling / runway / luma / gemini / minimax   final - direct video APIs (see providers.py; image-to-video when the shot has ref_image)
+  sora        retired - OpenAI removed the Sora video API on 2026-09-24
   replicate   final  - any Replicate-hosted text-to-video model (Kling, Luma Ray, Runway-style, Wan, Veo ...): set video_model
                        to the model slug, e.g. "kwaivgi/kling-v2.1" (REPLICATE_API_TOKEN)
   openai      final  - gpt-image-1 high-quality stills (OPENAI_API_KEY); the EDITOR adds camera motion
   stability   final  - Stability AI Stable Image Ultra stills (STABILITY_API_KEY)
   draft       DRAFT  - offline gradient title cards. Labeled draft everywhere; never final quality.
   mock        tests only
-Add a direct Runway / Luma / Kling API by subclassing VideoAdapter (see docs/VIDEO.md)."""
+Add another API by subclassing providers.Adapter (see docs/VIDEO.md)."""
 import base64, json, os, time, urllib.request
 from pathlib import Path
 from . import ff
 from .storyboard import find_clip
+from . import providers as PV
 
-FINAL = ("local", "replicate", "openai", "stability")
+FINAL = ("local", "replicate", "openai", "stability", "kling", "runway", "luma", "gemini", "minimax", "sora")
+DIRECT = ("kling", "runway", "luma", "gemini", "minimax", "sora", "replicate")
 class VisualError(RuntimeError): pass
 
 def _http(url, headers, body=None, data=None, timeout=300, method=None):
@@ -30,34 +34,6 @@ def _need(env):
 
 def prompt_for(shot, style=""):
     return ", ".join(x for x in (shot.get("visual") or shot.get("narration"), style, "no text, no watermark, no logos") if x)
-
-class VideoAdapter:
-    """Base for text-to-video APIs: submit() -> job, poll(job) -> url|None, then the clip is downloaded."""
-    name = "video"; poll_every = 5; max_wait = 900
-    def submit(self, prompt, aspect, seconds, model): raise NotImplementedError
-    def poll(self, job): raise NotImplementedError
-    def make(self, shot, out_dir, aspect, model, style=""):
-        job = self.submit(prompt_for(shot, style), aspect, shot["duration"], model); t0 = time.time()
-        while time.time() - t0 < self.max_wait:
-            url = self.poll(job)
-            if url: raw, _ = _http(url, {}); p = Path(out_dir) / f"{shot['id']}.mp4"; p.write_bytes(raw); return p
-            time.sleep(self.poll_every)
-        raise VisualError(f"{self.name}: timed out after {self.max_wait}s")
-
-class Replicate(VideoAdapter):
-    name = "replicate"
-    def h(self): return {"Authorization": f"Bearer {_need('REPLICATE_API_TOKEN')}", "Content-Type": "application/json"}
-    def submit(self, prompt, aspect, seconds, model):
-        if not model or "/" not in model: raise VisualError("set video_model to a Replicate model slug, e.g. kwaivgi/kling-v2.1")
-        raw, _ = _http(f"https://api.replicate.com/v1/models/{model}/predictions", self.h(),
-                       dict(input=dict(prompt=prompt, aspect_ratio=aspect, duration=5 if seconds <= 5.5 else 10)))
-        return json.loads(raw)
-    def poll(self, job):
-        raw, _ = _http(job["urls"]["get"], self.h()); j = json.loads(raw)
-        if j["status"] == "succeeded":
-            o = j["output"]; return o[0] if isinstance(o, list) else o
-        if j["status"] in ("failed", "canceled"): raise VisualError(f"replicate: {j.get('error') or j['status']}")
-        return None
 
 def openai_image(shot, out_dir, aspect, model=None, style=""):
     key = _need("OPENAI_API_KEY"); size = "1024x1536" if aspect == "9:16" else "1536x1024"
@@ -102,13 +78,20 @@ def mock_image(shot, out_dir, aspect, model=None, style="", size=(540, 960)):
 
 def auto_order(pref="auto", video_model=""):
     if pref and pref != "auto": return [pref]
-    o = []
-    if os.getenv("REPLICATE_API_TOKEN") and video_model: o.append("replicate")
+    o = [b for b in ("kling", "runway", "gemini", "minimax", "luma") if any(os.getenv(e) for e in PV.VIDEO_ENV[b])]
+    if os.getenv("REPLICATE_API_TOKEN") and video_model and "/" in video_model: o.append("replicate")
     if os.getenv("OPENAI_API_KEY"): o.append("openai")
     if os.getenv("STABILITY_API_KEY"): o.append("stability")
     return o
 
-def make(shot, out_dir, aspect, pref="auto", clips_dir=None, video_model="", image_model="", style="", allow_draft=True):
+def ref_for(shot, refs=None, base=None):
+    """Reference image for consistent characters: the shot's ref_image, else the first speaker that has one in refs."""
+    r = shot.get("ref_image") or next((refs[l["speaker"]] for l in shot.get("lines", []) if refs and l.get("speaker") in refs), None)
+    if not r: return None
+    p = Path(r) if Path(r).is_absolute() or not base else Path(base) / r
+    return p if p.is_file() else None
+
+def make(shot, out_dir, aspect, pref="auto", clips_dir=None, video_model="", image_model="", style="", allow_draft=True, refs=None, base=None):
     """Returns (path, info). Own clips win; then backends in order; then the labeled draft card if allowed."""
     if clips_dir:
         c = find_clip(clips_dir, shot["id"])
@@ -116,13 +99,17 @@ def make(shot, out_dir, aspect, pref="auto", clips_dir=None, video_model="", ima
     errs = []
     for b in auto_order(pref, video_model):
         try:
-            if b == "replicate": return Replicate().make(shot, out_dir, aspect, video_model, style), dict(backend=b, model=video_model)
+            if b in DIRECT:
+                a = PV.VIDEO[b](); m = (video_model if b == "replicate" or (video_model and "/" not in video_model) else "") or a.default_model
+                ref = ref_for(shot, refs, base)
+                p = a.run(prompt_for(shot, style), Path(out_dir) / f"{shot['id']}.mp4", aspect, shot["duration"], m, ref)
+                return p, dict(backend=b, model=m, **({"ref_image": Path(ref).name} if ref else {}))
             if b == "openai": return openai_image(shot, out_dir, aspect, image_model or None, style), dict(backend=b, model=image_model or "gpt-image-1")
             if b == "stability": return stability_image(shot, out_dir, aspect, image_model or None, style), dict(backend=b)
             if b == "mock": return mock_image(shot, out_dir, aspect), dict(backend=b)
             if b == "draft": break
             raise VisualError(f"unknown visuals backend {b}")
-        except (VisualError, ff.FFError) as e: errs.append(f"{b}: {e}")
+        except (VisualError, PV.ProviderError, ff.FFError) as e: errs.append(f"{b}: {e}")
     if allow_draft and pref in ("auto", "draft"):
         return draft_card(shot, out_dir, aspect), dict(backend="draft", draft=True, fallback_reasons=errs)
     raise VisualError("; ".join(errs) or "no visuals backend available (add clips, or set a key)")

@@ -77,7 +77,8 @@ def validate_storyboard(d):
         narr = " ".join(l["text"] for l in lines) if s.get("lines") else str(s.get("narration") or "").strip()
         out["shots"].append(dict(id=sid, narration=narr, lines=lines, duration=dur, caption=str(s.get("caption") or "").strip()[:80],
                                  visual=str(s.get("visual") or "").strip(), camera=cam, transition=tr,
-                                 **({"clip": str(s["clip"])} if s.get("clip") else {})))
+                                 **({"clip": str(s["clip"])} if s.get("clip") else {}),
+                                 **({"ref_image": str(s["ref_image"])[:200]} if s.get("ref_image") else {})))
     return out
 
 def find_clip(folder, sid):

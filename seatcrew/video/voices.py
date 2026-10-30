@@ -14,7 +14,7 @@ from . import ff, tts as TTS
 
 LIB_REL = Path("voices") / "characters.yaml"
 NAME_RE = re.compile(r"^[\w\u3040-\u30ff\u3400-\u9fff\uac00-\ud7af][\w\u3040-\u30ff\u3400-\u9fff\uac00-\ud7af \-]{0,39}$")
-BACKENDS = ("auto", "edge", "openai", "elevenlabs")
+BACKENDS = ("auto", "edge", "azure", "minimax", "doubao", "openai", "elevenlabs")
 GENDERS = ("female", "male", "neutral")
 AGES = ("child", "teen", "young", "adult", "mature", "elderly")
 OPENAI_VOICES = ("alloy", "ash", "ballad", "coral", "echo", "fable", "nova", "onyx", "sage", "shimmer", "verse")
@@ -114,7 +114,12 @@ def clean_profile(name, d):
                lang=lang_key(d.get("lang") or "zh-CN"), preset=str(d.get("preset") or ""), backend=d.get("backend") or "auto",
                voice=str(d.get("voice") or ""), openai_voice=str(d.get("openai_voice") or ""), elevenlabs_voice=str(d.get("elevenlabs_voice") or ""),
                rate=_int(d.get("rate", 0), -50, 50, "rate"), pitch=_int(d.get("pitch", 0), -50, 50, "pitch"), volume=_int(d.get("volume", 0), -50, 50, "volume"),
-               style=d.get("style") or "neutral", color=str(d.get("color") or ""))
+               style=d.get("style") or "neutral", color=str(d.get("color") or ""), minimax_voice=str(d.get("minimax_voice") or ""),
+               doubao_voice=str(d.get("doubao_voice") or ""), azure_voice=str(d.get("azure_voice") or ""), ref_image=str(d.get("ref_image") or ""))
+    for k in ("minimax_voice", "doubao_voice"):
+        if out[k] and not re.fullmatch(r"[A-Za-z0-9_\-]{3,64}", out[k]): raise ValueError(f"{k}: 3-64 letters/digits/_/-")
+    if out["azure_voice"] and not re.fullmatch(r"[A-Za-z]{2,3}-[A-Za-z]{2,4}(-[A-Za-z]+)?-[\w:]+", out["azure_voice"]): raise ValueError("azure voice id looks wrong (e.g. zh-CN-XiaoxiaoNeural)")
+    if out["ref_image"] and (".." in out["ref_image"] or not re.search(r"\.(png|jpe?g|webp)$", out["ref_image"], re.I)): raise ValueError("ref_image: a .png/.jpg/.webp path inside the data folder")
     if out["gender"] not in GENDERS: raise ValueError(f"gender must be one of {GENDERS}")
     if out["age"] not in AGES: raise ValueError(f"age must be one of {AGES}")
     if out["backend"] not in BACKENDS: raise ValueError(f"backend must be one of {BACKENDS}")
@@ -129,6 +134,7 @@ def clean_profile(name, d):
 def signature(p):
     """Identity of a voice (what must stay the same across shots). Emotion/style per line is allowed to vary."""
     key = {k: p.get(k) for k in ("backend", "voice", "openai_voice", "elevenlabs_voice", "rate", "pitch", "volume")}
+    key.update({k: p[k] for k in ("minimax_voice", "doubao_voice", "azure_voice") if p.get(k)})
     return hashlib.sha1(json.dumps(key, sort_keys=True).encode()).hexdigest()[:10]
 
 class Library:
@@ -184,7 +190,9 @@ def resolve(profile, emotion=None):
     rate, pitch, vol = profile["rate"] + r, profile["pitch"] + p, profile["volume"] + v
     return dict(pref=profile.get("backend") or "auto", voice=profile["voice"], openai_voice=profile.get("openai_voice") or None,
                 elevenlabs_voice=profile.get("elevenlabs_voice") or None, rate=f"{rate:+d}%", pitch=f"{pitch:+d}Hz", volume=f"{vol:+d}%",
-                instructions=instr, stability=stab, style=st)
+                instructions=instr, stability=stab, style=st, minimax_voice=profile.get("minimax_voice") or None,
+                doubao_voice=profile.get("doubao_voice") or None, azure_voice=profile.get("azure_voice") or None,
+                base=(profile["rate"], profile["pitch"], profile["volume"]))
 
 # ---- adjustments for CHIEF chat ("make mom sound older") ----
 ADJUST = {"older": dict(pitch=-6, rate=-6), "younger": dict(pitch=6, rate=4), "slower": dict(rate=-8), "faster": dict(rate=8),
@@ -218,7 +226,8 @@ def render_lines(lines, out, lib, lang="zh-CN", pref=None, allow_draft=False, ga
         sp = ln.get("speaker") or "narrator"; prof = lib.ensure(sp, lang); kw = resolve(prof, ln.get("emotion"))
         p, ws, inf = TTS.synth(ln["text"], out.parent / f"{out.stem}_{i:02d}", pref=pref or kw["pref"], voice=kw["voice"], lang=lang, allow_draft=allow_draft,
                                rate=kw["rate"], pitch=kw["pitch"], volume=kw["volume"], instructions=kw["instructions"],
-                               openai_voice=kw["openai_voice"], elevenlabs_voice=kw["elevenlabs_voice"], stability=kw["stability"])
+                               openai_voice=kw["openai_voice"], elevenlabs_voice=kw["elevenlabs_voice"], stability=kw["stability"], style=kw["style"],
+                               minimax_voice=kw["minimax_voice"], doubao_voice=kw["doubao_voice"], azure_voice=kw["azure_voice"], base=kw["base"])
         if i:
             pause = float(ln.get("pause", gap)); buf += b"\0\0" * int(sr * pause); t += pause
         pcm, cut = _trim(_pcm(p, sr), sr, keep_lead=0.04 if i else 0.0)   # TTS adds ~0.5s of silence around each line
@@ -240,12 +249,14 @@ class _Single:
     def ensure(self, name, lang=None): return self.p
 
 # ---- dashboard API ----
-FIELDS = ("preset", "description", "gender", "age", "lang", "backend", "voice", "openai_voice", "elevenlabs_voice", "rate", "pitch", "volume", "style", "color")
+FIELDS = ("preset", "description", "gender", "age", "lang", "backend", "voice", "openai_voice", "elevenlabs_voice", "rate", "pitch", "volume", "style", "color",
+          "minimax_voice", "doubao_voice", "azure_voice", "ref_image")
 
 def api_state(lang=None):
     import os
     return dict(characters=Library().all(), presets=presets(), styles=list(STYLES), genders=list(GENDERS), ages=list(AGES), backends=list(BACKENDS),
-                openai_voices=list(OPENAI_VOICES), lang=lang_key(lang), keys=dict(openai=bool(os.getenv("OPENAI_API_KEY")), elevenlabs=bool(os.getenv("ELEVENLABS_API_KEY"))))
+                openai_voices=list(OPENAI_VOICES), lang=lang_key(lang), keys=dict(openai=bool(os.getenv("OPENAI_API_KEY")), elevenlabs=bool(os.getenv("ELEVENLABS_API_KEY")),
+                minimax=bool(os.getenv("MINIMAX_API_KEY")), doubao=bool(os.getenv("VOLC_TTS_API_KEY")), azure=bool(os.getenv("AZURE_SPEECH_KEY"))))
 
 def audition_file(lib, name=None, preset_id=None, text=None, emotion=None, lang=None):
     """Cached mp3 preview (voices/auditions/<hash>.mp3) of a character or a preset."""

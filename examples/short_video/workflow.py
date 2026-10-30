@@ -17,7 +17,7 @@ import json, re, shutil
 from pathlib import Path
 from seatcrew import Seat, HumanSeat, Chief, Workflow, llm
 from seatcrew.config import Config, base_defaults
-from seatcrew.video import TEMPLATES, SIZES, validate_storyboard, key_status, tts as TTS, visuals as VIS, editor as ED, qc as QC, voices as VO
+from seatcrew.video import TEMPLATES, SIZES, validate_storyboard, key_status, tts as TTS, visuals as VIS, editor as ED, qc as QC, voices as VO, providers as PV
 from seatcrew.video.ff import have_ffmpeg, FFError
 
 SEATS = ["chief", "topic", "writer", "scriptcheck", "voice", "visuals", "editor", "qc", "approve"]
@@ -29,9 +29,10 @@ PROMPTS = {
 SETTINGS = {"template": "knowledge_explainer", "aspect": "9:16", "tts_backend": "auto", "tts_voice": "", "visuals_backend": "auto",
             "video_model": "", "image_model": "", "clips_dir": "", "bgm_path": "", "bgm_gain_db": -18.0, "allow_draft": True,
             "max_rewrites": 2, "banned_phrases": ["guaranteed", "risk-free", "miracle", "100% safe", "cure", "get rich"],
-            "min_sharpness": 12.0, "crf": 18, "preset": "slow", "approve_auto_approve": False, "load_samples": False, "speaker_colors": True}
-CHOICES = {"template": list(TEMPLATES), "aspect": list(SIZES), "tts_backend": ["auto", "elevenlabs", "openai", "edge", "draft"],
-           "visuals_backend": ["auto", "replicate", "openai", "stability", "draft"], "preset": ["slow", "medium", "fast", "veryfast", "ultrafast"]}
+            "min_sharpness": 12.0, "crf": 18, "preset": "slow", "approve_auto_approve": False, "load_samples": False, "speaker_colors": True,
+            "max_video_usd": 20.0}
+CHOICES = {"template": list(TEMPLATES), "aspect": list(SIZES), "tts_backend": ["auto", "elevenlabs", "minimax", "doubao", "azure", "openai", "edge", "draft"],
+           "visuals_backend": ["auto", "kling", "runway", "gemini", "minimax", "luma", "replicate", "openai", "stability", "draft"], "preset": ["slow", "medium", "fast", "veryfast", "ultrafast"]}
 SAMPLES = [dict(topic="Why is the sky blue?", template="knowledge_explainer",
                 notes="Sunlight looks white, but it is a mix of every color. Air molecules scatter short blue waves much more than long red ones. "
                       "So blue light reaches your eyes from every part of the sky. At sunset, light travels through more air and the blue is scattered away. That is why sunsets glow orange and red.")]
@@ -154,12 +155,19 @@ class Visuals(Seat):
     def rules(self, it):
         d = it["data"]; s = self.cfg["settings"]; work = self.wf.item_dir(it) / "visuals"; work.mkdir(parents=True, exist_ok=True)
         redo = set(d.pop("redo_shots", []) or []); tp = TEMPLATES[d["template"]]; clips = d.get("clips_dir") or s["clips_dir"] or None
+        todo = [x for x in d["storyboard"]["shots"] if not (x.get("clip_path") and Path(x["clip_path"]).exists()) or x["id"] in redo]
+        paid = [b for b in VIS.auto_order(s["visuals_backend"], s["video_model"]) if b in VIS.DIRECT]
+        if todo and paid:                                   # cost/time estimate shown BEFORE any paid generation
+            est = PV.estimate(todo, paid[0]); d["visuals_estimate"] = est
+            if est["usd"] is not None and est["usd"] > float(s.get("max_video_usd") or 0):
+                return False, f"{paid[0]} would cost ~${est['usd']} for {est['seconds']}s ({est['note']}) - over max_video_usd; approve or raise max_video_usd"
+        refs = {n: p["ref_image"] for n, p in VO.Library().all().items() if p.get("ref_image")}
         for sh in d["storyboard"]["shots"]:
             if sh.get("clip_path") and sh["id"] not in redo and Path(sh["clip_path"]).exists(): continue
             if sh["id"] in redo and sh.get("visual_info", {}).get("backend") == "local":
                 return False, f"{sh['id']}: your clip {sh['visual_info']['source']} failed QC - replace it in the clips folder"
-            try: p, info = VIS.make(sh, work, d["aspect"], pref=s["visuals_backend"], clips_dir=clips, video_model=s["video_model"], image_model=s["image_model"], style=tp["visual_style"], allow_draft=s["allow_draft"])
-            except (VIS.VisualError, FFError) as e: return False, f"{sh['id']}: {e}"
+            try: p, info = VIS.make(sh, work, d["aspect"], pref=s["visuals_backend"], clips_dir=clips, video_model=s["video_model"], image_model=s["image_model"], style=tp["visual_style"], allow_draft=s["allow_draft"], refs=refs)
+            except (VIS.VisualError, PV.ProviderError, FFError) as e: return False, f"{sh['id']}: {e}"
             sh["clip_path"], sh["visual_info"] = str(p), info
         bk = [x["visual_info"]["backend"] for x in d["storyboard"]["shots"]]
         d["visuals"] = dict(backends=sorted(set(bk)), draft="draft" in bk)
