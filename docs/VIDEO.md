@@ -64,3 +64,17 @@ seatcrew video assemble my_video --tts edge --tts-voice zh-CN-XiaoxiaoNeural \
 ```
 
 `seatcrew video qc` accepts the video folder, its `final.mp4`, or `work/manifest.json`.
+
+## Character voices
+
+Each character gets one persistent voice profile, stored in `voices/characters.yaml` inside the data folder. The same profile is used in every shot and every later video. Profile exports include it, and exports never contain keys.
+
+```bash
+python -m seatcrew video voices presets --lang zh-CN          # list the curated presets (zh-CN, zh-TW, en, ja, es)
+python -m seatcrew video voices set 妈妈 --preset zh-CN/elderly_woman --style tender --color "#FFB3C7"
+python -m seatcrew video voices audition 妈妈 --emotion worried -o mom.wav
+```
+
+Storyboard shots can carry `lines:` in either form: `[{speaker: 林晚, text: "妈？", emotion: tired}]` or `"林晚: 妈？"`. Plain `narration:` still works, and the `narrator` profile reads it. The VOICE seat renders each line with that speaker's profile and keeps word timings. `--speaker-colors` (or the `speaker_colors` setting) colors each speaker's subtitles. The QC check `voice_consistency` confirms that every character used exactly one voice. In CHIEF chat you can say things like "make mom sound older" (`set_voice`).
+
+Note: the free edge-tts endpoint has no SSML speaking styles. For edge, emotions are approximated with rate, pitch, and volume offsets. On OpenAI gpt-4o-mini-tts they are sent as `instructions`, and on ElevenLabs they map to `stability`.

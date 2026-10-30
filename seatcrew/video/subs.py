@@ -19,19 +19,37 @@ def chunk(words, L):
     def length(ws): return sum(len(x["w"]) for x in ws) + (0 if all(CJK.search(x["w"]) for x in ws) else len(ws) - 1)
     for i, w in enumerate(words):
         lim = L["max_cjk"] if CJK.search(w["w"]) else L["max_chars"]
-        if cur and (length(cur + [w]) > lim or w["start"] - cur[-1]["end"] > 0.45 or w.get("shot") != cur[-1].get("shot")): out.append(cur); cur = []
+        tail = 0                                                   # tokens left until the next punctuation (avoid 1-2 char orphans)
+        for x in words[i:i + 3]:
+            tail += 1
+            if END_P.search(x["w"]) or MID_P.search(x["w"]): break
+        else: tail = 99
+        over = length(cur + [w]) > lim and not (tail <= 2 and length(cur) + tail <= lim + 2)
+        if cur and (over or w["start"] - cur[-1]["end"] > 0.6 or w.get("shot") != cur[-1].get("shot") or w.get("speaker") != cur[-1].get("speaker")): out.append(cur); cur = []
         cur.append(w)
         if END_P.search(w["w"]) or (MID_P.search(w["w"]) and len(cur) >= 3): out.append(cur); cur = []
     if cur: out.append(cur)
-    return out
+    merged = []                                                    # a 1-2 word fragment cut off by a breath joins the next line
+    for g in out:
+        if merged and len(merged[-1]) <= 2 and not END_P.search(merged[-1][-1]["w"]) and not MID_P.search(merged[-1][-1]["w"]) \
+                and g[0].get("speaker") == merged[-1][0].get("speaker") and g[0].get("shot") == merged[-1][0].get("shot") \
+                and length(merged[-1] + g) <= (L["max_cjk"] if CJK.search(g[0]["w"]) else L["max_chars"]) + 2 and g[0]["start"] - merged[-1][-1]["end"] < 1.2:
+            merged[-1] = merged[-1] + g
+        else: merged.append(g)
+    return merged
 
 def ts(t):
     t = max(0.0, t); cs = int(round(t * 100)); return f"{cs // 360000}:{cs // 6000 % 60:02d}:{cs // 100 % 60:02d}.{cs % 100:02d}"
 
 def esc(s): return s.replace("\\", "＼").replace("{", "(").replace("}", ")").replace("\n", " ")
 
-def build_ass(words, captions, w, h, total, font=None):
-    """words: global [{w,start,end,shot}], captions: [(start, end, text)]. Returns (ass_text, cues) where cues are the subtitle events (for QC)."""
+def ass_color(hexrgb):
+    """#RRGGBB -> ASS &H00BBGGRR."""
+    h = hexrgb.lstrip("#"); return f"&H00{h[4:6]}{h[2:4]}{h[0:2]}".upper()
+
+def build_ass(words, captions, w, h, total, font=None, speaker_colors=None):
+    """words: global [{w,start,end,shot,speaker?}], captions: [(start, end, text)]. speaker_colors: {speaker: "#RRGGBB"} colors the
+    spoken (highlighted) words of that speaker's lines. Returns (ass_text, cues) where cues are the subtitle events (for QC)."""
     if font is None: font = FONT_CJK if any(CJK.search(x["w"]) for x in words) or any(CJK.search(c[2] or "") for c in captions) else FONT_NAME
     L = layout(w, h)
     head = f"""[Script Info]
@@ -65,9 +83,10 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
             t_next = g[i + 1]["start"] if i + 1 < len(g) else max(x["end"], x["start"] + 0.05)
             target = int(round((t_next - st) * 100)); k = max(1, target - acc); acc += k
             parts.append(f"{{\\k{k}}}{esc(x['w'])}" + ("" if cjk or i + 1 == len(g) else " "))
-        anim = "{\\fad(70,60)\\fscx92\\fscy92\\t(0,100,\\fscx100\\fscy100)}"
+        col = (speaker_colors or {}).get(g[0].get("speaker"))
+        anim = "{\\fad(70,60)\\fscx92\\fscy92\\t(0,100,\\fscx100\\fscy100)" + (f"\\1c{ass_color(col)}" if col else "") + "}"
         lines.append(f"Dialogue: 0,{ts(st)},{ts(en)},Karaoke,,0,0,0,,{anim}{''.join(parts)}")
-        cues.append(dict(start=round(st, 3), end=round(en, 3), text=("" if cjk else " ").join(x["w"] for x in g), first=g[0]["start"], words=[x["start"] for x in g]))
+        cues.append(dict(start=round(st, 3), end=round(en, 3), text=("" if cjk else " ").join(x["w"] for x in g), first=g[0]["start"], words=[x["start"] for x in g], **({"speaker": g[0]["speaker"]} if g[0].get("speaker") else {})))
     for s, e, text in captions:
         if text: lines.append(f"Dialogue: 1,{ts(s)},{ts(e)},Title,,0,0,0,,{{\\fad(200,200)}}{esc(text)}")
     return head + "\n".join(lines) + "\n", cues

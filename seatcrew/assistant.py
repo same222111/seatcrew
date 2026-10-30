@@ -19,7 +19,7 @@ from .profiles import SECRET_KEY_RE, SECRET_VAL_RE
 KEY_LINKS = {"openai": "https://platform.openai.com/api-keys", "anthropic": "https://console.anthropic.com/settings/keys",
              "gemini": "https://aistudio.google.com/apikey", "xai": "https://console.x.ai", "deepseek": "https://platform.deepseek.com/api_keys",
              "custom": "https://openrouter.ai/keys", "ollama": "https://ollama.com/download"}
-ACTION_TOOLS = ("create_workflow", "set_config", "run_sample")
+ACTION_TOOLS = ("create_workflow", "set_config", "run_sample", "set_voice")
 READ_TOOLS = ("who_decides", "troubleshoot", "explain")
 RULE_OPS = {"require", "max_len", "min_len", "block_if_match", "require_match", "classify", "template", "set"}
 SLUG = re.compile(r"[a-z][a-z0-9_]{1,39}")
@@ -242,6 +242,21 @@ class Assistant:
                 data = dict(samples[0]) if samples else None
             if data is not None and scrub(json.dumps(data))[1]: raise ValueError("sample contains something that looks like a key")
             return dict(tool=tool, args=dict(data=data), preview=json.dumps(data, ensure_ascii=False, indent=1) if data else "run one cycle now", title=f"run {wf.name} on a sample item")
+        if tool == "set_voice":
+            if getattr(wf, "studio", None) != "video": raise ValueError("character voices exist only in the video studio")
+            from .video import voices as VO
+            name = str(args.get("name") or "").strip(); lib = VO.Library(); cur = lib.all().get(name)
+            ch = {k: v for k, v in (args.get("changes") or {}).items() if k in VO.FIELDS}
+            if args.get("adjust"):
+                if args["adjust"] not in VO.ADJUST: raise ValueError(f"adjust must be one of {list(VO.ADJUST)}")
+                if not cur: raise ValueError(f"no character '{name}' yet - add it first (Character voices panel)")
+                for k, v in VO.adjusted(cur, args["adjust"]).items():
+                    if v != cur.get(k): ch[k] = v
+            if not ch: raise ValueError("nothing to change")
+            if scrub(json.dumps(ch, ensure_ascii=False))[1]: raise ValueError("looks like a key")
+            new = VO.clean_profile(name, dict({k: v for k, v in (cur or {}).items() if not ch.get("preset") or k in ("description", "color")}, **ch))
+            d = [f"{k}: {json.dumps((cur or {}).get(k), ensure_ascii=False)} -> {json.dumps(new[k], ensure_ascii=False)}" for k in new if (cur or {}).get(k) != new[k] and k != "preset"]
+            return dict(tool=tool, args=dict(name=name, changes=ch), preview=f"{name}\n" + "\n".join(d), title=f"voice for {name}")
         raise ValueError(f"unknown tool {tool}")
 
     def execute(self, p):
@@ -254,6 +269,11 @@ class Assistant:
             config.update(a["patch"])
             if wf: wf.log("chief", "CONFIG", "settings changed from CHIEF chat (confirmed): " + ", ".join(flat(a["patch"])))
             return "applied: " + ", ".join(flat(a["patch"]))
+        if p["tool"] == "set_voice":
+            from .video import voices as VO
+            pr = VO.Library().set(a["name"], **a["changes"])
+            if wf: wf.log("chief", "CONFIG", f"voice for {a['name']} changed from CHIEF chat (confirmed): {pr['voice']} {pr['rate']:+d}% {pr['pitch']:+d}Hz {pr['style']}")
+            return f"{a['name']}: {pr['voice']} rate {pr['rate']:+d}% pitch {pr['pitch']:+d}Hz {pr['style']} - used for every line of {a['name']} from now on"
         if p["tool"] == "run_sample":
             if a.get("data") is not None and getattr(wf, "submit_fields", None) is not None and hasattr(wf, "submit"):
                 it = wf.submit(data=a["data"]); wf.wake.set(); return f"submitted item #{it['id']} and started a cycle - watch the live flow"
@@ -275,6 +295,8 @@ class Assistant:
                 + ("This is a VIDEO STUDIO workflow: to make a video call run_sample with args {\"data\": {\"topic\": \"...\", \"notes\": \"optional script\", \"template\": \"emotional_story|knowledge_explainer|product_promo\", \"aspect\": \"9:16|16:9\"}}; "
                    "to adjust it use set_config on settings (template, aspect, tts_backend, visuals_backend, video_model, clips_dir, bgm_path, crf...). Quality matters: offline/draft output is labeled DRAFT PREVIEW and is not final; "
                    "final quality needs ElevenLabs/OpenAI/edge-tts voice and real clips (own folder, Replicate video model, or OpenAI/Stability images). "
+                   "Each character has ONE saved voice (character voice library). To change one call set_voice with args {\"name\": \"<character>\", \"adjust\": \"older|younger|slower|faster|lower|higher|softer|louder\"} "
+                   "or {\"name\": ..., \"changes\": {\"preset\": \"zh-CN/elderly_woman\", \"style\": \"gentle|sad|tender|cheerful|calm|...\", \"rate\": -10, \"pitch\": -6, \"voice\": \"zh-CN-XiaoxiaoNeural\", \"openai_voice\": \"sage\"}}. "
                    if getattr(wf, "studio", None) == "video" else "") +
                 "set_config args: {\"patch\": {partial config, e.g. {\"display\":{\"theme\":\"light\"}} or {\"seats\":{\"risk\":{\"provider\":\"ollama\"}}} or {\"settings\":{...}}}}. "
                 "run_sample args: {} or {\"data\": {...}}. Changing tools are only PROPOSED; the user confirms in the UI. Context: " + json.dumps(ctx, ensure_ascii=False, default=str)[:6000])
@@ -338,11 +360,35 @@ class Assistant:
         if m and re.search(r"make|create|generate|produce|做|生成|制作|製作|作って|作成|haz|crea|genera|video|vídeo|视频|影片|動画", ql):
             topic = m.group(1).strip(" .?!。？！\"'")[:200]
             if topic: return "run_sample", dict(data=dict(topic=topic, notes="", template=tpl or self.ctx["config"].data["settings"]["template"], aspect=self.ctx["config"].data["settings"]["aspect"])), ""
+        vv = self.voice_intent(q, ql)
+        if vv: return vv
         patch = {}
         if re.search(r"16:9|landscape|horizontal|横屏|橫式|横向|横長|horizontal", ql): patch["aspect"] = "16:9"
         elif re.search(r"9:16|vertical|portrait|竖屏|直式|縦|vertical", ql): patch["aspect"] = "9:16"
         if tpl and re.search(r"template|style|模板|範本|风格|テンプレ|plantilla|default|默认", ql): patch["template"] = tpl
         if patch: return "set_config", dict(patch=dict(settings=patch)), ""
+        return None
+
+    VOICE_ADJ = [("older", r"older|老一[点些]|更老|苍老|年纪大|老けて|年上|mayor|más viej"), ("younger", r"younger|年轻一?[点些]|更年轻|嫩一[点些]|若く|más joven"),
+                 ("slower", r"slower|慢一?[点些]|放慢|ゆっくり|más lent"), ("faster", r"faster|快一?[点些]|加快|速く|más rápid"),
+                 ("lower", r"lower|deeper|低沉|低一?[点些]|低く|más grave"), ("higher", r"higher|高一?[点些]|尖一?[点些]|高く|más agud"),
+                 ("softer", r"softer|quieter|轻一?[点些]|小声|柔一?[点些]|静かに|más suave"), ("louder", r"louder|大声|响一?[点些]|大きく|más fuerte")]
+    ALIASES = {"妈妈": r"mom|mum|mother|妈|媽|母|mamá|madre", "爸爸": r"dad|father|爸|父|papá|padre", "narrator": r"narrator|旁白|ナレーター|narrador"}
+    def voice_intent(self, q, ql):
+        """"make mom sound older" / "让妈妈的声音老一点" -> set_voice (needs a character with that name in the voice library)."""
+        if not re.search(r"voice|sound|声|聲|音|voz|suen", ql): return None
+        from .video import voices as VO
+        chars = list(VO.Library().all())
+        name = next((n for n in sorted(chars, key=len, reverse=True) if n.lower() in ql), None)
+        if not name:
+            for n in chars:
+                al = next((a for k, a in self.ALIASES.items() if k == n or re.search(a, n)), None)
+                if al and re.search(al, ql): name = n; break
+        if not name: return None
+        adj = next((k for k, rx in self.VOICE_ADJ if re.search(rx, ql)), None)
+        if adj: return "set_voice", dict(name=name, adjust=adj), ""
+        st = next((s for s in VO.STYLES if s in ql), None)
+        if st: return "set_voice", dict(name=name, changes=dict(style=st)), ""
         return None
 
     def confirm(self, mid, approve):

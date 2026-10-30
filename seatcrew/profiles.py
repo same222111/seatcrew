@@ -102,7 +102,22 @@ def export(wf, data, name="shared", author=""):
     data, _ = clean(wf.cfg, data)
     doc = {"seatcrew_profile": SCHEMA, "workflow": wf.name, "name": name or "shared", "author": (author or "")[:80],
            "app_version": __version__, "created": datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"), "data": data}
+    v = _voices_of(wf)
+    if v: doc["voices"] = v                      # character voice library travels with the profile (voice ids only, never keys)
     return doc
+
+def _voices_of(wf):
+    if getattr(wf, "studio", None) != "video": return {}
+    from .video.voices import Library
+    try: return Library().own()
+    except (ValueError, OSError): return {}
+
+def clean_voices(v):
+    """Shared characters -> validated profiles (unknown fields dropped). Raises ValueError."""
+    if not v: return {}
+    if not isinstance(v, dict) or len(v) > 100: raise ValueError("voices must be a mapping of up to 100 characters")
+    from .video.voices import clean_profile
+    return {str(n): clean_profile(str(n), strip_secrets(p)) for n, p in v.items()}
 
 def to_code(doc):
     raw = zlib.compress(json.dumps(doc, ensure_ascii=False, separators=(",", ":")).encode(), 9)
@@ -142,7 +157,8 @@ def preview(wf, text):
         elif a != b: changes.append({"path": p, "from": a, "to": b})
     walk(current(wf.cfg), data, "")
     return {"ok": True, "name": str(doc.get("name") or "imported")[:40], "author": str(doc.get("author") or ""), "workflow": doc.get("workflow"),
-            "app_version": doc.get("app_version"), "created": doc.get("created"), "warnings": warnings, "changes": changes[:200], "n_changes": len(changes), "data": data}
+            "app_version": doc.get("app_version"), "created": doc.get("created"), "warnings": warnings, "changes": changes[:200], "n_changes": len(changes), "data": data,
+            "voices": clean_voices(doc.get("voices")) if getattr(wf, "studio", None) == "video" else {}}
 
 def safe_name(s):
     s = re.sub(r"[^\w\- ]", "", str(s or ""))[:40].strip(); return s or "imported"

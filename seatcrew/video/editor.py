@@ -36,7 +36,7 @@ def timeline(shots, fps=30, transition_sec=0.5, voice=None):
     else:
         for i, s in enumerate(shots):
             off = S[i] + LEAD
-            words += [dict(w=w["w"], start=round(off + w["start"], 3), end=round(off + w["end"], 3), shot=i) for w in s.get("words", [])]
+            words += [dict(w=w["w"], start=round(off + w["start"], 3), end=round(off + w["end"], 3), shot=i, **({"speaker": w["speaker"]} if w.get("speaker") else {})) for w in s.get("words", [])]
     return dict(D=D, S=S, T=T, total=round(t, 3), words=words, lead=LEAD)
 
 def _shot_at(S, t): return max([i for i, s in enumerate(S) if s <= t + 1e-6] or [0])
@@ -92,7 +92,7 @@ def assemble(shots, out, work, aspect="9:16", size=None, voice=None, bgm=None, d
         seg_info.append(render_segment(s, D[i] + T[i], f"seg{i:02d}.mp4", w, h, o, str(work)))
     # 2) subtitles
     caps = [(S[i] + 0.1, S[i] + D[i] - 0.15, s.get("caption", "")) for i, s in enumerate(shots)] if captions else []
-    ass, cues = build_ass(tl["words"], caps, w, h, tl["total"])
+    ass, cues = build_ass(tl["words"], caps, w, h, tl["total"], speaker_colors=o.get("speaker_colors"))
     (work / "subs.ass").write_text(ass, encoding="utf-8")
     fd = work / "fonts"; fd.mkdir(exist_ok=True)
     extra = [Path(x) for x in (o.get("fonts_dir"), os.environ.get("SEATCREW_FONTS_DIR")) if x and Path(x).is_dir()]
@@ -139,6 +139,7 @@ def assemble(shots, out, work, aspect="9:16", size=None, voice=None, bgm=None, d
             "-c:a", "aac", "-b:a", "192k", "-ar", "48000", "-movflags", "+faststart", final], cwd=str(work))
     man = dict(output=str(final), size=[w, h], fps=o["fps"], aspect=aspect, total=total, draft=bool(draft), timeline=dict(D=D, S=S, T=T),
                shots=[dict(id=s["id"], start=S[i], dur=D[i], transition=s["transition"], camera=s.get("camera"), seg=str(work / f"seg{i:02d}.mp4"), **seg_info[i]) for i, s in enumerate(shots)],
-               cues=cues, words=tl["words"], voice_stem=str(work / "voice.wav"), loudness=ln, settings={k: o[k] for k in ("crf", "preset", "lufs", "true_peak", "transition_sec")}, bgm=bool(bgm))
+               cues=cues, words=tl["words"], voice_stem=str(work / "voice.wav"), loudness=ln, settings={k: o[k] for k in ("crf", "preset", "lufs", "true_peak", "transition_sec")}, bgm=bool(bgm),
+               voices=[dict(shot=s["id"], **v) for s in shots for v in s.get("voices", [])])
     (work / "manifest.json").write_text(json.dumps(man, ensure_ascii=False, indent=1), encoding="utf-8")
     return man

@@ -17,7 +17,7 @@ import json, re, shutil
 from pathlib import Path
 from seatcrew import Seat, HumanSeat, Chief, Workflow, llm
 from seatcrew.config import Config, base_defaults
-from seatcrew.video import TEMPLATES, SIZES, validate_storyboard, key_status, tts as TTS, visuals as VIS, editor as ED, qc as QC
+from seatcrew.video import TEMPLATES, SIZES, validate_storyboard, key_status, tts as TTS, visuals as VIS, editor as ED, qc as QC, voices as VO
 from seatcrew.video.ff import have_ffmpeg, FFError
 
 SEATS = ["chief", "topic", "writer", "scriptcheck", "voice", "visuals", "editor", "qc", "approve"]
@@ -29,7 +29,7 @@ PROMPTS = {
 SETTINGS = {"template": "knowledge_explainer", "aspect": "9:16", "tts_backend": "auto", "tts_voice": "", "visuals_backend": "auto",
             "video_model": "", "image_model": "", "clips_dir": "", "bgm_path": "", "bgm_gain_db": -18.0, "allow_draft": True,
             "max_rewrites": 2, "banned_phrases": ["guaranteed", "risk-free", "miracle", "100% safe", "cure", "get rich"],
-            "min_sharpness": 12.0, "crf": 18, "preset": "slow", "approve_auto_approve": False, "load_samples": False}
+            "min_sharpness": 12.0, "crf": 18, "preset": "slow", "approve_auto_approve": False, "load_samples": False, "speaker_colors": True}
 CHOICES = {"template": list(TEMPLATES), "aspect": list(SIZES), "tts_backend": ["auto", "elevenlabs", "openai", "edge", "draft"],
            "visuals_backend": ["auto", "replicate", "openai", "stability", "draft"], "preset": ["slow", "medium", "fast", "veryfast", "ultrafast"]}
 SAMPLES = [dict(topic="Why is the sky blue?", template="knowledge_explainer",
@@ -67,6 +67,9 @@ class Writer(Seat):
         prompt = (f"Topic: {d['topic']}\nNotes: {d.get('notes', '')}\nTemplate: {tp['label']} - arc: {' / '.join(tp['arc'])}\n"
                   f"Language: {self.cfg['language']}. Speaking pace {tp['wpm']} words/min. {tp['shots'][0]}-{tp['shots'][1]} shots, each {tp['shot_sec'][0]}-{tp['shot_sec'][1]}s, "
                   f"total {tp['total_sec'][0]}-{tp['total_sec'][1]}s. Max {tp['max_words_per_sentence']} words per sentence. Visual style: {tp['visual_style']}.\n"
+                  + (f"Characters with saved voices: {', '.join(n for n in VO.Library().all() if n != 'narrator')}. For dialogue use \"lines\": "
+                     f"[{{\"speaker\": \"narrator|<character>\", \"text\": \"...\", \"emotion\": \"{'|'.join(VO.STYLES)}\"}}] instead of narration.\n"
+                     if VO.Library().all() else "")
                   + (f"REWRITE - the previous version was rejected: {fb}\n" if fb else "") +
                   'Reply ONLY with JSON: {"title": "...", "shots": [{"id": "s01", "narration": "...", "duration": 4.0, "caption": "short on-screen text or empty", '
                   '"visual": "detailed image/video prompt, no text in image", "camera": "push_in|pull_out|pan_left|pan_right|pan_up|pan_down|static", "transition": "crossfade|fade_black|cut"}]}')
@@ -128,10 +131,20 @@ class Voice(Seat):
     def rules(self, it):
         d = it["data"]; s = self.cfg["settings"]; work = self.wf.item_dir(it) / "voice"; work.mkdir(parents=True, exist_ok=True)
         info = []
+        lib = VO.Library(); lang = self.cfg["language"]
         for sh in d["storyboard"]["shots"]:
-            try: p, words, i = TTS.synth(sh["narration"], work / sh["id"], pref=s["tts_backend"], voice=s["tts_voice"] or None, lang=self.cfg["language"], allow_draft=s["allow_draft"])
-            except (TTS.TTSError, FFError) as e: return False, f"{sh['id']}: {e}"
+            lines = sh.get("lines") or ([dict(speaker="narrator", text=sh["narration"])] if sh.get("narration") else [])
+            if not lines: continue
+            cast = any(l["speaker"] != "narrator" for l in lines) or "narrator" in lib.all() or not s["tts_voice"]
+            try:
+                if cast:                              # character voice library: one persistent voice per character
+                    p, words, inf = VO.render_lines(lines, work / f"{sh['id']}.wav", lib, lang=lang, pref=None if s["tts_backend"] == "auto" else s["tts_backend"], allow_draft=s["allow_draft"])
+                    sh["voices"] = inf; i = dict(backend=inf[0]["backend"], sync="exact" if all(x["sync"] == "exact" for x in inf) else "estimated",
+                                                  draft=any(x["draft"] for x in inf), voice=inf[0]["voice"])
+                else: p, words, i = TTS.synth(sh["narration"], work / sh["id"], pref=s["tts_backend"], voice=s["tts_voice"] or None, lang=lang, allow_draft=s["allow_draft"])
+            except (TTS.TTSError, FFError, ValueError) as e: return False, f"{sh['id']}: {e}"
             sh["audio"], sh["words"] = str(p), words; info.append(i)
+        if not info: return False, "no narration"
         d["voice"] = dict(backend=sorted({i["backend"] for i in info}), sync="estimated" if any(i["sync"] != "exact" for i in info) else "exact",
                           draft=any(i.get("draft") for i in info), voice=info[0].get("voice"), fallback=info[0].get("fallback_reasons"))
         return True, f"{'/'.join(d['voice']['backend'])} voice, {d['voice']['sync']} word timing" + (" · DRAFT" if d["voice"]["draft"] else "")
@@ -158,12 +171,13 @@ class Editor(Seat):
         if not have_ffmpeg(): return False, "ffmpeg not found - install ffmpeg and retry"
         d = it["data"]; s = self.cfg["settings"]; sb = d["storyboard"]; tp = TEMPLATES[d["template"]]; od = self.wf.item_dir(it)
         draft = bool(d.get("voice", {}).get("draft") or d.get("visuals", {}).get("draft"))
-        shots = [dict(id=x["id"], clip=x["clip_path"], camera=x["camera"], transition=x["transition"], caption=x["caption"], duration=x["duration"], audio=x.get("audio"), words=x.get("words", [])) for x in sb["shots"]]
+        shots = [dict(id=x["id"], clip=x["clip_path"], camera=x["camera"], transition=x["transition"], caption=x["caption"], duration=x["duration"], audio=x.get("audio"), words=x.get("words", []), voices=x.get("voices", [])) for x in sb["shots"]]
+        cols = {n: p["color"] for n, p in VO.Library().all().items() if p.get("color") and n != "narrator"} if s["speaker_colors"] else None
         bgm = s["bgm_path"] if s["bgm_path"] and Path(s["bgm_path"]).is_file() else None
         for f in od.glob("final*.mp4"): f.unlink()
         try:
             man = ED.assemble(shots, od / "final.mp4", od / "work", aspect=d["aspect"], size=self.wf.size_override, bgm=bgm, draft=draft,
-                              transition_sec=tp["transition_sec"], bgm_gain_db=s["bgm_gain_db"] if s["bgm_gain_db"] != -18.0 else tp["bgm_gain_db"],
+                              transition_sec=tp["transition_sec"], speaker_colors=cols, bgm_gain_db=s["bgm_gain_db"] if s["bgm_gain_db"] != -18.0 else tp["bgm_gain_db"],
                               **dict(dict(crf=s["crf"], preset=s["preset"]), **self.wf.editor_opts))
         except (FFError, ValueError) as e: return False, str(e)[-400:]
         d["video"] = dict(file=Path(man["output"]).name, total=man["total"], size=man["size"], draft=draft)

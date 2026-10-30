@@ -3,7 +3,7 @@ so the workflow can send the item back (VISUALS / VOICE / EDITOR / WRITER).
 
 checks: format (resolution, H.264, yuv420p, fps), duration (vs plan and template range), source resolution (upscaling),
 sharpness (Laplacian variance per shot), black frames, frozen frames, audio clipping (true peak), loudness (-14 LUFS +-1),
-narration silence gaps, subtitle-voice sync (each cue starts on speech; cues inside the video), draft label."""
+narration silence gaps, subtitle-voice sync (each cue starts on speech; cues inside the video), character voice consistency, draft label."""
 from pathlib import Path
 import re, subprocess
 import numpy as np
@@ -85,6 +85,17 @@ def check(manifest, plan=None, **opts):
         R.append(_chk("subtitle_sync", (good >= o["min_sync"] or est) and inside, "voice",
                       f"{good * 100:.0f}% of subtitle words start on speech" + (" (timings estimated - draft voice)" if est else ""), round(good, 3), "warn" if est else "fail"))
     else: R.append(_chk("voice_present", False, "voice", "no narration"))
+    # character voices: every character keeps ONE voice (profile + backend + voice id) across all shots
+    vc = manifest.get("voices") or []
+    if vc:
+        per = {}
+        for v in vc: per.setdefault(v["speaker"], set()).add((v.get("signature"), v.get("backend"), v.get("voice")))
+        bad = [f"{sp} uses {len(k)} voices" for sp, k in per.items() if len(k) > 1]
+        same = {}
+        for sp, k in per.items(): same.setdefault(next(iter(k))[1:], []).append(sp)
+        clash = [" = ".join(v) for v in same.values() if len(v) > 1]
+        R.append(_chk("voice_consistency", not bad, "voice", ("; ".join(bad)) if bad else f"{len(per)} character(s), one voice each" + (f" (same voice id: {', '.join(clash)} - differ by pitch/rate only)" if clash else ""),
+                      {sp: sorted(map(list, k)) for sp, k in per.items()}))
     R.append(_chk("final_quality", not manifest.get("draft"), "visuals", "final backends" if not manifest.get("draft") else
                   "DRAFT PREVIEW - offline voice/visuals; not final quality", severity="draft"))
     fails = [c for c in R if not c["ok"] and c["severity"] == "fail"]

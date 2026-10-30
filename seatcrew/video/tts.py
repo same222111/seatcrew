@@ -14,6 +14,7 @@ from . import ff
 
 EDGE_VOICES = {"en": "en-US-AndrewMultilingualNeural", "zh-CN": "zh-CN-XiaoxiaoNeural", "zh-TW": "zh-TW-HsiaoChenNeural", "ja": "ja-JP-NanamiNeural", "es": "es-ES-ElviraNeural"}
 OPENAI_VOICE, OPENAI_MODEL = "alloy", "gpt-4o-mini-tts"
+OPENAI_VOICES = ("alloy", "ash", "ballad", "coral", "echo", "fable", "nova", "onyx", "sage", "shimmer", "verse")
 ELEVEN_VOICE, ELEVEN_MODEL = "21m00Tcm4TlvDq8ikWAM", "eleven_multilingual_v2"
 CJK = re.compile(r"[\u3040-\u30ff\u3400-\u9fff\uf900-\ufaff]")
 FINAL = ("elevenlabs", "openai", "edge")
@@ -52,10 +53,12 @@ def _need(env):
     if not k: raise TTSError(f"{env} is not set")
     return k
 
-def elevenlabs(text, out, voice=None, lang="en", model=None):
+def elevenlabs(text, out, voice=None, lang="en", model=None, stability=None):
     key = _need("ELEVENLABS_API_KEY"); vid = voice or ELEVEN_VOICE
+    body = dict(text=text, model_id=model or ELEVEN_MODEL)
+    if stability is not None: body["voice_settings"] = dict(stability=float(stability), similarity_boost=0.8)
     raw, _ = _http(f"https://api.elevenlabs.io/v1/text-to-speech/{vid}/with-timestamps?output_format=mp3_44100_192",
-                   {"xi-api-key": key, "Content-Type": "application/json"}, dict(text=text, model_id=model or ELEVEN_MODEL))
+                   {"xi-api-key": key, "Content-Type": "application/json"}, body)
     j = json.loads(raw); Path(out).write_bytes(base64.b64decode(j["audio_base64"]))
     al = j.get("alignment") or j.get("normalized_alignment") or {}
     chars, st, en = al.get("characters", []), al.get("character_start_times_seconds", []), al.get("character_end_times_seconds", [])
@@ -80,10 +83,10 @@ def _attach_punct(words):
         else: out.append(dict(w))
     return [dict(w=w["w"], start=round(float(w["start"]), 3), end=round(float(w["end"]), 3)) for w in out]
 
-def openai(text, out, voice=None, lang="en", model=None):
-    key = _need("OPENAI_API_KEY")
-    raw, _ = _http("https://api.openai.com/v1/audio/speech", {"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
-                   dict(model=model or OPENAI_MODEL, voice=voice or OPENAI_VOICE, input=text, response_format="wav"))
+def openai(text, out, voice=None, lang="en", model=None, instructions=None):
+    key = _need("OPENAI_API_KEY"); body = dict(model=model or OPENAI_MODEL, voice=voice or OPENAI_VOICE, input=text, response_format="wav")
+    if instructions and body["model"].startswith("gpt-4o"): body["instructions"] = instructions
+    raw, _ = _http("https://api.openai.com/v1/audio/speech", {"Authorization": f"Bearer {key}", "Content-Type": "application/json"}, body)
     Path(out).write_bytes(raw); sync = "estimated"
     try:
         words = whisper_words(out, key, lang); sync = "exact"
@@ -116,13 +119,13 @@ def realign(text, heard):
         if b["end"] < b["start"]: b["end"] = b["start"] + 0.05
     return out
 
-def edge(text, out, voice=None, lang="en", model=None, rate="+0%", pitch="+0Hz"):
+def edge(text, out, voice=None, lang="en", model=None, rate="+0%", pitch="+0Hz", volume="+0%"):
     try: import edge_tts, asyncio
     except ImportError: raise TTSError("edge-tts is not installed (pip install edge-tts)")
     v = voice or EDGE_VOICES.get(lang, EDGE_VOICES["en"]); words = []; audio = bytearray()
     async def go():
-        try: c = edge_tts.Communicate(text, v, rate=rate, pitch=pitch, boundary="WordBoundary")
-        except TypeError: c = edge_tts.Communicate(text, v, rate=rate, pitch=pitch)
+        try: c = edge_tts.Communicate(text, v, rate=rate, pitch=pitch, volume=volume, boundary="WordBoundary")
+        except TypeError: c = edge_tts.Communicate(text, v, rate=rate, pitch=pitch, volume=volume)
         async for ch in c.stream():
             if ch["type"] == "audio": audio.extend(ch["data"])
             elif ch["type"] == "WordBoundary":
@@ -170,15 +173,19 @@ def auto_order(pref="auto"):
     except ImportError: pass
     return order
 
-def synth(text, out, pref="auto", voice=None, lang="en", allow_draft=True, model=None, rate=None, pitch=None):
+def synth(text, out, pref="auto", voice=None, lang="en", allow_draft=True, model=None, rate=None, pitch=None, volume=None,
+          instructions=None, openai_voice=None, elevenlabs_voice=None, stability=None):
     """Try backends in order. Returns (path, words, info). Falls back to the labeled draft voice only if allowed."""
     errs = []
     for b in auto_order(pref):
         if b not in BACKENDS: raise TTSError(f"unknown TTS backend {b}")
         try:
             ext = ".wav" if b in ("openai", "draft", "mock") else ".mp3"
-            kw = {k: v for k, v in dict(rate=rate, pitch=pitch).items() if v} if b == "edge" else {}
-            return BACKENDS[b](text, str(Path(out).with_suffix(ext)), voice=voice, lang=lang, model=model, **kw)
+            kw, v = {}, voice                       # each backend gets its own voice id + emotion controls
+            if b == "edge": kw = {k: x for k, x in dict(rate=rate, pitch=pitch, volume=volume).items() if x}
+            elif b == "openai": v = openai_voice or (voice if voice in OPENAI_VOICES else None); kw = dict(instructions=instructions) if instructions else {}
+            elif b == "elevenlabs": v = elevenlabs_voice or (None if voice and voice.endswith("Neural") else voice); kw = dict(stability=stability) if stability is not None else {}
+            return BACKENDS[b](text, str(Path(out).with_suffix(ext)), voice=v, lang=lang, model=model, **kw)
         except (TTSError, ff.FFError) as e: errs.append(f"{b}: {e}")
     if allow_draft and pref in ("auto", "draft"):
         p, w, info = draft(text, out, lang=lang); info["fallback_reasons"] = errs; return p, w, info

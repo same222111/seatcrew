@@ -41,3 +41,37 @@ function render(s){const vids=(s.items||[]).filter(i=>i.data&&i.data.topic);if(!
  box.querySelectorAll('[data-v]').forEach(b=>b.onclick=()=>{SEL=+b.dataset.v;SIG='';render(window.__ST||s)})}
 async function poll(){try{const s=await get('/api/state');window.__ST=s;render(s)}catch(e){}}
 poll();setInterval(poll,2500)})();
+
+/* Character voice library: one persistent voice per character, curated presets, audition. */
+(()=>{const L=(k,d)=>(LOC&&LOC[k])||d;const vb=document.createElement('div');vb.className='nx-card studio';vb.id='voices';
+const host=document.getElementById('studio');host.parentNode.insertBefore(vb,host.nextSibling);let V=null,SIGV='',EDIT=null;
+const plbl=p=>`${p.lang} · ${L('vk_'+p.kind,p.kind)}`;const sel=(n,opts,v,lab)=>`<select data-vf="${n}">${opts.map(o=>`<option value="${esc(o)}" ${o==v?'selected':''}>${esc(lab?lab(o):o)}</option>`).join('')}</select>`;
+let AUD=null;async function play(body,btn){try{btn&&(btn.disabled=true);const r=await fetch('/api/voices/audition',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+ if(!r.ok){const j=await r.json().catch(()=>({}));alert(j.error||r.status);return}const u=URL.createObjectURL(await r.blob());if(AUD)AUD.pause();AUD=new Audio(u);AUD.play()}finally{btn&&(btn.disabled=false)}}
+function form(c,name){c=c||{};const ps=V.presets.filter(p=>p.lang==V.lang).concat(V.presets.filter(p=>p.lang!=V.lang));
+ return `<div class="row" style="flex-wrap:wrap;gap:6px;align-items:center"><input data-vf="name" placeholder="${esc(L('v_name','Character name'))}" value="${esc(name||'')}" ${name?'readonly':''} style="width:120px">
+ <select data-vf="preset"><option value="">${esc(L('v_keep','(keep voice)'))}</option>${ps.map(p=>`<option value="${p.id}" ${p.id==c.preset?'selected':''}>${esc(plbl(p))} · ${esc(p.voice.replace(/^\w+-\w+-|Neural$/g,''))}</option>`).join('')}</select>
+ <input data-vf="description" placeholder="${esc(L('v_desc','who is this? (age, mood)'))}" value="${esc(c.description||'')}" style="width:200px">
+ ${sel('style',V.styles,c.style||'neutral',o=>L('st_'+o,o))} <label class="dim">${L('v_rate','rate')}</label><input data-vf="rate" type=number min=-50 max=50 value="${c.rate||0}" style="width:56px">%
+ <label class="dim">${L('v_pitch','pitch')}</label><input data-vf="pitch" type=number min=-50 max=50 value="${c.pitch||0}" style="width:56px">Hz
+ <label class="dim">${L('v_volume','volume')}</label><input data-vf="volume" type=number min=-50 max=50 value="${c.volume||0}" style="width:56px">%
+ <input data-vf="color" type=color value="${c.color||'#FFE500'}" title="${esc(L('v_color','subtitle color'))}">
+ <span class="adv">${sel('backend',V.backends,c.backend||'auto')} ${sel('openai_voice',['',...V.openai_voices],c.openai_voice||'')} <input data-vf="elevenlabs_voice" placeholder="ElevenLabs voice id" value="${esc(c.elevenlabs_voice||'')}" style="width:150px"></span>
+ <button class="b" data-vact="tryp">▶ ${esc(L('v_play','Audition'))}</button><button class="b" data-vact="save">${esc(L('v_save','Save'))}</button>${name?`<button class="b" data-vact="cancel">✕</button>`:''}</div>`}
+function render(){if(!V)return;const sig=JSON.stringify([LOC.app_sub,V.characters,EDIT]);if(sig==SIGV)return;SIGV=sig;const C=V.characters;
+ let h=`<div class="nx-h"><span>🎙 ${esc(L('voices_title','Character voices'))}</span><span class="qm" title="${esc(L('voices_hint','Each character keeps one voice in every shot and every future video. Tag storyboard lines with speaker: and emotion:.'))}">?</span></div>`;
+ h+=Object.keys(C).length?`<table><tr><th>${L('v_name','Character')}</th><th>${L('v_voice','voice')}</th><th>${L('v_style','style')}</th><th></th></tr>`+Object.entries(C).map(([n,c])=>EDIT==n?`<tr><td colspan=4>${form(c,n)}</td></tr>`:
+  `<tr><td><span style="color:${esc(c.color||'var(--fg)')}">●</span> <b>${esc(n)}</b><div class="dim">${esc(c.description||'')}</div></td><td class="mono">${esc(c.voice)} ${c.rate>=0?'+':''}${c.rate}% ${c.pitch>=0?'+':''}${c.pitch}Hz${c.volume?` vol ${c.volume}%`:''} <span class="dim adv">[${esc(c.backend)}${c.openai_voice?' · openai '+esc(c.openai_voice):''}${c.elevenlabs_voice?' · 11labs':''}]</span></td>
+  <td>${esc(L('st_'+c.style,c.style))}</td><td style="white-space:nowrap"><button class="b" data-vplay="${esc(n)}">▶</button> <button class="b" data-vedit="${esc(n)}">✎</button> <button class="b" data-vdel="${esc(n)}">🗑</button></td></tr>`).join('')+`</table>`
+  :`<div class="ph">${esc(L('v_empty','No characters yet. Add one below, e.g. narrator, 林晚, 妈妈.'))}</div>`;
+ h+=`<h4>${esc(L('v_add','Add character'))}</h4>${EDIT?'':form({},'')}`;vb.innerHTML=h;
+ const val=root=>{const o={};root.querySelectorAll('[data-vf]').forEach(e=>o[e.dataset.vf]=e.type=='number'?+e.value:e.value);if(!o.preset)delete o.preset;return o};
+ vb.querySelectorAll('[data-vact]').forEach(b=>b.onclick=async()=>{const row=b.closest('.row'),o=val(row);
+  if(b.dataset.vact=='cancel'){EDIT=null;SIGV='';return render()}
+  if(b.dataset.vact=='tryp'){if(o.preset&&!(EDIT&&!o.preset))return play({preset:o.preset},b);if(o.name&&C[o.name])return play({name:o.name},b);return}
+  const r=await post('/api/voices/set',o);if(r.ok===false){alert(r.error);return}EDIT=null;await load()});
+ vb.querySelectorAll('[data-vplay]').forEach(b=>b.onclick=()=>play({name:b.dataset.vplay},b));
+ vb.querySelectorAll('[data-vedit]').forEach(b=>b.onclick=()=>{EDIT=b.dataset.vedit;render()});
+ vb.querySelectorAll('[data-vdel]').forEach(b=>b.onclick=async()=>{if(!confirm(L('v_confirm_del','Delete this character voice?')))return;await post('/api/voices/delete',{name:b.dataset.vdel});await load()})}
+async function load(){try{V=await get('/api/voices');SIGV='';render()}catch(e){}}
+load();setInterval(()=>{if(!EDIT&&!vb.contains(document.activeElement))load()},10000);setInterval(render,1500)})();
