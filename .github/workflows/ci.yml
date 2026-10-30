@@ -12,6 +12,7 @@ jobs:
         with: {python-version: "${{ matrix.python }}"}
       - run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
       - run: pip install -e ".[dev]"
+      - run: python scripts/privacy_scan.py
       - run: pytest -q
       - run: docker build -t seatcrew .
         if: matrix.python == '3.12'

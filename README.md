@@ -233,6 +233,9 @@ Also in the setup wizard, the Video studio, and CHIEF chat. Adapters other than 
 | Best value | Voice / TTS | OpenAI TTS | `gpt-4o-mini-tts` | tone via instructions; whisper word timing (deprecated, shuts down 2027-01-06) | `OPENAI_API_KEY` | [Docs](https://developers.openai.com/api/docs/guides/text-to-speech) | [Get key](https://platform.openai.com/api-keys) | [Pricing](https://developers.openai.com/api/docs/pricing) |
 | Free / draft | Voice / TTS | Microsoft Edge neural voices (edge-tts) | `zh-CN-XiaoxiaoNeural etc.` | free, no key, good neural voices; styles only approximated | no key | [Docs](https://github.com/rany2/edge-tts) | - | - |
 
+### Character Studio
+Open `/characters` from the Video studio. You can make characters from photos or a description and generate a consistent sheet (front, side, full body, expressions) with OpenAI, Gemini, MiniMax or Replicate FLUX. An optional image-to-3D step (Meshy, Tripo or Replicate) feeds a bundled 360° viewer. You can lock a character's refs, bind or clone a voice, and build a cast (剧组) of up to 5 with roles. **Shoot with this cast** runs a dialogue scene: lines only for cast members, wide → OTS → close-up coverage, hard cuts, no music, room tone, optional lip-sync, and continuity QC. Without keys you get labeled DRAFT sheets and a flat "standee" model. All cloud adapters are mock-tested only. Guide and limits: [docs/VIDEO.md](docs/VIDEO.md#character-studio-characters).
+
 ### 推荐模型（2026-10-30 核对，价格请以官网为准）
 视频工作流：从主题或脚本生成竖屏/横屏短视频，角色在所有视频中保持同一音色和参考图，付费生成前先显示费用和时间估算。除 edge-tts 外，各适配器仅做了模拟 HTTP 测试。
 
@@ -250,3 +253,6 @@ Also in the setup wizard, the Video studio, and CHIEF chat. Adapters other than 
 | 性价比 | 配音 / TTS | Azure AI Speech | `Neural / HD voices (zh-CN-XiaoxiaoNeural ...)` | 真实 SSML 说话风格（悲伤、温柔、开心……），支持 zh-CN/en/ja | `AZURE_SPEECH_KEY`, `AZURE_SPEECH_REGION` | [文档](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/speech-synthesis-markup-voice) | [获取密钥](https://portal.azure.com/#create/Microsoft.CognitiveServicesSpeechServices) | [价格](https://azure.microsoft.com/en-us/pricing/details/speech/) |
 | 性价比 | 配音 / TTS | OpenAI TTS | `gpt-4o-mini-tts` | 用 instructions 控制语气（已弃用，2027-01-06 关停） | `OPENAI_API_KEY` | [文档](https://developers.openai.com/api/docs/guides/text-to-speech) | [获取密钥](https://platform.openai.com/api-keys) | [价格](https://developers.openai.com/api/docs/pricing) |
 | 免费 / 草稿 | 配音 / TTS | Microsoft Edge neural voices (edge-tts) | `zh-CN-XiaoxiaoNeural etc.` | 免费无需密钥，神经音色；风格仅近似 | 无需密钥 | [文档](https://github.com/rany2/edge-tts) | - | - |
+### 角色工作室（Character Studio）
+在视频工作室中打开 `/characters`。可以用照片或文字描述创建角色，并用 OpenAI、Gemini、MiniMax 或 Replicate FLUX 生成一致的设定图（正面、侧面、全身、表情）。可选的图生 3D（Meshy、Tripo、Replicate）会在内置的 360° 查看器中展示。可以锁定角色参考图、绑定或克隆音色，并组建最多 5 人的剧组并分配角色。点击「用这个剧组拍摄」会生成对话场景：台词只分给剧组成员，镜头按全景 → 过肩 → 特写安排，硬切、无背景音乐、带房间底噪，可选对口型，并进行连贯性质检。没有密钥时生成带 DRAFT 标记的设定图和平面"立牌"模型。所有云端适配器仅做了模拟测试。说明与局限见 [docs/VIDEO.md](docs/VIDEO.md#character-studio-characters)。
+

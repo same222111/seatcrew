@@ -298,3 +298,13 @@ def test_cli_character_cast_check(env, tmp_path, capsys):
     (tmp_path / "sb.yaml").write_text("shots:\n  - {id: s01, narration: hi, duration: 3, characters: [Mia]}\n")
     main(["check", str(v), "--storyboard", str(tmp_path / "sb.yaml"), "--cast", "Solo", "--json", str(tmp_path / "r.json")])
     out = capsys.readouterr().out; assert "character_consistency" in out and json.loads((tmp_path / "r.json").read_text())["checks"]
+
+def test_privacy_scan_clean_and_catches(tmp_path, monkeypatch):
+    import subprocess as sp, sys
+    root = Path(__file__).resolve().parents[1]; scan = root / "scripts" / "privacy_scan.py"
+    assert sp.run([sys.executable, str(scan)], cwd=root, capture_output=True).returncode == 0
+    sp.run(["git", "init", "-q"], cwd=tmp_path, check=True)
+    (tmp_path / "a.py").write_text('K = "sk-proj-' + "Q7w9" * 8 + '"\n'); (tmp_path / ".env").write_text("X=1\n"); (tmp_path / "clip.mp4").write_bytes(b"x")
+    sp.run(["git", "add", "-A"], cwd=tmp_path, check=True)
+    r = sp.run([sys.executable, str(scan)], cwd=tmp_path, capture_output=True, text=True)
+    assert r.returncode == 1 and "a.py:1" in r.stdout and ".env" in r.stdout and "clip.mp4" in r.stdout
