@@ -68,13 +68,13 @@ class Config:
         self.path = Path(path); self.data = self.load()
 
     def load(self):
-        user = yaml.safe_load(self.path.read_text()) if self.path.exists() else {}
+        user = yaml.safe_load(self.path.read_text(encoding="utf-8")) if self.path.exists() else {}
         user = migrate(user or {})
         return _merge(DEFAULTS, user or {})
 
     def save(self):
         with _lock:
-            tmp = self.path.with_suffix(".tmp"); tmp.write_text(yaml.safe_dump(self.data, sort_keys=False, allow_unicode=True))
+            tmp = self.path.with_suffix(".tmp"); tmp.write_text(yaml.safe_dump(self.data, sort_keys=False, allow_unicode=True), encoding="utf-8")
             os.replace(tmp, self.path)
 
     def update(self, patch):

@@ -35,7 +35,7 @@ def test_yaml_submit_and_rules(chdir):
 def test_content_review_rules_only(chdir):
     wf = loader.build("content_review"); run(wf, yes=True); st = {i["data"]["topic"]: i["status"] for i in wf.items}
     assert st == {"Why we test in staging": "done", "Our new pricing": "blocked at POLICY", "Benchmark results": "blocked at FACTCHECK", "Team offsite recap": "done"}
-    done = next(i for i in wf.items if i["status"] == "done"); assert Path(done["data"]["published_path"]).read_text() == done["data"]["draft"]
+    done = next(i for i in wf.items if i["status"] == "done"); assert Path(done["data"]["published_path"]).read_text(encoding="utf-8") == done["data"]["draft"]
 
 def test_content_review_human_reject_and_review_unpublish(chdir):
     wf = loader.build("content_review"); run(wf); w = [i for i in wf.items if "pending" in i]
@@ -96,12 +96,12 @@ def test_http_api(chdir):
 
 def test_core_locales_complete():
     import re
-    en = json.loads((i18n.CORE / "en.json").read_text())
-    html = (Path(i18n.CORE).parent / "web/index.html").read_text()
+    en = json.loads((i18n.CORE / "en.json").read_text(encoding="utf-8"))
+    html = (Path(i18n.CORE).parent / "web/index.html").read_text(encoding="utf-8")
     used = set(re.findall(r'data-i18n="(\w+)"', html)) | {k for k in re.findall(r"\bT\('(\w+)'", html)}
     assert used <= set(en), used - set(en)
     for f in i18n.CORE.glob("*.json"):
         d = json.loads(f.read_text(encoding="utf-8")); assert set(d) == set(en), f.name
         for k, v in en.items(): assert set(re.findall(r"\{(\w+)\}", v)) == set(re.findall(r"\{(\w+)\}", d[k])), (f.name, k)
     cr = loader.examples_dir() / "content_review/locales"
-    assert all(set(json.loads(f.read_text(encoding="utf-8"))) == set(json.loads((cr / "en.json").read_text())) for f in cr.glob("*.json"))
+    assert all(set(json.loads(f.read_text(encoding="utf-8"))) == set(json.loads((cr / "en.json").read_text(encoding="utf-8"))) for f in cr.glob("*.json"))

@@ -86,4 +86,4 @@ def test_config_validation(tmp_path):
     for bad in [{"language": "xx"}, {"seats": {"nope": {"provider": "rules"}}}, {"seats": {"a": {"provider": "nope"}}}, {"bogus": 1}]:
         with pytest.raises(ValueError): c.update(bad)
     c.update({"seats": {"a": {"provider": "ollama"}}, "language": "ja"}); c2 = Config(c.path, base_defaults(["a"]))
-    assert c2["seats"]["a"]["provider"] == "ollama" and c2["language"] == "ja" and "KEY" not in c.path.read_text()
+    assert c2["seats"]["a"]["provider"] == "ollama" and c2["language"] == "ja" and "KEY" not in c.path.read_text(encoding="utf-8")

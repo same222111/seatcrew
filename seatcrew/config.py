@@ -20,7 +20,7 @@ def load_env(path=".env"):
     """Load KEY=value lines into os.environ (existing environment wins)."""
     p = Path(path)
     if p.exists():
-        for line in p.read_text().splitlines():
+        for line in p.read_text(encoding="utf-8").splitlines():
             line = line.strip()
             if line and not line.startswith("#") and "=" in line:
                 k, v = line.split("=", 1); os.environ.setdefault(k.strip(), v.strip().strip('"').strip("'"))
@@ -39,11 +39,11 @@ class Config:
     def __init__(self, path, defaults, validate=None):
         self.path = Path(path); self.defaults = defaults; self._validate = validate; self.data = self.load()
     def load(self):
-        user = yaml.safe_load(self.path.read_text()) if self.path.exists() else {}
+        user = yaml.safe_load(self.path.read_text(encoding="utf-8")) if self.path.exists() else {}
         return merge(self.defaults, user or {})
     def save(self):
         with _lock:
-            tmp = self.path.with_suffix(".tmp"); tmp.write_text(yaml.safe_dump(self.data, sort_keys=False, allow_unicode=True)); os.replace(tmp, self.path)
+            tmp = self.path.with_suffix(".tmp"); tmp.write_text(yaml.safe_dump(self.data, sort_keys=False, allow_unicode=True), encoding="utf-8"); os.replace(tmp, self.path)
     def update(self, patch):
         bad = [k for k in (patch or {}) if k not in self.defaults]
         if bad: raise ValueError(f"unknown settings: {bad}")

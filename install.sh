@@ -93,7 +93,7 @@ Categories=Office;Development;"
 else say "4/4 shortcut skipped (--no-shortcut)"; fi
 
 say "done. Launch: double-click SeatCrew on your desktop, or run: $LAUNCHER"
-for s in "${SHORTCUTS[@]}"; do echo "  shortcut: $s"; done
+for s in ${SHORTCUTS[@]+"${SHORTCUTS[@]}"}; do echo "  shortcut: $s"; done
 echo "  command line: $VENV/bin/seatcrew list | run <workflow> | ui <workflow>"
 echo "RESULT app_dir=$APPDIR launcher=$LAUNCHER shortcuts=${#SHORTCUTS[@]} dry_run=$DRY"
 if [ "$LAUNCH" = 1 ] && [ "$DRY" = 0 ]; then nohup "$LAUNCHER" >/dev/null 2>&1 & fi

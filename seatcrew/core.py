@@ -86,7 +86,7 @@ class Workflow:
         self.log_f = self.state_dir / "log.jsonl"; self.items_f = self.state_dir / "items.json"; self.lock = threading.RLock()
         self.stop = threading.Event(); self.wake = threading.Event(); self.inbox = []; self._ids = itertools.count(1)
         self.events, self.items = [], []; self.cycle_no = 0; self.last_cycle = None; self.active = None
-        if self.log_f.exists(): self.events = [json.loads(l) for l in self.log_f.read_text().splitlines()[-300:] if l.strip()]
+        if self.log_f.exists(): self.events = [json.loads(l) for l in self.log_f.read_text(encoding="utf-8").splitlines()[-300:] if l.strip()]
         if seats: self.setup(seats, chain)
 
     def setup(self, seats, chain=None):
@@ -96,7 +96,7 @@ class Workflow:
         self.chain = [self.seat_map[n] for n in chain] if chain else [s for s in seats if s.name != "chief"]
         self.seats = {s.name: dict(status="idle", last="", ts="", t=0.0) for s in seats}
         if self.persist_items and self.items_f.exists():
-            self.items = json.loads(self.items_f.read_text())
+            self.items = json.loads(self.items_f.read_text(encoding="utf-8"))
             self._ids = itertools.count(max([i["id"] for i in self.items] + [0]) + 1)
 
     # ---------- event log ----------
@@ -107,7 +107,7 @@ class Workflow:
         e = dict(ts=now().isoformat(timespec="seconds"), agent=seat.upper(), kind=kind, sym=sym, msg=msg, **kw)
         with self.lock:
             self.events = (self.events + [e])[-300:]
-            with open(self.log_f, "a") as f: f.write(json.dumps(e, ensure_ascii=False, default=str) + "\n")
+            with open(self.log_f, "a", encoding="utf-8") as f: f.write(json.dumps(e, ensure_ascii=False, default=str) + "\n")
         if seat in self.seats: self.seats[seat] = dict(status=kind, last=f"{sym} {msg}"[:160], ts=e["ts"][11:19], t=time.time())
         self.active = seat; return e
 
@@ -130,7 +130,7 @@ class Workflow:
 
     def save_items(self):
         if self.persist_items:
-            with self.lock: self.items_f.write_text(json.dumps(self.items[:200], ensure_ascii=False, default=str, indent=0))
+            with self.lock: self.items_f.write_text(json.dumps(self.items[:200], ensure_ascii=False, default=str, indent=0), encoding="utf-8")
 
     def gate(self, seat, item):
         """Hook: return (ok, reason) to override a seat's own check for this item (e.g. CHIEF hold), else None."""

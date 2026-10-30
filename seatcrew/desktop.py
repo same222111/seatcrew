@@ -38,8 +38,8 @@ def workflows(home):
 
 def save_key(env_path, var, value):
     """Write/replace one KEY=value line in .env (value is never logged or returned)."""
-    lines = [l for l in (env_path.read_text().splitlines() if env_path.exists() else []) if not l.startswith(var + "=")]
-    lines.append(f"{var}={value.strip()}"); env_path.write_text("\n".join(lines) + "\n")
+    lines = [l for l in (env_path.read_text(encoding="utf-8").splitlines() if env_path.exists() else []) if not l.startswith(var + "=")]
+    lines.append(f"{var}={value.strip()}"); env_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
     try: os.chmod(env_path, 0o600)
     except OSError: pass
     os.environ[var] = value.strip()
@@ -51,14 +51,14 @@ class App:
         os.chdir(self.home)                      # relative config./state/ paths land in the data folder
         load_env(str(self.home / ".env"))
         self.prefs_path = self.home / "desktop.json"
-        self.prefs = json.loads(self.prefs_path.read_text()) if self.prefs_path.exists() else {}
+        self.prefs = json.loads(self.prefs_path.read_text(encoding="utf-8")) if self.prefs_path.exists() else {}
         self.open = {}                           # workflow name -> (wf, server, url)
         self.lock = threading.Lock()
         self.launcher = ThreadingHTTPServer(("127.0.0.1", free_port()), self.handler())
         self.url = f"http://127.0.0.1:{self.launcher.server_port}/"
 
     def save_prefs(self, **kw):
-        self.prefs.update(kw); self.prefs_path.write_text(json.dumps(self.prefs, indent=1))
+        self.prefs.update(kw); self.prefs_path.write_text(json.dumps(self.prefs, indent=1), encoding="utf-8")
 
     def info(self):
         return dict(first_run=not self.prefs.get("setup_done"), language=self.prefs.get("language", "en"), languages=LANGUAGES,

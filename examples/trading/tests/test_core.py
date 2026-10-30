@@ -9,7 +9,7 @@ NY = ZoneInfo("America/New_York")
 def test_config_roundtrip_and_validation(cfg, tmp_path):
     cfg.update({"watchlist": ["aapl", " msft "], "seats": {"stocks": {"provider": "gemini", "model": "gemini-2.0-flash"}}})
     c2 = Config(cfg.path); assert c2["watchlist"] == ["AAPL", "MSFT"] and c2["seats"]["stocks"]["provider"] == "gemini"
-    assert "API_KEY=" not in cfg.path.read_text()
+    assert "API_KEY=" not in cfg.path.read_text(encoding="utf-8")
     for bad in [{"capital": -1}, {"watchlist": []}, {"seats": {"risk": {"provider": "nope"}}}, {"language": "xx"}, {"broker": {"mode": "live"}}, {"bogus": 1}]:
         with pytest.raises(ValueError): cfg.update(bad)
 

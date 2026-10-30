@@ -34,8 +34,8 @@ def main(argv=None):
         d = Path(a.dir) / a.name; f = d / ("workflow.py" if a.python else "workflow.yaml")
         if f.exists(): print(t("cli_exists", _lang(a), path=f)); return 1
         d.mkdir(parents=True, exist_ok=True)
-        tpl = (Path(__file__).parent / "templates" / f.name).read_text()
-        f.write_text(tpl.format(name=a.name, title=a.name.replace("_", " ").title(), path=d, cls="".join(w.title() for w in a.name.split("_")) + "Workflow"))
+        tpl = (Path(__file__).parent / "templates" / f.name).read_text(encoding="utf-8")
+        f.write_text(tpl.format(name=a.name, title=a.name.replace("_", " ").title(), path=d, cls="".join(w.title() for w in a.name.split("_")) + "Workflow"), encoding="utf-8")
         print(t("cli_created", _lang(a), path=f, cmd=f"seatcrew ui {d}")); return 0
     if a.cmd == "test-ai":
         from .llm import PROVIDERS, key_status, test_connection

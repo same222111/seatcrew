@@ -23,8 +23,8 @@ class PaperBroker:
     """Simulated fills: price x (1 +/- session slippage). Off regular hours only whole-share limit orders are allowed."""
     def __init__(self, name, capital, state_dir):
         self.name = name; self.f = Path(state_dir) / f"portfolio_{name}.json"; self.f.parent.mkdir(parents=True, exist_ok=True)
-        self.p = json.loads(self.f.read_text()) if self.f.exists() else dict(cash=float(capital), start=float(capital), pos={}, trades=[], day="", day_start=float(capital), orders_today=0)
-    def save(self): self.f.write_text(json.dumps(self.p, indent=1))
+        self.p = json.loads(self.f.read_text(encoding="utf-8")) if self.f.exists() else dict(cash=float(capital), start=float(capital), pos={}, trades=[], day="", day_start=float(capital), orders_today=0)
+    def save(self): self.f.write_text(json.dumps(self.p, indent=1), encoding="utf-8")
     def equity(self, px): return self.p["cash"] + sum(q * px.get(s, 0) for s, q in self.p["pos"].items())
     def roll_day(self, px):
         d = now().strftime("%Y-%m-%d")

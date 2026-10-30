@@ -39,9 +39,9 @@ def test_first_run_lists_examples_and_serves_launcher(app):
 def test_wizard_saves_language_and_key_privately(app):
     code, r = post(app.url + "api/setup", {"language": "ja", "provider": "openai", "api_key": "sk-test-123"})
     assert code == 200 and r["ok"] and "sk-test-123" not in json.dumps(r)
-    env = app.home / ".env"; assert "OPENAI_API_KEY=sk-test-123" in env.read_text()
+    env = app.home / ".env"; assert "OPENAI_API_KEY=sk-test-123" in env.read_text(encoding="utf-8")
     if os.name == "posix": assert stat.S_IMODE(env.stat().st_mode) == 0o600
-    assert json.loads((app.home / "desktop.json").read_text())["language"] == "ja"
+    assert json.loads((app.home / "desktop.json").read_text(encoding="utf-8"))["language"] == "ja"
     assert json.loads(get(app.url + "api/home"))["first_run"] is False
     assert post(app.url + "api/setup", {"language": "xx"})[0] == 400
 
@@ -103,8 +103,8 @@ def test_install_ps1_dry_run(tmp_path):
 
 def test_packaging_files_are_consistent():
     ver = __import__("seatcrew").__version__
-    assert f'"CFBundleShortVersionString": "{ver}"' in (ROOT / "packaging/seatcrew.spec").read_text()
-    assert f'#define MyVersion "{ver}"' in (ROOT / "packaging/seatcrew.iss").read_text()
-    rel = (ROOT / ".github/workflows/release.yml").read_text()
+    assert f'"CFBundleShortVersionString": "{ver}"' in (ROOT / "packaging/seatcrew.spec").read_text(encoding="utf-8")
+    assert f'#define MyVersion "{ver}"' in (ROOT / "packaging/seatcrew.iss").read_text(encoding="utf-8")
+    rel = (ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8")
     for s in ("tags:", "windows-latest", "macos-latest", "ubuntu-", "build_appimage.sh", "seatcrew.iss", "build_macos.sh"): assert s in rel
     for f in ("icon.png", "icon.ico", "icon.icns"): assert (ROOT / "seatcrew/assets" / f).stat().st_size > 1000

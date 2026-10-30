@@ -92,5 +92,5 @@ def test_quant_manual_override(crew):
     crew.cfg.data["risk_dial"] = "cautious"; assert crew.quant.dial(pd.DataFrame({"QQQ": range(1, 300)})) == "cautious"
 
 def test_legacy_roles_config_migrates(tmp_path):
-    f = tmp_path / "c.yaml"; f.write_text("roles:\n  news: {provider: gemini}\n  sizer: {provider: openai}\n")
+    f = tmp_path / "c.yaml"; f.write_text("roles:\n  news: {provider: gemini}\n  sizer: {provider: openai}\n", encoding="utf-8")
     c = Config(f); assert c["seats"]["stocks"]["provider"] == "gemini" and c["seats"]["size"]["provider"] == "openai" and "roles" not in c.data
