@@ -109,18 +109,50 @@ def chunk(words, L):
     for c in merged: out.extend(_balance(c, _lim(c, L)))
     return out
 
+def tokens(text):
+    """Split display text into breakable tokens: jieba words for Chinese when available, else characters; Latin by spaces."""
+    t = re.sub(r"\s+", " ", str(text or "").strip()); out = []
+    for part in re.findall(r"[A-Za-z0-9À-ÿ'’.\-]+|\s|.", t):
+        if part == " ": continue
+        out.append(part)
+    if _jieba is not None and CJK.search(t):
+        merged, buf = [], ""
+        for seg in _jieba.lcut(t):
+            if seg.strip(): merged.append(seg.strip())
+        if "".join(merged) == "".join(out): out = merged
+    return out
+
+def break_text(text, per_line, max_lines=None):
+    """Shared line breaker for subtitles, captions and draft cards: punctuation never starts a line, ?/。 never stand alone,
+    words (e.g. 橙红色) are not split when jieba is installed, and line lengths are balanced."""
+    toks = tokens(text)
+    if not toks: return []
+    ws = [dict(w=x if CJK.search(x) or _is_punct(x) or i == 0 else x, start=0.0, end=0.0) for i, x in enumerate(toks)]
+    ws = _glue(ws); lim = max(2, int(per_line)); clauses, cur = [], []
+    for x in ws:                                                    # clauses end at punctuation -> preferred break points
+        cur.append(x)
+        if x["w"] and x["w"][-1] in "。！？!?；;，,、：:": clauses.append(cur); cur = []
+    if cur: clauses.append(cur)
+    groups = []
+    for c in clauses:                                               # pack short clauses together, balance long ones
+        if groups and _len(groups[-1] + c) <= lim: groups[-1] = groups[-1] + c
+        elif groups and _len(groups[-1]) <= max(2, lim // 3):          # no orphan 「那么，」 line
+            b = _balance(c, lim)
+            if _len(groups[-1] + b[0]) <= lim: groups[-1] = groups[-1] + b[0]; groups.extend(b[1:])
+            else: groups[-1:] = _balance(groups[-1] + c, lim)
+        else: groups.extend(_balance(c, lim))
+    lines = []
+    for g in groups:
+        cj = all(CJK.search(x["w"]) or _is_punct(x["w"]) for x in g)
+        lines.append(("" if cj else " ").join(x["w"] for x in g))
+    if max_lines and len(lines) > max_lines: lines = lines[:max_lines]; lines[-1] = lines[-1].rstrip("，、,;；") + "…"
+    return lines
+
 def wrap_title(text, per_line):
-    """Balanced manual line breaks (ASS \\N) for CJK captions, keeping punctuation off line starts."""
+    """Balanced manual line breaks (joined with newlines) for CJK captions; Latin text is left to the renderer."""
     t = text.strip()
     if not CJK.search(t) or len(t) <= per_line: return t
-    k = -(-len(t) // per_line); size = -(-len(t) // k); lines, i = [], 0
-    while i < len(t):
-        j = min(len(t), i + size)
-        while j < len(t) and (t[j] in NO_START) and j - i < size + 2: j += 1          # pull closing punctuation up
-        while j < len(t) and j - i > 1 and t[j - 1] in NO_END: j -= 1                  # push opening punctuation down
-        lines.append(t[i:j]); i = j
-    if len(lines) > 1 and len(lines[-1].strip("".join(NO_START))) == 0: lines[-2] += lines.pop()
-    return "\n".join(lines)
+    return "\n".join(break_text(t, per_line))
 
 def ts(t):
     t = max(0.0, t); cs = int(round(t * 100)); return f"{cs // 360000}:{cs // 6000 % 60:02d}:{cs // 100 % 60:02d}.{cs % 100:02d}"
