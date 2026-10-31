@@ -64,7 +64,7 @@ body.simple .adv{display:none!important}#simpleBtn.on{border-color:var(--acc);co
 .flow .wire{stroke:var(--ln);stroke-width:2;fill:none}.flow .wire.ok{stroke:var(--acc);stroke-dasharray:3 9;animation:nxDash 1.2s linear infinite;filter:drop-shadow(0 0 4px #3dffa088)}
 .flow .wire.bad{stroke:var(--bad);stroke-dasharray:2 7;opacity:.7}.flow .wire.wait{stroke:var(--warn);stroke-dasharray:3 9;animation:nxDash 2s linear infinite}
 .flow .node circle.core{fill:var(--pn2);stroke:var(--ln);stroke-width:3;transition:all .4s}.flow .node text{fill:var(--dim);font:700 11px var(--mono);letter-spacing:.1em;text-anchor:middle}
-.flow .node .glyph{font:700 20px var(--sans);fill:var(--dim)}.flow .node .sub{font:500 10px var(--mono);letter-spacing:.02em}
+.flow .node .glyph{font:700 20px var(--sans);fill:var(--dim)}.flow .node .sub{font:600 15px var(--sans);letter-spacing:0;transform:translateY(8px)}.flow .node text.lbl{font-size:17px}body.vstudio .flow .node .sub{font-size:21px;transform:translateY(14px)}body.vstudio .flow .node text.lbl{font-size:23px}
 .flow .node.ok circle.core{stroke:var(--acc);filter:drop-shadow(0 0 10px #3dffa077)}.flow .node.ok .glyph,.flow .node.ok text.lbl{fill:var(--acc)}
 .flow .node.bad circle.core{stroke:var(--bad);fill:#2a0b13;filter:drop-shadow(0 0 16px #ff4f6daa)}.flow .node.bad .glyph,.flow .node.bad text.lbl{fill:var(--bad)}
 .flow .node.wait circle.core{stroke:var(--warn);filter:drop-shadow(0 0 12px #ffc94d88)}.flow .node.wait .glyph,.flow .node.wait text.lbl{fill:var(--warn)}
@@ -142,7 +142,7 @@ body[data-density=comfy] main{padding:20px}body[data-density=comfy] .pn{padding:
   <div class="right">
    <div class="nx-card pn" id="submitPn"><h3 data-i18n="new_item"></h3><div id="form"></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="b" id="submitBtn" data-i18n="submit"></button><button class="b sec" id="sampleBtn"></button></div></div>
    <div id="panels"></div>
-   <div class="nx-card term"><div class="nx-h"><span class="acc">$ tail -f</span> <span id="logName"></span><span style="margin-left:auto" id="logN"></span></div><div id="log"></div><span class="nx-cursor"></span></div>
+   <div class="nx-card term"><div class="nx-h"><span class="acc" id="logCmd">$ tail -f</span> <span id="logName"></span><span style="margin-left:auto" id="logN"></span></div><div id="log"></div><span class="nx-cursor"></span></div>
   </div>
  </div>
  <div class="nx-card pn" style="margin-top:12px"><h3><span data-i18n="chain_title"></span> <span style="color:var(--bad)" data-i18n="single_point"></span></h3><div class="items" id="items"></div></div>
@@ -180,10 +180,10 @@ const job=s=>LOC['seat_'+s.name]||s.job;
 const SN=k=>LOC['sn_'+k]||String(k).toUpperCase();   // seat display name (workflow locales may translate it)
 function toast(m){$('toast').textContent=m;$('toast').style.display='block';setTimeout(()=>$('toast').style.display='none',2200)}
 async function setLang(l,save){LOC=await get('/api/locale/'+l);document.documentElement.lang=l;document.querySelectorAll('[data-i18n]').forEach(e=>e.textContent=T(e.dataset.i18n));document.querySelectorAll('[data-i18n-ph]').forEach(e=>e.placeholder=T(e.dataset.i18nPh));if(typeof HOME!='undefined'&&HOME)$('crumbHome').innerHTML=`<a href="${HOME}">${esc(T('home'))}</a>`;
- ['langSel','setLang'].forEach(i=>$(i).value=l);if(save)await post('/api/config',{language:l});renderCfg();try{SIG={}}catch(e){}tick();window.dispatchEvent(new CustomEvent('seatcrew:lang',{detail:l}))}
+ ['langSel','setLang'].forEach(i=>$(i).value=l);if(save)await post('/api/config',{language:l});if(DEF)$('wfname').textContent=LOC.wf_label||DEF.name;renderCfg();try{SIG={}}catch(e){}tick();window.dispatchEvent(new CustomEvent('seatcrew:lang',{detail:l}))}
 function bindNav(){document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{document.querySelectorAll('nav button,.tab').forEach(x=>x.classList.remove('act'));b.classList.add('act');$(b.dataset.t).classList.add('act');window.dispatchEvent(new CustomEvent('seatcrew:tab',{detail:b.dataset.t}))})}bindNav();
 ['langSel','setLang'].forEach(i=>$(i).onchange=e=>setLang(e.target.value,true));
-async function load(){META=await get('/api/config');DEF=META.definition;document.title=DEF.title+' · SeatCrew';$('title').textContent='▌'+DEF.title;$('heroTitle').textContent=DEF.title;$('heroVer').textContent='v'+META.version;$('crumbWf').textContent=DEF.title;$('wfname').textContent=DEF.name;
+async function load(){META=await get('/api/config');DEF=META.definition;document.title=DEF.title+' · SeatCrew';$('title').textContent='▌'+DEF.title;$('heroTitle').textContent=DEF.title;$('heroVer').textContent='v'+META.version;$('crumbWf').textContent=DEF.title;$('wfname').textContent=LOC.wf_label||DEF.name;
  const lo=Object.entries(META.languages).map(([k,v])=>`<option value="${k}">${v}</option>`).join('');['langSel','setLang'].forEach(i=>$(i).innerHTML=lo);
  $('submitPn').style.display=DEF.submit.length?'':'none';
  $('form').innerHTML=DEF.submit.map(f=>`<div class="row" style="display:block"><label>${esc(LOC['field_'+f.name]||f.label||f.name)}</label>${f.type=='textarea'?`<textarea data-f="${f.name}"></textarea>`:f.type=='select'?`<select data-f="${f.name}" style="width:100%">${(f.options||[]).map(o=>`<option value="${esc(o)}" ${o==((META.settings||{})[f.name]??f.default)?'selected':''}>${esc(LOC['opt_'+o]||o)}</option>`).join('')}</select>`:`<input data-f="${f.name}" style="width:100%">`}</div>`).join('');
@@ -274,7 +274,7 @@ function renderDetail(o){if(!o){$('detail').innerHTML=`<div class="nx-h" data-i1
  const kv=Object.entries(o).filter(([k,v])=>!skip.has(k)&&v!==null&&typeof v!='object').slice(0,8).map(([k,v])=>`<span>${esc(LOC['field_'+k]||k)}</span><span>${esc(typeof v=='number'?+v.toFixed(4):v)}</span>`).join('');
  $('detail').innerHTML=`<div class="nx-h">${esc(T('detail_title'))} · #${o.id}<span class="nx-badge ${stc}" style="margin-left:auto">${esc(bl?T('badge_block'):wait?T('badge_wait'):o.status)}</span></div>
   <div class="dt"><b>${esc(o.title)}</b>${o.label?`<span class="nx-badge b-live">${esc(o.label)}</span>`:''}</div><div class="kv">${kv}<span>${esc(T('status'))}</span><span>${esc(o.status)}</span></div>
-  ${o.why?`<div class="why"><b>${esc(T('reason'))}:</b> ${esc(o.why)}</div>`:''}${bl?`<div class="why"><b class="bad">${esc(SN(bl.seat))} ✕</b> ${esc(bl.reason)}</div>`:''}`}
+  ${o.why?`<div class="why"><b>${esc(T('reason'))}:</b> ${esc(o.why)}</div>`:''}${bl?`<div class="why"><b class="bad">${esc(SN(bl.seat))} ✕</b> ${esc((bl.reason_l||bl.reason))}</div>`:''}`}
 async function tick(){if(!DEF||!LOC.app_sub||busy)return;if(document.activeElement&&document.activeElement.dataset&&document.activeElement.dataset.note)return;let s;try{s=await get('/api/state')}catch(e){return}LAST=s;
  const clk=s.time.replace('T',' ').slice(0,19);$('clk').textContent=clk;$('heroClk').textContent=clk.slice(11);$('runner').textContent=T('runner',{n:s.runner.interval});$('cyc').textContent=` ${T('cycle')} ${s.cycle} · ${T('last')} ${s.last_cycle?s.last_cycle.slice(11,19):'—'}`;
  const on=META.auto_run!==false;$('runDot').classList.toggle('off',!on);$('runTxt').textContent=on?T('running'):T('paused');
@@ -288,7 +288,7 @@ async function tick(){if(!DEF||!LOC.app_sub||busy)return;if(document.activeEleme
  $('flowPath').textContent=' · '+DEF.chain.map(SN).join(' → ');$('flowChk').textContent=T('checked_n',{n:ck});
  if(FOCUS!=null&&!its.find(o=>o.id==FOCUS))FOCUS=null;const fo=its.find(o=>o.id==FOCUS)||its[0];
  const chips=its.slice(0,4).map(o=>{const b=(o.chain||[]).find(c=>!c.ok),c=b?'bad':o.pending!=null?'wait':/^(done|filled)$/.test(o.status)?'ok':'';
-  return `<div class="chip ${c} ${fo&&o.id==fo.id?'sel':''}" data-focus="${o.id}"><b>${esc(o.subject||o.title)}</b><span class="s">${esc(b?SN(b.seat)+' ✕ '+b.reason:o.status)}</span></div>`}).join('');
+  return `<div class="chip ${c} ${fo&&o.id==fo.id?'sel':''}" data-focus="${o.id}"><b>${esc(o.subject||o.title)}</b><span class="s">${esc(b?SN(b.seat)+' ✕ '+(b.reason_l||b.reason):o.status)}</span></div>`}).join('');
  if(SIG.chips!==chips){$('chips').innerHTML=chips;SIG.chips=chips;document.querySelectorAll('[data-focus]').forEach(e=>e.onclick=()=>{FOCUS=+e.dataset.focus;SIG={};tick()})}
  const fsig=fo?fo.id+':'+JSON.stringify(fo.chain)+fo.pending+LOC.app_sub:'none'+LOC.app_sub;
  if(SIG.flow!==fsig){$('flow').innerHTML=fo?flowSVG(fo):`<div class="dim" style="padding:90px 0;text-align:center">${esc(T('chain_empty'))}</div>`;SIG.flow=fsig;renderDetail(fo)}
@@ -299,8 +299,8 @@ async function tick(){if(!DEF||!LOC.app_sub||busy)return;if(document.activeEleme
  $('panels').innerHTML=(s.panels||[]).map(p=>`<div class="nx-card pn"><h3>${esc(p.title)}</h3><table><tr>${p.columns.map(c=>`<th>${esc(c)}</th>`).join('')}</tr>${p.rows.map(r=>`<tr>${r.map(c=>`<td>${esc(c)}</td>`).join('')}</tr>`).join('')}</table></div>`).join('');
  const items=s.items.length?s.items.slice(0,14).map(itemCard).join(''):`<span class="dim">${T('chain_empty')}</span>`;if(SIG.items!==items){$('items').innerHTML=items;SIG.items=items;
  document.querySelectorAll('[data-ap]').forEach(b=>b.onclick=()=>decide(+b.dataset.ap,true,+b.dataset.pending));document.querySelectorAll('[data-rj]').forEach(b=>b.onclick=()=>decide(+b.dataset.rj,false,+b.dataset.pending))}
- $('logName').textContent=DEF.name+'.log';$('logN').textContent=T('lines',{n:s.events.length});
- const seen=+($('log').dataset.n||0);$('log').innerHTML=s.events.slice().reverse().map((e,i)=>`<div class="k-${e.kind} ${i<s.events.length-seen?'nx-in':''}"><span class=dim>${e.ts.slice(11,19)}</span> ${e.agent.padEnd(9)} ${e.kind.padEnd(13)} ${esc(e.sym)} ${esc(e.msg)}</div>`).join('');$('log').dataset.n=s.events.length}
+ const lz=!/^en/.test(document.documentElement.lang);$('logCmd').textContent=lz?'▤':'$ tail -f';$('logName').textContent=lz?T('log_title')+' · '+(LOC.wf_label||DEF.name):DEF.name+'.log';$('logN').textContent=T('lines',{n:s.events.length});
+ const seen=+($('log').dataset.n||0);$('log').innerHTML=s.events.slice().reverse().map((e,i)=>`<div class="k-${e.kind} ${i<s.events.length-seen?'nx-in':''}"><span class=dim>${e.ts.slice(11,19)}</span> ${esc((e.agent_l||e.agent).padEnd(9))} ${esc((e.kind_l||e.kind).padEnd(e.kind_l?6:13))} ${esc(e.sym)} ${esc(e.msg_l||e.msg)}</div>`).join('');$('log').dataset.n=s.events.length}
 // ---------- navigation: big back button, breadcrumb, Esc / Alt+Left ----------
 const HOME=(()=>{const h=new URLSearchParams(location.search).get("home");return h&&/^http:\/\/127\.0\.0\.1:\d+\/$/.test(h)?h:null})();
 if(HOME){$('homeBtn').href=HOME;$('homeBtn').style.display='inline-flex';$('crumbHome').innerHTML=`<a href="${HOME}">${esc(T('home'))}</a>`}else{$('homeBtn').style.display='none';document.querySelector('[data-i18n=back_keys]').style.display='none'}
