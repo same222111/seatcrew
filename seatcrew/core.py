@@ -134,7 +134,11 @@ class Workflow:
             with self.lock:
                 self.items = self._retained_items(200)
                 tmp = self.items_f.with_suffix(".tmp")
-                tmp.write_text(json.dumps(self.items, ensure_ascii=False, default=str, indent=0), encoding="utf-8")
+                for _ in range(5):                       # parallel items may mutate their own dict while we serialise: retry
+                    try: txt = json.dumps(self.items, ensure_ascii=False, default=str, indent=0); break
+                    except RuntimeError: time.sleep(0.01)
+                else: return
+                tmp.write_text(txt, encoding="utf-8")
                 os.replace(tmp, self.items_f)
 
     def _retained_items(self, limit):
@@ -192,9 +196,41 @@ class Workflow:
         items = self.collect()
         self._hold = not self.chief.plan(items) if self.chief else False
         if self._hold: self.log("chief", "HOLD", "CHIEF holds new items this cycle")
-        res = [self.run_chain(i) for i in items]; self._hold = False
+        n = self.parallel()
+        if n > 1 and items: res = self._run_parallel(items, n)
+        else: res = [self.run_chain(i) for i in items]
+        self._hold = False
         self.log("chief", "DONE", f"cycle {self.cycle_no}: {sum(r is True for r in res)} passed, {sum(r is False for r in res)} blocked, {sum(r is None for r in res)} waiting / {len(items)}")
         self.active = None; self.last_cycle = now().isoformat(timespec="seconds")
+
+    parallel_items = 1
+    def parallel(self):
+        """How many items may walk the chain at the same time (settings.parallel_items, default 1 = strictly one by one)."""
+        try: return max(1, min(8, int((self.cfg.data.get("settings") or {}).get("parallel_items", self.parallel_items))))
+        except (TypeError, ValueError, AttributeError): return 1
+    def _run_parallel(self, items, n):
+        """Run items on n worker threads. Items submitted while the cycle is busy join at once instead of waiting
+        for the next cycle, so a second video starts while the first one renders."""
+        from concurrent.futures import ThreadPoolExecutor, wait, FIRST_COMPLETED
+        with ThreadPoolExecutor(n, thread_name_prefix="item") as ex:
+            futs = [ex.submit(self.run_chain, i) for i in items]; pull = True
+            while True:
+                pending = [f for f in futs if not f.done()]
+                if not pending: break
+                wait(pending, timeout=0.25, return_when=FIRST_COMPLETED)
+                if not pull: continue
+                with self.lock: late = list(self.inbox); self.inbox.clear()
+                if late:
+                    if self.chief and not self.chief.plan(late):
+                        self.log("chief", "HOLD", f"CHIEF holds {len(late)} new item(s) until the next cycle")
+                        with self.lock: self.inbox[:0] = late
+                        pull = False; continue
+                    self.log("chief", "PARALLEL", f"{len(late)} new item(s) started next to the running one(s)"); futs += [ex.submit(self.run_chain, i) for i in late]
+        out = []
+        for f in futs:
+            try: out.append(f.result())
+            except Exception as e: self.log("chief", "ERROR", f"{type(e).__name__}: {e}"); out.append(False)
+        return out
 
     # ---------- for the dashboard ----------
     def definition(self):
