@@ -374,3 +374,35 @@ def test_wrap_title_and_draft_card_share_breaker(tmp_path, monkeypatch):
     visuals.draft_card(dict(id="s9", caption="那么，为什么晚霞是橙红色的呢？"), tmp_path, "9:16", size=(1080, 1920))
     card = (tmp_path / "s9.card.txt").read_text(encoding="utf-8").split("\n")
     assert any("橙红色" in l for l in card) and all(l[0] not in subs.NO_START for l in card) and calls
+
+
+# ---- CI fixes: no CJK font installed -> degrade, never block PRODUCTION; install.sh dry-run never SIGPIPEs ----
+def test_text_font_degrades_without_cjk_fonts(monkeypatch):
+    import warnings, pytest
+    from seatcrew.video import typography as T
+    monkeypatch.setenv("SEATCREW_NO_SYSTEM_FONTS", "1"); monkeypatch.delenv("SEATCREW_FONTS_DIR", raising=False)
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        path, fam = T.text_font("天空为什么是蓝色的")
+    assert path == T.LATIN and path.is_file() and any("fonts-noto-cjk" in str(x.message) for x in w)
+    with pytest.raises(T.FFError): T.text_font("天空", strict=True)
+
+def test_draft_card_and_editor_render_without_cjk_fonts(tmp_path, monkeypatch):
+    import shutil as sh, subprocess, os, sys, pytest
+    if not sh.which("ffmpeg"): pytest.skip("ffmpeg missing")
+    from seatcrew.video import visuals, subs
+    monkeypatch.setenv("SEATCREW_NO_SYSTEM_FONTS", "1"); monkeypatch.delenv("SEATCREW_FONTS_DIR", raising=False)
+    p = visuals.draft_card(dict(id="s1", caption="那么，为什么晚霞是橙红色的呢？"), tmp_path, "9:16", size=(270, 480))
+    assert p.is_file() and p.stat().st_size > 0
+    # whole offline pipeline (init + assemble, Chinese draft) in a fresh process with no CJK fonts at all
+    env = dict(os.environ, SEATCREW_NO_SYSTEM_FONTS="1", LANG="zh_CN.UTF-8", PYTHONPATH=str(ROOT)); env.pop("SEATCREW_FONTS_DIR", None)
+    d = tmp_path / "proj"
+    assert subprocess.run([sys.executable, "-m", "seatcrew.video.cli", "init", str(d)], env=env, capture_output=True, timeout=120).returncode == 0
+    r = subprocess.run([sys.executable, "-m", "seatcrew.video.cli", "assemble", str(d), "--aspect", "9:16"], env=env, capture_output=True, text=True, timeout=600)
+    assert r.returncode == 0, r.stdout[-800:] + r.stderr[-800:]
+    assert list(d.glob("final*.mp4"))
+
+def test_install_sh_dry_run_write_drains_stdin():
+    src = (ROOT / "install.sh").read_text(encoding="utf-8")
+    line = next(l for l in src.splitlines() if l.startswith("write()"))
+    assert 'cat >/dev/null' in line.split("else")[0]                 # dry-run branch reads the pipe -> no SIGPIPE/141
