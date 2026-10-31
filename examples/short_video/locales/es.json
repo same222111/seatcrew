@@ -210,5 +210,6 @@
  "set_image_backend": "Servicio de imagen (auto = el mejor disponible)",
  "set_keyframes": "Crear primero una imagen clave",
  "set_lipsync_backend": "Servicio de sincronía labial",
- "set_continuity_qc": "Revisar continuidad de personajes"
+ "set_continuity_qc": "Revisar continuidad de personajes",
+ "r_no_script": "Sin IA conectada y sin guion: escribe tu guion en Notas (una frase = un plano), pulsa 'Cargar ejemplo' o conecta una IA en la pestaña de asientos de IA. El redactor sin conexión nunca inventa contenido."
 }

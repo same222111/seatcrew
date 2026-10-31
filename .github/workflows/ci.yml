@@ -10,9 +10,34 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: {python-version: "${{ matrix.python }}"}
-      - run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
-      - run: pip install -e ".[dev]"
+      - run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg fonts-noto-cjk
+      - run: pip install -e ".[dev]" playwright
+      # the UI overflow test must run here (not skip): Playwright's own Chromium
+      - run: python -m playwright install --with-deps chromium
       - run: python scripts/privacy_scan.py
-      - run: pytest -q
+      - run: pytest -q -rs
+        env: {SEATCREW_REQUIRE_UI: "1"}
       - run: docker build -t seatcrew .
         if: matrix.python == '3.12'
+  wheel:
+    # fresh install from the built wheel (no repo on the path): web assets, locales, video package, every workflow opens
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - name: Build wheel
+        shell: bash
+        run: pip install build && python -m build --wheel --outdir wheelhouse
+      - name: Install in a clean venv and smoke
+        shell: bash
+        run: |
+          python -m venv "$RUNNER_TEMP/v"
+          if [ "$RUNNER_OS" = Windows ]; then PY="$RUNNER_TEMP/v/Scripts/python.exe"; EXE="$RUNNER_TEMP/v/Scripts/seatcrew-desktop.exe"; else PY="$RUNNER_TEMP/v/bin/python"; EXE="$RUNNER_TEMP/v/bin/seatcrew-desktop"; fi
+          "$PY" -m pip install wheelhouse/*.whl
+          cp scripts/smoke_app.py "$RUNNER_TEMP/" && cd "$RUNNER_TEMP"
+          "$PY" smoke_app.py "$EXE"

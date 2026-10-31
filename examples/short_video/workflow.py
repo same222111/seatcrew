@@ -13,6 +13,7 @@
 * QC: automated checks; failures go back to the responsible seat (bounded rounds), then the item blocks with the report.
 * Anything made with a draft backend is marked "DRAFT PREVIEW - NOT FINAL QUALITY" in the UI, the video and its name.
 Run:  seatcrew ui short_video      CLI assembly from your own clips:  seatcrew video assemble <folder>"""
+from seatcrew import i18n
 import json, re, shutil
 from pathlib import Path
 from seatcrew import Seat, HumanSeat, Chief, Workflow, llm
@@ -81,8 +82,9 @@ class Writer(Seat):
         out = self.ai_write(d, tp, fb)
         if out: sb, who = out
         elif not (d.get("notes") or "").strip() and not d.get("cast"):
-            return False, ("no AI connected and no script: write your script in Notes (one sentence = one shot), "
-                           "press 'Load sample', or connect an AI in the AI Seats tab - the offline writer never invents content")
+            msg = i18n.t("r_no_script", self.cfg.get("language") or "en", self.wf.locale_dirs)
+            err, self.ai_err = getattr(self, "ai_err", None), None
+            return False, (f"AI: {err} · " + msg) if err else msg
         else: sb, who = self.from_notes(d, tp, fb), "template"
         d["storyboard"] = sb; d.pop("feedback", None) if fb else None
         return True, f"{len(sb['shots'])} shots, ~{sum(s['duration'] for s in sb['shots']):.0f}s ({who})"
@@ -106,8 +108,16 @@ class Writer(Seat):
         r = llm.write(self.name, prompt, self.cfg, max_tokens=2500)
         if not r: return None
         m = re.search(r"\{.*\}", r[0], re.S)
-        try: sb = validate_storyboard(dict(json.loads(m.group(0)), aspect=d["aspect"], language=self.cfg["language"], template=d["template"]))
-        except (AttributeError, ValueError) as e: self.wf.log(self.name, "AI-ERR", f"storyboard rejected: {e}", it_subject(d)); return None
+        try:
+            raw = json.loads(m.group(0))
+            for i, sh in enumerate(raw.get("shots") or []):           # forgive small format slips (local models): unknown camera/transition/duration
+                if isinstance(sh, dict):
+                    if sh.get("camera") not in SB.CAMERAS: sh["camera"] = tp["cameras"][i % len(tp["cameras"])]
+                    if sh.get("transition") not in SB.TRANSITIONS: sh["transition"] = tp["transition"]
+                    if not isinstance(sh.get("duration"), (int, float)): sh["duration"] = round(estimate_sec(str(sh.get("narration") or ""), tp["wpm"]), 1)
+            sb = validate_storyboard(dict(raw, aspect=d["aspect"], language=self.cfg["language"], template=d["template"]))
+        except (AttributeError, ValueError, TypeError) as e:
+            self.wf.log(self.name, "AI-ERR", f"storyboard rejected: {e}", it_subject(d)); self.ai_err = str(e)[:120]; return None
         return sb, r[1]
     def from_cast(self, d, tp):
         """No AI + a cast: "Name: line" rows in your notes become dialogue; unlabeled sentences go to the cast in turn.
@@ -193,6 +203,12 @@ class Voice(Seat):
     def rules(self, it):
         d = it["data"]; s = self.cfg["settings"]; work = self.wf.item_dir(it) / "voice"; work.mkdir(parents=True, exist_ok=True)
         info = []
+        if d.get("cast"):                                          # cast members without a voice get a free default voice (by gender/age) - change it in Character Studio
+            st, have = CH.Store(), VO.Library().all()
+            for m in d.get("cast_members") or []:
+                if m not in have:
+                    c = st.get(m); st.bind_voice(m, **{k: c.get(k) for k in ("gender", "age") if k in VO.FIELDS and c.get(k)})
+                    self.wf.log(self.name, "VOICE", f"{m}: default voice assigned (change it in Character Studio)", it_subject(d))
         lib = VO.Library(); lang = self.cfg["language"]
         for sh in d["storyboard"]["shots"]:
             lines = sh.get("lines") or ([dict(speaker="narrator", text=sh["narration"])] if sh.get("narration") else [])

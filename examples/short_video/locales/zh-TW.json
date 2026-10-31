@@ -210,5 +210,6 @@
  "set_image_backend": "圖片服務(auto = 自動選最好的)",
  "set_keyframes": "先產生關鍵影格圖片",
  "set_lipsync_backend": "對嘴同步服務",
- "set_continuity_qc": "檢查角色連貫性"
+ "set_continuity_qc": "檢查角色連貫性",
+ "r_no_script": "未連接 AI,也沒有腳本:請在「要點或你的腳本」裡寫腳本(一句 = 一個鏡頭),或點「填入範例」,或在「AI 席位」裡連接一個 AI。離線寫手不會憑空編內容。"
 }

@@ -326,6 +326,8 @@ def main(argv=None):
     app = App(a.home).start()
     url = app.open_workflow(a.open) if a.open else app.url
     print(f"{APP} {__version__}  data: {app.home}  url: {url}", flush=True)
+    if os.environ.get("SEATCREW_URL_FILE"):                   # windowed builds have no console: smoke tests read the url here
+        Path(os.environ["SEATCREW_URL_FILE"]).write_text(url, encoding="utf-8")
     webview = None
     if not a.no_window:
         try: import webview

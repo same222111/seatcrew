@@ -8,6 +8,18 @@
 
 *v0.6 "Night Shift" UI: seat cards with status badges, an animated check chain, live log. Animations follow `prefers-reduced-motion` and can be switched off (Settings → display → animations, or the **motion** button). [Watch the MP4](docs/demo.mp4).*
 
+## New in 0.9.0
+- **Character Studio + casts**: consistent characters, voices and dialogue scenes, which also work without keys as labeled DRAFTs.
+- **Zero-key sample**: one click makes a real short video with a free voice.
+- **Model cards** in 5 languages, plus local AI through **Ollama**.
+- Every installer is smoke-tested in CI on Windows, macOS and Linux.
+
+Full list: [CHANGELOG.md](CHANGELOG.md).
+
+> **Honest notes.** Paid providers (video, image, 3D, cloud TTS and paid LLMs) are tested with mocked HTTP only, **not with real keys yet**. The things tested for real are the no-key path (edge-tts plus DRAFT visuals) and local Ollama. **Clone a voice only with the speaker's explicit permission.**
+
+<img src="docs/img/character_studio_draft.png" width="420" alt="Character Studio with no keys: two cat characters with DRAFT sheets and free voices">
+
 ## Get started in 3 minutes
 
 1. **Install** (any option below) and open SeatCrew. A 3-step wizard appears.
@@ -167,6 +179,17 @@ MIT licensed. See [CONTRIBUTING.md](CONTRIBUTING.md).
 ---
 
 ## 中文说明
+
+### 0.9.0 新功能
+- **角色工作室 + 剧组**：角色形象和音色保持一致，可以拍对话场景。没有密钥也能用，生成的内容会标注 DRAFT。
+- **零密钥示例**：一键生成一条真实的短视频，配音免费。
+- **模型卡片**：支持 5 种语言，并支持通过 **Ollama** 使用本地 AI。
+- CI 会在 Windows、macOS、Linux 上逐个启动安装包做冒烟测试。
+
+完整列表见 [CHANGELOG.md](CHANGELOG.md)。
+
+> **如实说明**：付费服务商（视频、图像、3D、云端配音、付费大模型）目前只做了模拟 HTTP 测试，**还没有用真实密钥测过**。真实跑通的是无密钥路径（edge-tts + DRAFT 画面）和本地 Ollama。**克隆声音必须事先得到说话人的明确同意。**
+
 
 ### 3 分钟上手
 1. 安装并打开 SeatCrew，首次启动出现 3 步向导。

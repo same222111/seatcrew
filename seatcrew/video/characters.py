@@ -151,7 +151,14 @@ class Store:
         if voice and voice != vname:
             src = lib.get(voice); f = {k: src.get(k) for k in VO.FIELDS if k in src and k != "name"}
             f.update({k: v for k, v in fields.items() if v is not None}); lib.set(vname, **f)
-        else: lib.set(vname, preset=preset, **{k: v for k, v in fields.items() if v is not None})
+        else:
+            if not preset and not fields.get("voice"):                 # no choice made: pick by the character's own gender/age
+                for k in ("gender", "age"): fields.setdefault(k, c.get(k) or None)
+                if "voice" not in (lib.get(vname) if vname in lib.all() else {}) or not lib.all().get(vname, {}).get("voice"):
+                    ps = VO.presets(); g, a = fields.get("gender"), fields.get("age")
+                    pick = next((x for x in ps if x.get("gender") == g and x.get("age") == a), None) or next((x for x in ps if x.get("gender") == g), None)
+                    if pick: preset = pick["id"]
+            lib.set(vname, preset=preset, **{k: v for k, v in fields.items() if v is not None})
         if c.get("locked") and c.get("locked_refs"): lib.set(vname, ref_image=str(self.path(name) / c["locked_refs"][0]))
         c["voice"] = vname; return self._write(c), lib.get(vname)
     def clone_voice(self, name, backend, sample, voice_id=None):

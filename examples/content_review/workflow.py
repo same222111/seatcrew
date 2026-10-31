@@ -22,6 +22,11 @@ PROMPTS = {
     "publish": "You are PUBLISH.",
     "review": "You are REVIEW. Compare the published text with the approved draft. Answer ok or flag.",
 }
+_CJK = re.compile(r"[\u3040-\u30ff\u3400-\u9fff\uac00-\ud7af]")
+def words(text):
+    """Word count that also works for Chinese/Japanese/Korean (each CJK character counts as one word)."""
+    return len(_CJK.findall(text or "")) + len(_CJK.sub(" ", text or "").split())
+
 SETTINGS = {"banned_phrases": ["guaranteed", "risk-free", "miracle", "100% safe", "cure"], "min_words": 30, "max_words": 600,
             "approve_auto_approve": False, "load_samples": True}
 SAMPLES = [
@@ -38,10 +43,10 @@ class Draft(Seat):
         if not d.get("topic", "").strip(): return False, "no topic"
         out = llm.write(self.name, f"Topic: {d['topic']}\nNotes: {d.get('notes', '')}\nSources: {d.get('sources', '')}", self.cfg)
         if out:
-            d["draft"], who = out; self.wf.log(self.name, "AI", f"[{who}] drafted {len(d['draft'].split())} words", it["subject"]); return True, f"AI draft by {who}"
+            d["draft"], who = out; self.wf.log(self.name, "AI", f"[{who}] drafted {words(d['draft'])} words", it["subject"]); return True, f"AI draft by {who}"
         d["draft"] = f"# {d['topic']}\n\n{d.get('notes', '').strip()}\n\n" + (f"_Sources: {d['sources']}_\n" if d.get("sources") else "") + \
                      "\nThis post was drafted from the team's notes and is reviewed by a human before publishing. Questions and corrections are welcome."
-        return True, f"template draft ({len(d['draft'].split())} words)"
+        return True, f"template draft ({words(d['draft'])} words)"
 
 class FactCheck(Seat):
     name = "factcheck"; job = "checks claims"; labels = ("supported", "unsupported"); block_labels = ("unsupported",)
@@ -53,7 +58,7 @@ class FactCheck(Seat):
 class Policy(Seat):
     name = "policy"; job = "compliance"; labels = ("ok", "violation"); block_labels = ("violation",)
     def rules(self, it):
-        s = self.cfg["settings"]; text = it["data"].get("draft", ""); w = len(text.split())
+        s = self.cfg["settings"]; text = it["data"].get("draft", ""); w = words(text)
         hit = [p for p in s["banned_phrases"] if p.lower() in text.lower()]
         if hit: return False, f"banned phrase: {', '.join(hit)}"
         if w < s["min_words"]: return False, f"too short ({w} < {s['min_words']} words)"

@@ -89,6 +89,12 @@ TXT["es"] = dict(TXT["en"], hi="Hola, soy CHIEF. Pregúntame cómo funciona Seat
   no_wf="Abre primero un flujo (desde Inicio) para cambiar su configuración o ejecutarlo.", no_seats="(abre un flujo para ver sus puestos)", fallback="No lo encontré en las FAQ sin conexión. Prueba: ¿qué es un puesto? ¿quién decide? ¿cómo conecto una IA? crea un flujo…", trouble="Diagnóstico:", t_ok="todo bien",
   who="¿Quién decide?\n1. CHIEF (comandante) inicia cada ciclo y reparte el trabajo - nunca aprueba nada solo.\n2. Cada puesto juzga con sus reglas y, opcionalmente, su IA. La IA solo puede volverlo MÁS prudente.\n3. Los controles filtran: un BLOCKED detiene el elemento.\n4. Un puesto humano (si existe) aprueba o rechaza.\nAsignación actual:")
 
+AI_FAIL = {"en": "The AI did not answer this time (it is connected - check that it is running), so I'm using the offline FAQ.",
+           "zh-CN": "AI 这次没有回应(已连接,请确认它在运行),我先用离线问答回答你。",
+           "zh-TW": "AI 這次沒有回應(已連接,請確認它在執行),我先用離線問答回答你。",
+           "ja": "AI から今回は応答がありませんでした(接続済み。起動しているか確認してください)。オフライン FAQ で答えます。",
+           "es": "La IA no respondió esta vez (está conectada; comprueba que esté en marcha), así que uso las FAQ sin conexión."}
+
 def sample_for(wf, lang):
     """One sample item for this workflow, in the UI language when the workflow ships one ("lang" key), else the first."""
     samples = (getattr(wf, "spec", {}) or {}).get("sample_items") or type(wf).__init__.__globals__.get("SAMPLES") or []
@@ -367,7 +373,7 @@ class Assistant:
                     reply = str(j.get("reply") or (raw if not m else "")).strip(); tool = j.get("tool"); args = j.get("args") or {}
                     if not isinstance(args, dict): args = {}
                 except llm.LLMError as e:
-                    out.append(self._add("chief", f"AI error ({p}): {e}. " + tx(self.lang, "offline"), kind="warn")); p = None
+                    out.append(self._add("chief", f"AI error ({p}): {e}. " + AI_FAIL.get(self.lang, AI_FAIL["en"]), kind="warn")); p = None
             if not p:
                 tool, args, reply = self.offline_intent(clean)
             if reply: out.append(self._add("chief", reply))

@@ -59,20 +59,66 @@ def test_zero_key_sample_is_in_ui_language():
     assert "天空" in zh["topic"]
 
 def _chrome():
-    try: import playwright.sync_api  # noqa
+    """System Chrome/Chromium path, "bundled" for Playwright's own Chromium, else None (test skipped - CI sets
+    SEATCREW_REQUIRE_UI=1 so a missing browser fails there instead)."""
+    try: from playwright.sync_api import sync_playwright
     except ImportError: return None
-    return next((p for p in ("/usr/bin/google-chrome", "/usr/bin/chromium", "/usr/bin/chromium-browser") if os.path.exists(p)), None) or shutil.which("google-chrome")
+    sys_c = next((p for p in ("/usr/bin/google-chrome", "/usr/bin/chromium", "/usr/bin/chromium-browser") if os.path.exists(p)), None) or shutil.which("google-chrome")
+    if sys_c: return sys_c
+    try:
+        with sync_playwright() as p: return "bundled" if os.path.exists(p.chromium.executable_path) else None
+    except Exception: return None
 
-@pytest.mark.skipif(not _chrome(), reason="needs playwright + a Chrome/Chromium")
+@pytest.mark.skipif(not _chrome() and not os.environ.get("SEATCREW_REQUIRE_UI"), reason="needs playwright + a Chrome/Chromium")
 def test_no_clipped_text_or_horizontal_overflow(app):
     from playwright.sync_api import sync_playwright
     post(app.url + "api/setup", {"language": "zh-CN"})
     js = (HERE / "ui" / "overflow.js").read_text(encoding="utf-8"); bad = []
     with sync_playwright() as p:
-        b = p.chromium.launch(executable_path=_chrome(), args=["--no-sandbox"])
+        c = _chrome(); b = p.chromium.launch(**({} if c == "bundled" else dict(executable_path=c)), args=["--no-sandbox"])
         for w, h in ((1280, 800), (1440, 900), (1920, 1080)):
             pg = b.new_page(viewport=dict(width=w, height=h)); pg.goto(app.url); pg.wait_for_timeout(800)
             bad += [(w, x) for x in pg.evaluate(js)]
             pg.close()
+        print("ui overflow checked with", c)
         b.close()
     assert not bad, bad[:10]
+
+def test_almost_json_from_a_small_model_abstains_or_parses(monkeypatch):
+    from seatcrew import llm
+    cfg = {"seats": {"x": {"provider": "ollama", "prompt": "p", "model": "m"}}, "llm_limits": {"max_calls_per_hour": 99, "cost_per_call_usd": 0, "max_daily_usd": 1}}
+    monkeypatch.setattr(llm, "chat", lambda *a, **k: ('{"label": "hold" "reason": "broken json"}', "m"))
+    r = llm.ask_role("x", "u", ("proceed", "hold"), cfg); assert r["label"] == "hold" and r["ok"]
+    monkeypatch.setattr(llm, "chat", lambda *a, **k: ("{not json at all}", "m"))
+    assert llm.ask_role("x", "u", ("proceed", "hold"), cfg)["label"] == "abstain"
+
+def test_ollama_default_model_falls_back_to_an_installed_one(monkeypatch):
+    from seatcrew import llm
+    llm._OL["http://x"] = (__import__("time").time(), ["qwen2.5:0.5b"])
+    assert llm.ollama_model("http://x", llm.PROVIDERS["ollama"]["model"]) == "qwen2.5:0.5b"
+    assert llm.ollama_model("http://x", "mine:7b") == "mine:7b"
+
+@pytest.mark.parametrize("data", [{"settings": "x"}, {"seats": "x"}, {"settings": {"crf": "abc"}}, {"settings": {"allow_draft": "yes"}}])
+def test_malformed_profile_is_a_clean_error(data):
+    from seatcrew import profiles as PF
+    class C: defaults = {"settings": {"crf": 18, "allow_draft": True}, "seats": {"a": {}}}; data = defaults
+    with pytest.raises(ValueError): PF.clean(C, data)
+
+def test_every_python_package_ships_in_the_wheel():
+    import tomllib
+    from pathlib import Path
+    root = HERE.parent; cfg = tomllib.loads((root / "pyproject.toml").read_text(encoding="utf-8"))["tool"]["setuptools"]
+    pkgs = set(cfg["packages"])
+    for init in (root / "seatcrew").rglob("__init__.py"):
+        assert ".".join(init.parent.relative_to(root).parts) in pkgs, f"{init.parent} missing from pyproject packages"
+
+def test_still_image_static_camera_is_not_frozen():
+    from seatcrew.video.editor import _kb
+    assert _kb("static", 100, 0.1)[0] != "1"
+
+def test_character_without_choice_gets_voice_by_gender_age(tmp_path):
+    from seatcrew.video import characters as CH, voices as VO
+    st = CH.Store(root=tmp_path / "c", casts=tmp_path / "k", voices=tmp_path / "v.yaml")
+    st.create("老张", "x", "male", "adult", ""); st.create("小美", "x", "female", "young", "")
+    a, b = st.bind_voice("老张")[1], st.bind_voice("小美")[1]
+    assert a["gender"] == "male" and b["gender"] == "female" and a["voice"] != b["voice"]

@@ -210,5 +210,6 @@
  "set_image_backend": "Image service (auto = best available)",
  "set_keyframes": "Make a keyframe image first",
  "set_lipsync_backend": "Lip-sync service",
- "set_continuity_qc": "Check character continuity"
+ "set_continuity_qc": "Check character continuity",
+ "r_no_script": "No AI connected and no script: write your script in Notes (one sentence = one shot), press 'Load sample', or connect an AI in the AI Seats tab. The offline writer never invents content."
 }

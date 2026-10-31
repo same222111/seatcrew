@@ -70,7 +70,9 @@ def chat(name, system, user, cfg, model=None, max_tokens=200, timeout=None):
             try: return cli_ai.ask(p["tool"], system, user, model=model or None, timeout=max(timeout, 90)), model or p["tool"]
             except cli_ai.CLIError as e: raise LLMError(str(e)) from None
         if p["kind"] == "ollama":
-            r = _post(f"{base}/api/chat", {}, dict(model=model, stream=False, messages=msgs, options={"temperature": 0}), timeout)
+            model = ollama_model(base, model)
+            r = _post(f"{base}/api/chat", {}, dict(model=model, stream=False, messages=msgs, options={"temperature": 0, "num_predict": max_tokens}),
+                      max(timeout, 120))                            # local CPU models are slow - give them time
             return r["message"]["content"], model
     except LLMError: raise
     except (KeyError, IndexError, TypeError) as e:
@@ -78,6 +80,19 @@ def chat(name, system, user, cfg, model=None, max_tokens=200, timeout=None):
     except Exception as e:
         raise LLMError(_scrub(f"{type(e).__name__}: {e}")) from None
     raise LLMError(f"unsupported kind {p['kind']}")
+
+_OL = {}
+def ollama_model(base, model):
+    """Use the configured model if Ollama has it; if it is the untouched default and missing, use the first installed model."""
+    if model != PROVIDERS["ollama"]["model"]: return model
+    if base not in _OL or time.time() - _OL[base][0] > 60:
+        try:
+            with urllib.request.urlopen(base + "/api/tags", timeout=2) as r: names = [m["name"] for m in json.loads(r.read()).get("models", [])]
+        except Exception: names = []
+        _OL[base] = (time.time(), names)
+    names = _OL[base][1]
+    if not names or any(n == model or n.split(":")[0] == model for n in names): return model
+    return names[0]
 
 def test_connection(name, cfg, model=None):
     """Real minimal call. Returns dict(ok, provider, model, latency_ms, reply|error)."""
@@ -112,7 +127,13 @@ def ask_role(role, user, labels, cfg):  # role = seat name
     system = rc["prompt"] + f'\nReply ONLY with JSON: {{"label": one of {list(labels)}, "reason": "<one short sentence>"}}'
     try:
         txt, model = chat(rc["provider"], system, user, cfg, model=rc.get("model") or None)
-        m = re.search(r"\{.*\}", txt, re.S); j = json.loads(m.group(0)) if m else {}
+        m = re.search(r"\{.*\}", txt, re.S)
+        try: j = json.loads(m.group(0)) if m else {}
+        except ValueError: j = {}                                     # small/local models often emit almost-JSON
+        if not isinstance(j, dict): j = {}
+        if not j:
+            lm = re.search(r'"?label"?\s*:\s*"?(\w+)', txt); rm = re.search(r'"?reason"?\s*:\s*"([^"]*)', txt)
+            j = dict(label=lm.group(1) if lm else "", reason=rm.group(1) if rm else "")
         lab = str(j.get("label", "")).lower()
         if lab not in labels: return dict(ok=False, label="abstain", reason=f"unparseable: {txt[:80]}", provider=rc["provider"], model=model)
         return dict(ok=True, label=lab, reason=str(j.get("reason", ""))[:200], provider=rc["provider"], model=model)

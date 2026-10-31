@@ -47,7 +47,8 @@ def _kb(cam, n, m):
     return {"push_in": (f"1+{m}*{e}", cx, cy), "pull_out": (f"{1 + m}-{m}*{e}", cx, cy),
             "pan_left": (f"{1 + m}", f"(iw-iw/zoom)*(1-{e})", cy), "pan_right": (f"{1 + m}", f"(iw-iw/zoom)*{e}", cy),
             "pan_up": (f"{1 + m}", cx, f"(ih-ih/zoom)*(1-{e})"), "pan_down": (f"{1 + m}", cx, f"(ih-ih/zoom)*{e}"),
-            "static": ("1", cx, cy)}[cam]
+            # a still image can't be truly static (QC would flag a frozen frame): give it a barely visible drift
+            "static": (f"1+{round(m * 0.4, 4)}*{e}", cx, cy)}[cam]
 
 def render_segment(shot, length, out, w, h, o, cwd):
     """One shot -> near-lossless intermediate of exactly `length` seconds. Returns info for QC."""

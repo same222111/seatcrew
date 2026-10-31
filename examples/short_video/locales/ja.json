@@ -210,5 +210,6 @@
  "set_image_backend": "画像サービス(auto = 最適を自動選択)",
  "set_keyframes": "先にキーフレーム画像を作る",
  "set_lipsync_backend": "リップシンクサービス",
- "set_continuity_qc": "キャラクターの一貫性を確認"
+ "set_continuity_qc": "キャラクターの一貫性を確認",
+ "r_no_script": "AI 未接続で台本もありません。メモ欄に台本を書く(1文 = 1ショット)、「サンプルを入力」を押す、または「AI 席位」で AI を接続してください。オフラインの脚本係は内容を作り上げません。"
 }

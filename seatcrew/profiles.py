@@ -56,12 +56,22 @@ def clean(cfg, data):
     allowed = set(keys(cfg)); unknown = [k for k in data if k not in allowed]
     if unknown: warnings.append("ignored unknown settings: " + ", ".join(map(str, unknown)))
     data = {k: v for k, v in data.items() if k in allowed}
+    for k, v in list(data.items()):                              # shape check: sections must stay objects, values keep their type
+        dv = cfg.defaults.get(k)
+        if isinstance(dv, dict) and not isinstance(v, dict): raise ValueError(f"invalid profile: '{k}' must be an object")
+        if isinstance(dv, dict) and k != "seats":
+            for sk, sv in v.items():
+                d0 = dv.get(sk)
+                if d0 is None or sv is None: continue
+                if isinstance(d0, bool) != isinstance(sv, bool) or (isinstance(d0, (int, float)) and not isinstance(sv, (int, float))) \
+                        or (isinstance(d0, str) and not isinstance(sv, str)) or (isinstance(d0, list) and not isinstance(sv, list)):
+                    raise ValueError(f"invalid profile: {k}.{sk} should be {type(d0).__name__}, got {type(sv).__name__}")
     if "seats" in data:
         bad = [s for s in data["seats"] if s not in cfg.defaults["seats"]]
         if bad: warnings.append("ignored unknown seats: " + ", ".join(bad)); data["seats"] = {k: v for k, v in data["seats"].items() if k not in bad}
     trial = merge(cfg.data, data)
     try: cfg.validate(trial)
-    except (KeyError, TypeError) as e: raise ValueError(f"invalid profile: {e}")
+    except (KeyError, TypeError, AttributeError) as e: raise ValueError(f"invalid profile: {e}")
     return data, warnings
 
 def folder(wf_name):

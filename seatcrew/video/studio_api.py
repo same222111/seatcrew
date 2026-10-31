@@ -67,7 +67,11 @@ def post(st, kind, op, b, wf=None, lang=None):
         if op == "save": return dict(ok=True, cast=st.save_cast(n, b.get("members") or [], b.get("plot", ""), b.get("set_sheet", ""), b.get("language", ""), b.get("style", "")))
         if op == "delete": st.delete_cast(n); return dict(ok=True)
         if op == "export": return dict(ok=True, file=st.export_cast(n, images=b.get("images", True)), filename=f"{CH.slug(n)}.cast.json")
-        if op == "import": return dict(ok=True, cast=st.import_cast(b.get("file") or b.get("text"), overwrite=bool(b.get("overwrite"))))
+        if op == "import":
+            try: return dict(ok=True, cast=st.import_cast(b.get("file") or b.get("text"), overwrite=bool(b.get("overwrite"))))
+            except (ValueError, TypeError, AttributeError) as e:
+                if isinstance(e, ValueError) and not type(e).__name__.startswith("JSON"): raise
+                raise ValueError("not a SeatCrew cast file (damaged or not JSON)") from None
         if op == "shoot":
             c = st.cast(n)
             if wf is None: raise ValueError("no video workflow running")

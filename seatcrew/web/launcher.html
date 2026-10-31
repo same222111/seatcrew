@@ -124,6 +124,6 @@ async function finish(name){if(await setup(true))openWf(name)}
  $("lang").onchange=async()=>{L=$("lang").value;paint();await api("/api/prefs",{language:L});if(window.ChiefChat)ChiefChat.refresh()};$("n1").onclick=()=>step(2);$("n2").onclick=()=>step(3);$("n3").onclick=()=>step(4);$("b3m").onclick=()=>step(2);$("b2").onclick=()=>step(1);$("b3").onclick=()=>step(3);$("skip").onclick=()=>setup(false);$("test").onclick=testConn;document.querySelectorAll("input[name=mode]").forEach(r=>r.onchange=paintMode);$("prov").onchange=paintMode;$("redo").onclick=()=>{show(true);step(1)};$("chg").onclick=changeData;$("anim").onclick=async()=>{await api("/api/prefs",{animations:H.animations===false});H=await api("/api/home");paint()};$("dataIn").value=$("dataNew").value=H.data_dir;
  if(H.ai_mode&&document.querySelector(`input[value=${H.ai_mode}]`))document.querySelector(`input[value=${H.ai_mode}]`).checked=true;
  const wz=new URLSearchParams(location.search).get("wizard");show(H.first_run||!!wz);paint();step(1)})();
-setInterval(()=>{const c=document.getElementById("clock");if(c)c.textContent=new Date().toLocaleTimeString()},1000);
+setInterval(()=>{const c=document.getElementById("clock");if(c)c.textContent=new Date().toLocaleTimeString([],{hour12:false})},1000);
 if(window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches)document.body.classList.add("noanim");
 </script><script src="/setup.js"></script><script src="/chat.js"></script></body></html>

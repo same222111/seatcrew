@@ -210,5 +210,6 @@
  "set_image_backend": "图片服务(auto = 自动选最好的)",
  "set_keyframes": "先生成关键帧图片",
  "set_lipsync_backend": "口型同步服务",
- "set_continuity_qc": "检查角色连贯性"
+ "set_continuity_qc": "检查角色连贯性",
+ "r_no_script": "未连接 AI,也没有脚本:请在「要点或你的脚本」里写脚本(一句 = 一个镜头),或点「填入示例」,或在「AI 席位」里连接一个 AI。离线写手不会凭空编内容。"
 }

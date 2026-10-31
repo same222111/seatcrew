@@ -61,15 +61,15 @@ def recommend(det):
     """Pick a chat backend that works right now (never needs a key), a voice, and an optional local clone engine."""
     why = []
     key = next((p for p, ok in det["keys"].items() if ok), None)
-    if key: chat, why = key, [f"API key found for {key}"]
-    elif det["cli"]["codex"]["logged_in"]: chat, why = "codex_cli", ["signed in to Codex CLI (your ChatGPT plan)"]
-    elif det["cli"]["claude"]["logged_in"]: chat, why = "claude_cli", ["signed in to Claude Code (your Claude plan)"]
-    elif det["ollama"]["running"] and det["ollama"]["models"]: chat, why = "ollama", [f"Ollama running with {det['ollama']['models'][0]}"]
-    else: chat, why = None, ["no account or local model yet - starting in free demo mode; log in with ChatGPT or Claude any time"]
+    if key: chat, why, wk = key, [f"API key found for {key}"], ["w_key", key]
+    elif det["cli"]["codex"]["logged_in"]: chat, why, wk = "codex_cli", ["signed in to Codex CLI (your ChatGPT plan)"], ["w_codex", ""]
+    elif det["cli"]["claude"]["logged_in"]: chat, why, wk = "claude_cli", ["signed in to Claude Code (your Claude plan)"], ["w_claude", ""]
+    elif det["ollama"]["running"] and det["ollama"]["models"]: chat, why, wk = "ollama", [f"Ollama running with {det['ollama']['models'][0]}"], ["w_ol", det['ollama']['models'][0]]
+    else: chat, why, wk = None, ["no account or local model yet - starting in free demo mode; log in with ChatGPT or Claude any time"], ["w_demo", ""]
     g = det.get("gpu") or {}; ram = det.get("ram_gb") or 0
-    if g.get("cuda") and (g.get("vram_gb") or 0) >= 6: clone, device, warn = "cosyvoice", "cuda", None
-    elif g.get("mps"): clone, device, warn = "cosyvoice", "cpu", "Apple GPU is not used by CosyVoice yet - CPU is slow (about 5-20x realtime)"
-    else: clone, device, warn = ("cosyvoice" if ram >= 8 else None), "cpu", "No NVIDIA GPU found - local voice cloning will run on CPU and be slow; edge-tts stays the default"
-    if (det.get("disk_free_gb") or 99) < 8: clone, warn = None, "Less than 8 GB free in the data folder - local voice engine not recommended"
+    if g.get("cuda") and (g.get("vram_gb") or 0) >= 6: clone, device, warn, xk = "cosyvoice", "cuda", None, None
+    elif g.get("mps"): clone, device, xk, warn = "cosyvoice", "cpu", "x_mps", "Apple GPU is not used by CosyVoice yet - CPU is slow (about 5-20x realtime)"
+    else: clone, device, xk, warn = ("cosyvoice" if ram >= 8 else None), "cpu", "x_nogpu", "No NVIDIA GPU found - local voice cloning will run on CPU and be slow; edge-tts stays the default"
+    if (det.get("disk_free_gb") or 99) < 8: clone, xk, warn = None, "x_disk", "Less than 8 GB free in the data folder - local voice engine not recommended"
     return dict(chat_provider=chat, ai_mode=("cli" if chat in ("codex_cli", "claude_cli") else "ollama" if chat == "ollama" else "key" if chat else "demo"),
-                voice="edge" if det.get("edge_tts") else "draft", clone_engine=clone, clone_device=device, warning=warn, why=why)
+                voice="edge" if det.get("edge_tts") else "draft", clone_engine=clone, clone_device=device, warning=warn, why=why, why_k=wk, warning_k=xk)
