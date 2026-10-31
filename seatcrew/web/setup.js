@@ -51,7 +51,7 @@ const lang=()=>{try{return L}catch(e){return "en"}},t=k=>((S[lang()]||S.en)[k])|
 const J=async(p,b)=>(await fetch(p,b?{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(b)}:{})).json();
 let D=null,V=null;
 const css=document.createElement("style");css.textContent=`.sd{border:1px solid var(--ln);border-radius:12px;padding:12px 14px;margin:0 0 12px}.sd .k{display:inline-block;margin:2px 14px 2px 0}.sd .acc{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px;margin-top:8px}
-.sd .box{border:1px solid var(--ln);border-radius:10px;padding:10px}.sd button{margin-top:8px}.sd code{font:12px var(--mono);background:#05080d;padding:2px 6px;border-radius:6px;user-select:all}.sd .big{font:800 22px var(--mono);color:var(--acc);letter-spacing:.1em}.sd .warn{color:var(--warn)}`;document.head.appendChild(css);
+.sd .box{border:1px solid var(--ln);border-radius:10px;padding:10px}.sd button{margin-top:8px}.sd code{overflow-wrap:anywhere;font:12px var(--mono);background:#05080d;padding:2px 6px;border-radius:6px;user-select:all}.sd .big{font:800 22px var(--mono);color:var(--acc);letter-spacing:.1em}.sd .warn{color:var(--warn)}`;document.head.appendChild(css);
 function host(id,parent,first){let e=g(id);if(!e){e=document.createElement("div");e.id=id;e.className="sd";const p=g(parent);if(!p)return null;first?p.prepend(e):p.insertBefore(e,p.querySelector("button"))}return e}
 function cliBox(tool){const c=D.cli[tool],lbl=tool=="codex"?t("lcx"):t("lcl");
  return `<div class="box"><b>${esc(c.label)}</b> <span class="${c.logged_in?"ok":"dim"}">${c.installed?(c.logged_in?t("in"):t("out")):""}</span> <span class="dim">${esc(c.version||"")}</span>
