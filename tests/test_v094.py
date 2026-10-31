@@ -326,3 +326,51 @@ def test_per_character_tokens_break_between_words(monkeypatch):
     joined = "|".join(lines)
     for w in ("散射", "穿过", "晚霞", "蓝光"): assert w in joined.replace("|", "") and w[0] + "|" + w[1] not in joined, lines
     assert not any(l in ("那么，", "？") for l in lines), lines
+
+
+# ---- round 3: localized draft banner + shared word-aware line breaking ----
+def test_draft_banner_follows_video_language():
+    from seatcrew.video import editor as ED
+    assert ED.banner_text("zh-CN") == "草稿预览 · 非成品画质"
+    assert ED.banner_text("zh-TW") == "草稿預覽 · 非成品畫質"
+    assert ED.banner_text("ja").startswith("下書き")
+    assert ED.banner_text("es") == "BORRADOR - CALIDAD NO FINAL"
+    assert ED.banner_text("en") == ED.banner_text(None) == "DRAFT PREVIEW - NOT FINAL QUALITY"
+    assert ED.banner_text("en", "天空为什么是蓝色的") == "草稿预览 · 非成品画质"   # spoken text wins over a wrong config
+    assert ED.banner_text("zh-CN", "空はなぜ青いの") .startswith("下書き")
+    assert ED.banner_text("xx") == ED.DRAFT_BANNER["en"]
+
+def test_draft_banner_burned_from_textfile(tmp_path, monkeypatch):
+    from seatcrew.video import editor as ED
+    src = open(ED.__file__, encoding="utf-8").read()
+    assert "textfile=banner.txt" in src and "text='DRAFT PREVIEW" not in src
+
+def test_break_text_keeps_words_and_punctuation():
+    import pytest
+    from seatcrew.video import subs
+    if subs._jieba is None: pytest.skip("jieba not installed")
+    for per in (5, 6, 7, 8, 9, 10):
+        lines = subs.break_text("那么，为什么晚霞是橙红色的呢？", per)
+        assert "".join(lines) == "那么，为什么晚霞是橙红色的呢？"
+        assert any("橙红色" in l for l in lines), (per, lines)
+        assert all(l[0] not in subs.NO_START for l in lines), lines
+        assert lines[-1] != "？" and "呢？" in lines[-1]
+        if per >= 9: assert lines[0] != "那么，", lines
+    lines = subs.break_text("天空为什么是蓝色的？因为空气散射蓝光更多。", 8)
+    assert lines[1].endswith("？") and lines[2].startswith("因为")
+
+def test_break_text_latin_and_max_lines():
+    from seatcrew.video.subs import break_text
+    lines = break_text("Why is the sky blue? Because air scatters blue light more than red light.", 28)
+    assert all(len(l) <= 28 for l in lines) and " ".join(lines).split() == "Why is the sky blue? Because air scatters blue light more than red light.".split()
+    assert lines[0] == "Why is the sky blue?"
+    assert len(break_text("一二三四五六七八九十" * 6, 6, max_lines=4)) == 4
+
+def test_wrap_title_and_draft_card_share_breaker(tmp_path, monkeypatch):
+    from seatcrew.video import subs, visuals
+    assert subs.wrap_title("那么，为什么晚霞是橙红色的呢？", 9).split("\n") == subs.break_text("那么，为什么晚霞是橙红色的呢？", 9)
+    calls = []
+    monkeypatch.setattr(visuals.ff, "run", lambda *a, **k: calls.append(a))
+    visuals.draft_card(dict(id="s9", caption="那么，为什么晚霞是橙红色的呢？"), tmp_path, "9:16", size=(1080, 1920))
+    card = (tmp_path / "s9.card.txt").read_text(encoding="utf-8").split("\n")
+    assert any("橙红色" in l for l in card) and all(l[0] not in subs.NO_START for l in card) and calls
