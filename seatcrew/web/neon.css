@@ -1,9 +1,9 @@
 /* SeatCrew "Night Shift" look - shared by the launcher, the generic dashboard and the TradeCrew terminal.
    Pure CSS, system fonts, no external assets. Motion is disabled by prefers-reduced-motion or body.noanim. */
 :root{--bg:#07090d;--pn:#0d1118;--pn2:#111725;--ln:#1e2736;--fg:#dbe7f3;--dim:#7d8ba1;--acc:#3dffa0;--warn:#ffc94d;--bad:#ff4f6d;--blue:#5cc8ff;--vio:#b18cff;--or:#ff9a3d;
- --glow:0 0 18px;--r:12px;--sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans","PingFang SC","Microsoft YaHei",sans-serif;--mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace}
-body{background:radial-gradient(1200px 600px at 70% -10%,#12203a55,transparent),radial-gradient(900px 500px at -10% 110%,#0f2e2255,transparent),var(--bg);color:var(--fg);font-family:var(--mono)}
-body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:50;background:repeating-linear-gradient(0deg,#ffffff06 0 1px,transparent 1px 3px);mix-blend-mode:overlay}
+ --glow:0 0 18px;--r:12px;--sans:"Inter","Segoe UI Variable","Segoe UI",system-ui,-apple-system,"PingFang SC","Hiragino Sans GB","Microsoft YaHei UI","Microsoft YaHei","Noto Sans CJK SC","Noto Sans SC","Source Han Sans SC","Noto Sans JP","Hiragino Kaku Gothic ProN","Yu Gothic UI",Roboto,"Noto Sans",sans-serif;--code:ui-monospace,"JetBrains Mono","Cascadia Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono","Noto Sans Mono CJK SC",monospace;/* --mono is kept for older rules: labels and chips now use the UI font; real code uses --code */--mono:var(--sans)}
+body{background:radial-gradient(1200px 600px at 70% -10%,#12203a55,transparent),radial-gradient(900px 500px at -10% 110%,#0f2e2255,transparent),var(--bg);color:var(--fg);font-family:var(--sans)}
+
 .nx-card{background:linear-gradient(180deg,var(--pn2),var(--pn));border:1px solid var(--ln);border-radius:var(--r);transition:border-color .35s,box-shadow .35s,transform .35s}
 .nx-h{font:600 11px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin:0 0 10px;display:flex;align-items:center;gap:8px}
 .nx-badge{font:700 10px var(--mono);letter-spacing:.08em;padding:2px 7px;border-radius:5px;border:1px solid currentColor;text-transform:uppercase;white-space:nowrap}
@@ -27,4 +27,101 @@ body[data-theme=contrast]{--bg:#000;--pn:#000;--pn2:#000;--ln:#a0a0a0;--fg:#fff;
 /* motion off: user toggle (body.noanim) or OS setting */
 body.noanim *,body.noanim *::before,body.noanim *::after{animation:none!important;transition:none!important}body.noanim .nx-packet{display:none}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}.nx-packet{display:none}}
-table.models{width:100%;border-collapse:collapse;font-size:13px}table.models td,table.models th{padding:6px;border-bottom:1px solid rgba(255,255,255,.08);vertical-align:top;text-align:left}
+
+
+/* ===================== Design system v2 (loaded after page styles, so it wins) =====================
+   Spacing 4/8/12/16/24/32 · type 12/13/14/16/20 · one card, one table, one button family · CJK-safe font stack · tabular numbers */
+:root{--s1:4px;--s2:8px;--s3:12px;--s4:16px;--s5:24px;--s6:32px;--fs-xs:12px;--fs-sm:13px;--fs-md:14px;--fs-lg:16px;--fs-xl:20px;
+ --ctl:34px;--ctl-sm:28px;--r-sm:8px;--ease:cubic-bezier(.2,.7,.2,1);--chat-w:min(420px,34vw)}
+html{background:var(--bg);-webkit-text-size-adjust:100%}
+body{min-height:100vh;font-size:var(--fs-md);line-height:1.55;font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;overflow-x:hidden}
+body,button,input,select,textarea{font-family:var(--sans)}
+code,pre,kbd,samp,.mono,.code,#log,#expCode,#impText,#editor textarea,textarea.code{font-family:var(--code)!important;font-variant-ligatures:none}
+code{font-size:.92em;background:#ffffff0d;border:1px solid var(--ln);border-radius:5px;padding:0 5px;overflow-wrap:anywhere}
+pre code{background:none;border:0;padding:0}
+h1,h2,h3,h4{font-family:var(--sans);line-height:1.25}
+/* small caps labels: readable size, calm tracking */
+.nx-h,h2,.pn h3,.hstats .l,.hero-stats .lbl,.steps,.nx-badge,.tag,.chip,label,.lbl{letter-spacing:.04em}
+.nx-h,.pn h3,h2{font-size:var(--fs-xs)!important;font-weight:650}
+.hstats .l,.hero-stats .lbl{font-size:var(--fs-xs)!important;text-transform:none!important;letter-spacing:.02em!important}
+.nx-badge,.tag,.chip{font-size:11px!important;line-height:1.5;text-transform:none}
+.nx-big,.hero-stats .num,.hstats b,.big{font-variant-numeric:tabular-nums lining-nums}
+/* buttons: one family, never wrap */
+button,.b,a.btn{white-space:nowrap;min-height:var(--ctl-sm);display:inline-flex;align-items:center;justify-content:center;gap:6px;line-height:1.2;
+ border-radius:var(--r-sm);font-weight:650;font-size:var(--fs-sm);transition:background .18s var(--ease),border-color .18s var(--ease),color .18s var(--ease),box-shadow .18s var(--ease),transform .12s var(--ease),filter .18s}
+button:active:not(:disabled){transform:translateY(1px)}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+button:disabled,button[aria-disabled=true]{opacity:.5;cursor:not-allowed;filter:grayscale(.4);box-shadow:none!important}
+input,select,textarea{font-size:var(--fs-sm);min-height:var(--ctl);border-radius:var(--r-sm)!important;transition:border-color .18s,box-shadow .18s}
+textarea{min-height:64px;line-height:1.5}
+input:focus,select:focus,textarea:focus{border-color:var(--acc)!important;box-shadow:0 0 0 3px #3dffa022;outline:none}
+input[type=checkbox],input[type=radio]{min-height:0;width:16px;height:16px;accent-color:var(--acc)}
+label{font-size:var(--fs-sm)}
+a{color:var(--blue);text-underline-offset:3px;text-decoration-thickness:1px}
+a:hover{color:#8fdcff}
+/* tables: one style */
+table{font-variant-numeric:tabular-nums}
+td,th{padding:8px 10px!important;vertical-align:middle;border-bottom:1px solid #ffffff10!important}
+th{font-size:var(--fs-xs);color:var(--dim);font-weight:600;letter-spacing:.03em;white-space:nowrap}
+td.num,th.num{text-align:right}
+/* scrollbars */
+*{scrollbar-width:thin;scrollbar-color:#2a3647 transparent}
+::-webkit-scrollbar{width:10px;height:10px}::-webkit-scrollbar-thumb{background:#2a3647;border-radius:10px;border:2px solid transparent;background-clip:padding-box}
+/* cards: one style */
+.nx-card,.pn,.card{border-radius:14px;box-shadow:0 1px 0 #ffffff08 inset,0 10px 30px #0006}
+.nx-card:hover,.pn:hover{border-color:#2a3a50}
+/* calmer motion */
+.nx-in{animation:nxIn .32s var(--ease) both}
+.hint-key{font-size:var(--fs-xs);color:var(--dim);line-height:1.45;margin-top:6px}
+.hint-key code{font-size:11px}
+
+/* ----- Recommended models: cards ----- */
+.mdl h3{font-size:var(--fs-lg);margin:0 0 4px;color:var(--fg);letter-spacing:0;text-transform:none}
+.mdl .mhint{color:var(--dim);font-size:var(--fs-sm);margin:0 0 var(--s4)}
+.mdl .kind{display:flex;align-items:center;gap:10px;margin:var(--s5) 0 var(--s2);font-size:var(--fs-md);font-weight:700;color:var(--fg)}
+.mdl .kind::after{content:"";flex:1;height:1px;background:var(--ln)}
+.mdl .tier{font-size:var(--fs-xs);color:var(--dim);font-weight:650;margin:var(--s3) 0 var(--s2);display:flex;gap:8px;align-items:center}
+.mdl .tier i{font-style:normal;padding:1px 8px;border-radius:999px;border:1px solid currentColor}
+.mdl .tier.best_quality i{color:var(--vio)}.mdl .tier.best_value i{color:var(--acc)}.mdl .tier.free_draft i{color:var(--blue)}
+.mgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:var(--s3)}
+.mcard{display:flex;flex-direction:column;gap:var(--s2);padding:var(--s4);border:1px solid var(--ln);border-radius:14px;background:linear-gradient(180deg,var(--pn2),var(--pn));min-width:0;transition:border-color .2s,box-shadow .2s,transform .2s}
+.mcard:hover{border-color:#2f4560;transform:translateY(-1px)}
+.mcard.on{border-color:#3dffa066;box-shadow:0 0 0 1px #3dffa022,0 0 22px #3dffa014}
+.mcard.retired{opacity:.6}
+.mcard .top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.mcard .nm{font-weight:750;font-size:var(--fs-lg);line-height:1.3;color:var(--fg)}
+.mcard .md{font-family:var(--code);font-size:var(--fs-xs);color:var(--dim);overflow-wrap:anywhere}
+.mcard .ds{font-size:var(--fs-sm);color:#b7c4d4;line-height:1.55;flex:1}
+.mcard .price{font-size:var(--fs-xs);color:var(--warn);font-weight:650;white-space:nowrap}
+.mcard .st{font-size:11px;padding:2px 8px;border-radius:999px;border:1px solid currentColor;white-space:nowrap;font-weight:650}
+.mcard .st.ok{color:var(--acc)}.mcard .st.no{color:var(--dim)}.mcard .st.free{color:var(--blue)}.mcard .st.ret{color:var(--bad)}
+.mcard .links{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:var(--fs-xs)}
+.mcard .links a{white-space:nowrap;text-decoration:none}.mcard .links a:hover{text-decoration:underline}
+.mcard .act{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:2px}
+.mcard .act button{margin:0!important;min-height:var(--ctl-sm);padding:4px 12px!important;font-size:var(--fs-xs)!important;background:none!important;color:var(--fg)!important;border:1px solid var(--ln)!important;box-shadow:none!important}
+.mcard .act button:not(:disabled):hover{border-color:var(--acc)!important;color:var(--acc)!important}
+.mcard .act .out{font-size:var(--fs-xs)}
+.mcard .keyrow{display:flex;gap:6px;width:100%}.mcard .keyrow input{flex:1;min-width:0;min-height:var(--ctl-sm);padding:4px 8px;margin:0}
+body[data-theme=light] .mcard .ds{color:#33445a}
+
+/* ----- CHIEF drawer: docks to the right and pushes the page instead of covering it ----- */
+body.cc-open{padding-right:var(--chat-w);transition:padding-right .28s var(--ease)}
+body{transition:padding-right .28s var(--ease)}
+@media (max-width:1000px){body.cc-open{padding-right:0}:root{--chat-w:min(420px,100vw)}}
+.ok{color:var(--acc)}.err{color:var(--bad)}
+
+button.sec{background:transparent;border:1px solid var(--line,#2a3550);color:inherit}
+button.sec:hover{border-color:var(--accent,#3cf)}
+
+.box .tag{display:inline-block;max-width:100%;white-space:normal;line-height:1.35;vertical-align:middle}
+
+/* settings: one tidy label | control grid instead of ragged rows */
+#set .pn{max-width:980px}
+#wfset{display:grid;grid-template-columns:repeat(auto-fill,minmax(420px,1fr));gap:6px 28px}
+#wfset .row{display:grid!important;grid-template-columns:minmax(0,1fr) 200px;gap:12px;align-items:center;margin:0;min-height:36px}
+#wfset .row label{min-width:0!important;line-height:1.35}
+#wfset .row input:not([type=checkbox]),#wfset .row select{width:100%!important;min-width:0}
+#wfset .row input[type=checkbox]{justify-self:start}
+#seatcfg{display:grid;grid-template-columns:repeat(auto-fill,minmax(380px,1fr));gap:12px}
+#seatcfg .agent{margin:0}
+#seatcfg .agent .row{flex-wrap:wrap}

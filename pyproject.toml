@@ -33,7 +33,7 @@ packages = ["seatcrew", "tradecrew", "seatcrew_examples"]
 package-dir = {"tradecrew" = "examples/trading/tradecrew", "seatcrew_examples" = "examples"}
 
 [tool.setuptools.package-data]
-seatcrew = ["web/*.html", "web/*.css", "web/*.js", "web/vendor/*", "locales/*.json", "templates/*", "assets/*", "video/fonts/*"]
+seatcrew = ["web/*.html", "web/*.css", "web/*.js", "web/vendor/*", "locales/*.json", "templates/*", "assets/*", "video/fonts/*", "video/*.json"]
 tradecrew = ["web/*.html", "locales/*.json"]
 seatcrew_examples = ["*/*.py", "*/*.yaml", "*/locales/*.json", "*/profiles/*.json"]
 

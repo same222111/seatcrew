@@ -267,6 +267,14 @@ class App:
                     if self.path == "/api/setup": return self.send(app.setup(b))
                     if self.path == "/api/test-connection": return self.send(app.test_key(b))
                     if self.path == "/api/recommend-apply": return self.send(app.apply_recommended(b))
+                    if self.path == "/api/models/key":       # paste a video/voice key: saved to the data folder's .env, never echoed back
+                        from .video import providers as PV
+                        i = str(b.get("id", "")); val = str(b.get("value", "")).strip()
+                        if not any(e["id"] == i for e in PV.CATALOG): raise ValueError("unknown model")
+                        var = PV.key_var(i)
+                        if not var: raise ValueError("this model needs no key")
+                        if not val or len(val) < 8 or any(c.isspace() for c in val): raise ValueError("that does not look like a key")
+                        save_key(app.home / ".env", var, val); return self.send(dict(ok=True, var=var, configured=True))
                     if self.path == "/api/cli-login":
                         if b.get("tool") not in cli_ai.TOOLS: raise ValueError("tool must be codex or claude")
                         return self.send(cli_ai.login(b["tool"], bool(b.get("device"))))
@@ -280,8 +288,15 @@ class App:
                     r = AS.route(app.chat, "POST", self.path, b)
                     if r: return self.send(*r)
                     if self.path == "/api/prefs":
-                        if not isinstance(b.get("animations"), bool): raise ValueError("animations must be true or false")
-                        app.save_prefs(animations=b["animations"]); return self.send(dict(ok=True, animations=b["animations"]))
+                        kw = {}
+                        if "animations" in b:
+                            if not isinstance(b["animations"], bool): raise ValueError("animations must be true or false")
+                            kw["animations"] = b["animations"]
+                        if "language" in b:
+                            if b["language"] not in LANGUAGES: raise ValueError("unknown language")
+                            kw["language"] = b["language"]
+                        if not kw: raise ValueError("nothing to save (animations or language)")
+                        app.save_prefs(**kw); return self.send(dict(ok=True, **kw))
                     if self.path == "/api/datadir": return self.send(app.change_data(b.get("path", ""), bool(b.get("move"))))
                     if self.path == "/api/open": return self.send(dict(ok=True, url=app.open_workflow(b["workflow"])))
                     self.send({"error": "not found"}, 404)

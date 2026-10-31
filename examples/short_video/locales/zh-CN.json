@@ -201,5 +201,14 @@
  "cs_role_narrator": "旁白",
  "cs_role_cameo": "客串",
  "opt_dialogue_scene": "对话场景（剧组）",
- "seat_lipsync": "对口型"
+ "seat_lipsync": "对口型",
+ "set_approve_auto_approve": "自动批准完成的视频",
+ "set_load_samples": "启动时载入示例事项",
+ "set_speaker_colors": "按说话人给字幕上色",
+ "set_max_video_usd": "每条视频最高花费(美元)",
+ "set_cast": "默认演员组(角色工作室)",
+ "set_image_backend": "图片服务(auto = 自动选最好的)",
+ "set_keyframes": "先生成关键帧图片",
+ "set_lipsync_backend": "口型同步服务",
+ "set_continuity_qc": "检查角色连贯性"
 }

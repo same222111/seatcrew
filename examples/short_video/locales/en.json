@@ -201,5 +201,14 @@
  "cs_role_narrator": "narrator",
  "cs_role_cameo": "cameo",
  "opt_dialogue_scene": "Dialogue scene (cast)",
- "seat_lipsync": "LIP-SYNC"
+ "seat_lipsync": "LIP-SYNC",
+ "set_approve_auto_approve": "Auto-approve finished videos",
+ "set_load_samples": "Load a sample item on start",
+ "set_speaker_colors": "Color subtitles by speaker",
+ "set_max_video_usd": "Max spend per video (USD)",
+ "set_cast": "Default cast (Character Studio)",
+ "set_image_backend": "Image service (auto = best available)",
+ "set_keyframes": "Make a keyframe image first",
+ "set_lipsync_backend": "Lip-sync service",
+ "set_continuity_qc": "Check character continuity"
 }

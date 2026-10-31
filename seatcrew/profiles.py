@@ -15,7 +15,7 @@ from .config import merge
 SCHEMA = 1
 CODE_PREFIX = "SC1."
 EXCLUDE = {"setup_complete", "broker"}                     # machine state / safety locks, never shared
-DISPLAY_DEFAULTS = {"theme": "dark", "font_size": 13, "density": "normal", "animations": True, "simple": True}
+DISPLAY_DEFAULTS = {"theme": "dark", "font_size": 14, "density": "normal", "animations": True, "simple": True}
 THEMES, DENSITIES = ("dark", "light", "contrast"), ("compact", "normal", "comfy")
 NAME_RE = re.compile(r"[\w\- ]{1,40}")
 SECRET_KEY_RE = re.compile(r"(api[_-]?key|secret|token|password|passwd|credential|private[_-]?key|authorization|bearer)", re.I)

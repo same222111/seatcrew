@@ -201,5 +201,14 @@
  "cs_role_narrator": "ナレーター",
  "cs_role_cameo": "カメオ",
  "opt_dialogue_scene": "会話シーン（キャスト）",
- "seat_lipsync": "リップシンク"
+ "seat_lipsync": "リップシンク",
+ "set_approve_auto_approve": "完成した動画を自動承認",
+ "set_load_samples": "起動時にサンプルを読み込む",
+ "set_speaker_colors": "話者ごとに字幕を色分け",
+ "set_max_video_usd": "動画1本あたりの上限(USD)",
+ "set_cast": "既定のキャスト(キャラクタースタジオ)",
+ "set_image_backend": "画像サービス(auto = 最適を自動選択)",
+ "set_keyframes": "先にキーフレーム画像を作る",
+ "set_lipsync_backend": "リップシンクサービス",
+ "set_continuity_qc": "キャラクターの一貫性を確認"
 }

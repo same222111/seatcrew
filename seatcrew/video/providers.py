@@ -268,6 +268,19 @@ TIERS = {"video": dict(best_quality=["kling", "runway", "gemini"], best_value=["
          "tts": dict(best_quality=["elevenlabs", "minimax_tts"], best_value=["doubao", "azure", "openai_tts"], free_draft=["edge"])}
 
 def entry(i): return next(e for e in CATALOG if e["id"] == i)
+_I18N = None
+def i18n():
+    """Translated descriptions/units for the Recommended models cards (seatcrew/video/models_i18n.json)."""
+    global _I18N
+    if _I18N is None:
+        import json
+        from pathlib import Path
+        _I18N = json.loads((Path(__file__).resolve().parent / "models_i18n.json").read_text(encoding="utf-8"))
+        _I18N.pop("_note", None)
+    return _I18N
+def key_var(i):
+    """The env var a pasted key is saved under (first one listed), or None for key-free entries."""
+    e = entry(i); return e["env"][0] if e["env"] and e["status"] != "retired" else None
 def recommended():
     return {k: {t: [dict(entry(i), configured=configured(i)) for i in ids] for t, ids in tiers.items()} for k, tiers in TIERS.items()}
 def configured(i):

@@ -37,14 +37,23 @@ CHOICES = {"template": list(TEMPLATES), "aspect": list(SIZES), "tts_backend": ["
            "image_backend": ["auto", *IG.ADAPTERS, "draft"], "lipsync_backend": ["none", *LS.ADAPTERS]}
 SAMPLES = [dict(topic="Why is the sky blue?", template="knowledge_explainer",
                 notes="Sunlight looks white, but it is a mix of every color. Air molecules scatter short blue waves much more than long red ones. "
-                      "So blue light reaches your eyes from every part of the sky. At sunset, light travels through more air and the blue is scattered away. That is why sunsets glow orange and red.")]
+                      "So blue light reaches your eyes from every part of the sky. At sunset, light travels through more air and the blue is scattered away. That is why sunsets glow orange and red."),
+           dict(lang="zh-CN", topic="天空为什么是蓝色的?", template="knowledge_explainer", aspect="9:16",
+                notes="阳光看起来是白色的,其实混合了所有颜色。\n空气分子更容易散射波长短的蓝光,红光则很少被散射。\n所以无论你看向天空哪里,都有蓝光进入眼睛。\n傍晚时阳光要穿过更厚的空气,蓝光在路上就被散射掉了。\n这就是为什么晚霞是橙红色的。"),
+           dict(lang="zh-TW", topic="天空為什麼是藍色的?", template="knowledge_explainer", aspect="9:16",
+                notes="陽光看起來是白色的,其實混合了所有顏色。\n空氣分子更容易散射波長短的藍光,紅光則很少被散射。\n所以無論你看向天空哪裡,都有藍光進入眼睛。\n傍晚時陽光要穿過更厚的空氣,藍光在路上就被散射掉了。\n這就是為什麼晚霞是橙紅色的。"),
+           dict(lang="ja", topic="空はなぜ青いの?", template="knowledge_explainer", aspect="9:16",
+                notes="太陽の光は白く見えますが、実はすべての色が混ざっています。\n空気の分子は波長の短い青い光を、赤い光よりずっと強く散らします。\nだから空のどこを見ても、青い光が目に届きます。\n夕方は光が厚い空気を通るので、青い光は途中で散ってしまいます。\nだから夕焼けはオレンジ色に輝くのです。"),
+           dict(lang="es", topic="¿Por qué el cielo es azul?", template="knowledge_explainer", aspect="9:16",
+                notes="La luz del sol parece blanca, pero mezcla todos los colores. Las moléculas del aire dispersan mucho más las ondas azules, cortas, que las rojas, largas. "
+                      "Por eso la luz azul llega a tus ojos desde todo el cielo. Al atardecer, la luz cruza más aire y el azul se dispersa por el camino. Por eso los atardeceres brillan naranjas y rojos.")]
 
 def estimate_sec(text, wpm):
     n = len(TTS.tokens(text)); cjk = bool(TTS.CJK.search(text))
     return (n / (4.5 if cjk else wpm / 60.0)) + 0.5
 
 def sentences(text):
-    return [s.strip() for s in re.split(r"(?<=[.!?。！？])\s+|\n+", text or "") if s.strip()]
+    return [s.strip() for s in re.split(r"(?<=[.!?])\s+|(?<=[。！？])\s*|\n+", text or "") if s.strip()]
 
 class Topic(Seat):
     name = "topic"; job = "checks the brief"
@@ -71,6 +80,9 @@ class Writer(Seat):
         d = it["data"]; tp = TEMPLATES[d["template"]]; fb = d.get("feedback", {}).get("writer")
         out = self.ai_write(d, tp, fb)
         if out: sb, who = out
+        elif not (d.get("notes") or "").strip() and not d.get("cast"):
+            return False, ("no AI connected and no script: write your script in Notes (one sentence = one shot), "
+                           "press 'Load sample', or connect an AI in the AI Seats tab - the offline writer never invents content")
         else: sb, who = self.from_notes(d, tp, fb), "template"
         d["storyboard"] = sb; d.pop("feedback", None) if fb else None
         return True, f"{len(sb['shots'])} shots, ~{sum(s['duration'] for s in sb['shots']):.0f}s ({who})"
@@ -122,7 +134,14 @@ class Writer(Seat):
         """No AI: each sentence of your notes/script becomes narration; long sentences are split; the template sets camera,
         captions and pacing. Honest: it never invents facts."""
         lim = tp["max_words_per_sentence"]; maxw = int(tp["shot_sec"][1] * tp["wpm"] / 60) - 1; out = []
+        wc = lambda x: len(TTS.tokens(x))
         for s in sentences(d.get("notes") or d["topic"]):
+            if TTS.CJK.search(s):                                  # CJK: no spaces - split long sentences at commas
+                parts, cur = [], ""
+                for seg in [x for x in re.split(r"(?<=[,，、;；])", s) if x]:
+                    if cur and wc(cur + seg) > lim * 2: parts.append(cur); cur = seg
+                    else: cur += seg
+                out += [x for x in parts + [cur] if x.strip()]; continue
             ws = s.split()
             while len(ws) > lim:                                   # split long sentences at a comma near the middle, else in half
                 cut = next((i + 1 for i in range(len(ws) // 2, len(ws) - 2) if ws[i].endswith(",")), None) or next((i + 1 for i in range(len(ws) // 2, 1, -1) if ws[i].endswith(",")), None) or len(ws) // 2
@@ -130,7 +149,7 @@ class Writer(Seat):
             out.append(" ".join(ws))
         shots, cur = [], ""
         for s in out:                                              # merge very short lines into one shot
-            if cur and len((cur + " " + s).split()) <= maxw and len(cur.split()) < 6: cur += " " + s
+            if cur and wc(cur + " " + s) <= maxw and wc(cur) < 6: cur += ("" if TTS.CJK.search(cur) else " ") + s
             else:
                 if cur: shots.append(cur)
                 cur = s
@@ -296,7 +315,9 @@ class ShortVideo(Workflow):
         super().__init__(cfg, state_dir)
         self.setup([Chief(self), Topic(self), Writer(self), ScriptCheck(self), Voice(self), Visuals(self), LipSync(self), Editor(self), QualityCheck(self), Approve(self)])
         if not self.items and cfg["settings"]["load_samples"]:
-            for s in SAMPLES: self.inbox.append(self.new_item(s["topic"], s, "video"))
+            lang = cfg.get("language") or "en"
+            s = next((x for x in SAMPLES if x.get("lang") == lang), SAMPLES[0]); s = {k: v for k, v in s.items() if k != "lang"}
+            self.inbox.append(self.new_item(s["topic"], s, "video"))
     def submit(self, title=None, data=None, subject="video"):
         data = {k: v for k, v in dict(data or {}).items() if v not in (None, "")}
         return super().submit(title or data.get("topic", "video"), data, subject)

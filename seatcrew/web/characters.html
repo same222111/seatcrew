@@ -1,7 +1,7 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <!-- Character Studio: gallery, create wizard, character sheet, 3D viewer (bundled model-viewer, no CDN), voice binding, cast builder.
      Talks to /api/characters* and /api/casts* on this local server. All strings from /api/locale/<code>. -->
-<title>Character Studio · SeatCrew</title><link rel="stylesheet" href="/neon.css">
+<title>Character Studio · SeatCrew</title>
 <style>
 body{margin:0;font-size:13px}a{color:var(--blue)}.wrap{max-width:1380px;margin:0 auto;padding:14px 18px 40px}
 header{display:flex;align-items:center;gap:12px;margin-bottom:14px}header h1{font:800 22px var(--sans);margin:0;letter-spacing:-.01em;color:var(--fg);text-shadow:0 0 18px #3dffa055}
@@ -27,7 +27,8 @@ input,textarea,select{width:100%;box-sizing:border-box;background:#05070b;border
 .toast{position:fixed;bottom:18px;right:18px;background:var(--pn2);border:1px solid var(--acc);padding:9px 14px;border-radius:9px;display:none;z-index:60}.muted{color:var(--dim);font-size:11px}
 .vrow{display:grid;grid-template-columns:1fr 1fr;gap:8px}.wave{height:36px;border-radius:8px;background:repeating-linear-gradient(90deg,#3dffa055 0 2px,transparent 2px 6px);mask:linear-gradient(90deg,#000,#0008 60%,#000)}
 body.simple .adv{display:none!important}
-</style></head><body class="simple">
+</style><link rel="stylesheet" href="/neon.css">
+</head><body class="simple">
 <div class="wrap"><header><h1>◆ <b data-i18n="cs_title">Character Studio</b></h1><span class="muted" data-i18n="cs_sub"></span><span class="sp"></span>
 <a class="b sm" href="/" data-i18n="cs_back">← Studio</a><button class="b sm" id="simpleBtn" onclick="toggleSimple()"></button><select id="langSel" style="width:auto"></select></header>
 <div class="tabs"><button class="b on" data-tab="gallery" data-i18n="cs_gallery">Gallery</button><button class="b" data-tab="create" data-i18n="cs_create">+ New character</button><button class="b" data-tab="cast" data-i18n="cs_cast">Cast</button></div>

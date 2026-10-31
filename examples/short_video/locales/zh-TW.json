@@ -201,5 +201,14 @@
  "cs_role_narrator": "旁白",
  "cs_role_cameo": "客串",
  "opt_dialogue_scene": "對話場景（劇組）",
- "seat_lipsync": "對嘴型"
+ "seat_lipsync": "對嘴型",
+ "set_approve_auto_approve": "自動批准完成的影片",
+ "set_load_samples": "啟動時載入範例事項",
+ "set_speaker_colors": "依說話者為字幕上色",
+ "set_max_video_usd": "每部影片最高花費(美元)",
+ "set_cast": "預設演員組(角色工作室)",
+ "set_image_backend": "圖片服務(auto = 自動選最好的)",
+ "set_keyframes": "先產生關鍵影格圖片",
+ "set_lipsync_backend": "對嘴同步服務",
+ "set_continuity_qc": "檢查角色連貫性"
 }

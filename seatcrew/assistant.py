@@ -40,7 +40,7 @@ TXT = {
   offline="No AI is connected, so I'm answering from the built-in FAQ. Connect one (even free local Ollama) for full chat.",
   key_removed="I removed something that looked like an API key from your message. Paste keys only in the setup wizard or the AI Seats tab - never in chat.",
   confirm_needed="Nothing is changed yet - review the preview and press Confirm.", done="Done.", cancelled="Cancelled - nothing was changed.",
-  no_wf="Open a workflow first (from Home) to change its settings or run it.", fallback="I didn't find that in the offline FAQ. Try: what is a seat? who decides? how do I connect an AI? create a workflow ...",
+  no_wf="Open a workflow first (from Home) to change its settings or run it.", no_seats="(open a workflow to see its seats)", fallback="I didn't find that in the offline FAQ. Try: what is a seat? who decides? how do I connect an AI? create a workflow ...",
   who="Who decides?\n1. CHIEF (commander) starts each cycle and assigns work - it never approves anything by itself.\n2. Each seat judges one thing with its rules, then optionally its AI. An AI can only make a seat MORE cautious.\n3. Checks gate: one BLOCKED check stops the item (single point of failure = intercepted).\n4. A human seat (if any) approves or rejects.\nCurrent assignment:",
   trouble="Troubleshooting:", t_ok="looks fine", t_nokey="seat '{s}' uses {p} but {env} is not set - add it in the wizard or the AI Seats tab, or switch the seat to rules / ollama.",
   t_none="No AI provider has a key. Everything still runs on rules. To chat with an AI: run the wizard, or install free Ollama.", t_ollama="Ollama/custom need a local server running (e.g. `ollama serve`, then `ollama pull llama3.2`).",
@@ -57,7 +57,7 @@ TXT = {
   offline="当前没有连接 AI,我先用内置的离线问答回答你。连接一个 AI(本地免费的 Ollama 也行)即可完整对话。",
   key_removed="你的消息里有像 API 密钥的内容,我已经删掉了。密钥只在设置向导或「AI 席位」页填写,不要发在聊天里。",
   confirm_needed="还没有做任何修改 - 请看预览,然后点「确认」。", done="已完成。", cancelled="已取消 - 没有修改任何东西。",
-  no_wf="请先从首页打开一个工作流,才能修改它的设置或运行。", fallback="离线问答里没找到。试试:什么是席位?谁来做决定?怎么连接 AI?创建一个工作流……",
+  no_wf="请先从首页打开一个工作流,才能修改它的设置或运行。", no_seats="(打开一个工作流即可看到它的席位)", fallback="离线问答里没找到。试试:什么是席位?谁来做决定?怎么连接 AI?创建一个工作流……",
   who="谁来做决定?\n1. 总指挥 CHIEF 启动每一轮并分派任务 - 它自己不批准任何事。\n2. 每个席位用规则判断一件事,可选再问它的 AI。AI 只能让席位更谨慎。\n3. 检查把关:任何一个检查 BLOCKED,事项就停下(单点失败即拦截)。\n4. 人工席位(如有)最后批准或驳回。\n当前分工:",
   trouble="故障排查:", t_ok="正常", t_nokey="席位 '{s}' 用的是 {p},但没有设置 {env} - 在向导或「AI 席位」页填写,或把席位改成 rules / ollama。",
   t_none="还没有任何 AI 密钥。一切仍可只靠规则运行。想和 AI 对话:重新运行向导,或安装免费的 Ollama。", t_ollama="Ollama/custom 需要本地服务在运行(如 `ollama serve`,再 `ollama pull llama3.2`)。",
@@ -73,17 +73,29 @@ TXT = {
 TXT["zh-TW"] = dict(TXT["zh-CN"], hi="你好,我是總指揮 CHIEF。可以問我 SeatCrew 怎麼用、誰來做決定,或說「建立一個流程,用來……」。",
   offline="目前沒有連接 AI,先用內建離線問答回答。連接一個 AI(本機免費的 Ollama 也可以)即可完整對話。",
   confirm_needed="尚未做任何修改 - 請看預覽後按「確認」。", done="完成。", cancelled="已取消 - 沒有任何修改。",
-  key_removed="你的訊息裡有像 API 金鑰的內容,已刪除。金鑰只在設定精靈或「AI 席位」頁填寫。")
+  key_removed="你的訊息裡有像 API 金鑰的內容,已刪除。金鑰只在設定精靈或「AI 席位」頁填寫。",
+  no_wf="請先從首頁開啟一個流程,才能修改設定或執行。", no_seats="(開啟一個流程即可看到它的席位)", who="誰來做決定?\n1. 總指揮 CHIEF 啟動每一輪並分派任務 - 它自己不核准任何事。\n2. 每個席位用規則判斷一件事,可選再問它的 AI。AI 只能讓席位更謹慎。\n3. 檢查把關:任何一個檢查 BLOCKED,項目就停下。\n4. 人工席位(如有)最後核准或駁回。\n目前分工:",
+  fallback="離線問答裡沒找到。試試:什麼是席位?誰來做決定?怎麼連接 AI?建立一個流程……", trouble="故障排除:", t_ok="正常")
 TXT["ja"] = dict(TXT["en"], hi="こんにちは、CHIEF です。SeatCrew の使い方、誰が何を決めるか、または「…するワークフローを作って」と話しかけてください。",
   offline="AI が未接続のため、内蔵のオフライン FAQ で回答します。AI(無料のローカル Ollama でも可)を接続すると会話できます。",
   confirm_needed="まだ何も変更していません - プレビューを確認して「確認」を押してください。", done="完了しました。", cancelled="キャンセルしました - 変更はありません。",
   key_removed="API キーのような文字列を削除しました。キーはセットアップか AI シート画面でのみ入力してください。",
+  no_wf="設定変更や実行の前に、ホームからワークフローを開いてください。", no_seats="(ワークフローを開くとシートが表示されます)", fallback="オフライン FAQ に見つかりませんでした。例: シートとは? 誰が決める? AI の接続方法は? ワークフローを作って…", trouble="トラブルシュート:", t_ok="問題なし",
   who="誰が決める?\n1. CHIEF(指揮官)が各サイクルを開始し仕事を割り当てる - 自分では承認しない。\n2. 各シートがルールで判断し、任意で AI に聞く。AI は慎重にする方向にしか働かない。\n3. チェックが関門: 1 つでも BLOCKED なら止まる。\n4. 人間のシート(あれば)が承認/却下。\n現在の割り当て:")
 TXT["es"] = dict(TXT["en"], hi="Hola, soy CHIEF. Pregúntame cómo funciona SeatCrew, quién decide qué, o di \"crea un flujo que ...\".",
   offline="No hay IA conectada; respondo con las preguntas frecuentes integradas. Conecta una (incluso Ollama local gratis) para chatear.",
   confirm_needed="Aún no se cambió nada - revisa la vista previa y pulsa Confirmar.", done="Hecho.", cancelled="Cancelado - no se cambió nada.",
   key_removed="Quité algo que parecía una clave API. Pega las claves solo en el asistente inicial o en la pestaña de puestos IA.",
+  no_wf="Abre primero un flujo (desde Inicio) para cambiar su configuración o ejecutarlo.", no_seats="(abre un flujo para ver sus puestos)", fallback="No lo encontré en las FAQ sin conexión. Prueba: ¿qué es un puesto? ¿quién decide? ¿cómo conecto una IA? crea un flujo…", trouble="Diagnóstico:", t_ok="todo bien",
   who="¿Quién decide?\n1. CHIEF (comandante) inicia cada ciclo y reparte el trabajo - nunca aprueba nada solo.\n2. Cada puesto juzga con sus reglas y, opcionalmente, su IA. La IA solo puede volverlo MÁS prudente.\n3. Los controles filtran: un BLOCKED detiene el elemento.\n4. Un puesto humano (si existe) aprueba o rechaza.\nAsignación actual:")
+
+def sample_for(wf, lang):
+    """One sample item for this workflow, in the UI language when the workflow ships one ("lang" key), else the first."""
+    samples = (getattr(wf, "spec", {}) or {}).get("sample_items") or type(wf).__init__.__globals__.get("SAMPLES") or []
+    if not samples: return None
+    s = next((x for x in samples if x.get("lang") == lang), None) or next((x for x in samples if (x.get("lang") or "")[:2] == (lang or "")[:2]), None) \
+        or next((x for x in samples if x.get("lang") in (None, "en")), samples[0])
+    return {k: v for k, v in s.items() if k != "lang"}
 
 def tx(lang, k): return TXT.get(lang, TXT["en"]).get(k) or TXT["en"][k]
 
@@ -114,7 +126,11 @@ def validate_spec(text, taken=()):
 
 def starter_spec(description):
     """Offline (no-AI) draft: a safe 4-seat review flow named after the description. The user still confirms."""
+    description = re.sub(r"^\s*(?:please\s+)?(?:create|make|build)\s+(?:me\s+)?(?:a|an)?\s*(?:new\s+)?workflow\s*(?:that|which|to|for)?\s*|^\s*(?:请)?(?:帮我)?(?:创建|新建|建立|做)一个?(?:工作流|流程)[,，:：]?\s*(?:用来|用於|用于|来|來)?", "", description, flags=re.I).strip() or description
     words = re.findall(r"[a-z]+", description.lower())
+    if not words:   # CJK description -> readable English slug from keywords
+        kw = [("review", r"审|審|校|レビュー|revis"), ("support", r"客服|工单|工單|サポート|soporte"), ("blog", r"博客|部落格|文章|ブログ"), ("video", r"视频|影片|動画|vídeo"), ("trade", r"交易|股票|トレード")]
+        words = ([k for k, rx in kw if re.search(rx, description)] + ["flow"]) if any(re.search(rx, description) for _, rx in kw) else []
     stop = {"create", "a", "an", "the", "workflow", "that", "which", "for", "to", "new", "make", "build", "and", "of", "with", "me", "please"}
     name = "_".join([w for w in words if w not in stop][:3]) or "my_flow"
     name = (name if SLUG.fullmatch(name) else "my_flow")[:40]
@@ -190,7 +206,7 @@ class Assistant:
             rows.append(dict(seat=n, ai=who, kind="human" if kinds.get(n) == "human" else ("commander" if n == "chief" else kinds.get(n, "check"))))
         lines = [f"  {r['seat'].upper():<10} {r['kind']:<9} -> {r['ai'] if r['kind'] != 'human' else 'you'}" for r in rows]
         if wf: lines.append("  chain: " + " -> ".join(c.upper() for c in [x.name for x in wf.chain]))
-        if not rows: lines.append("  (open a workflow to see its seats)")
+        if not rows: lines.append("  " + tx(self.lang, "no_seats"))
         return tx(self.lang, "who") + "\n" + "\n".join(lines), dict(table=rows)
 
     def troubleshoot(self):
@@ -217,7 +233,11 @@ class Assistant:
         wf = self.ctx.get("wf"); config = self.ctx.get("config")
         if tool == "create_workflow":
             taken = set((self.ctx.get("taken") or (lambda: []))())
-            spec_text = args.get("yaml") or yaml.safe_dump(starter_spec(args.get("description", "")), sort_keys=False, allow_unicode=True)
+            if args.get("yaml"): spec_text = args["yaml"]
+            else:
+                sp = starter_spec(args.get("description", "")); base, n = sp["name"], 2
+                while sp["name"] in taken: sp["name"] = f"{base[:36]}_{n}"; n += 1
+                spec_text = yaml.safe_dump(sp, sort_keys=False, allow_unicode=True)
             spec, text = validate_spec(spec_text, taken)
             return dict(tool=tool, args=dict(yaml=text, name=spec["name"]), preview=text, title=f"create workflow '{spec['name']}'")
         if tool == "set_config":
@@ -237,9 +257,7 @@ class Assistant:
         if tool == "run_sample":
             if wf is None: raise ValueError(tx(self.lang, "no_wf"))
             data = args.get("data") if isinstance(args.get("data"), dict) else None
-            if data is None:
-                samples = (getattr(wf, "spec", {}) or {}).get("sample_items") or type(wf).__init__.__globals__.get("SAMPLES") or []
-                data = dict(samples[0]) if samples else None
+            if data is None: data = sample_for(wf, self.lang)
             if data is not None and scrub(json.dumps(data))[1]: raise ValueError("sample contains something that looks like a key")
             return dict(tool=tool, args=dict(data=data), preview=json.dumps(data, ensure_ascii=False, indent=1) if data else "run one cycle now", title=f"run {wf.name} on a sample item")
         if tool == "set_voice":
@@ -360,7 +378,7 @@ class Assistant:
                 try:
                     prop = self.propose(tool, args)
                     out.append(self._add("chief", tx(self.lang, "confirm_needed"), kind="proposal", status="pending", proposal=prop))
-                except ValueError as e: out.append(self._add("chief", f"{tool}: {e}", kind="warn"))
+                except ValueError as e: out.append(self._add("chief", str(e), kind="warn"))
             if not out or out[-1]["role"] == "user": out.append(self._add("chief", self.faq(clean)))
             self._save()
         return dict(ok=True, messages=out, offline=self.provider() is None)
@@ -477,7 +495,7 @@ def route(asst, method, path, body=None):
     """Shared HTTP routes. Returns (obj, code) or None when the path is not a chat route."""
     if path == "/api/models" and method == "GET":
         from .video import providers as PV
-        return dict(tiers=PV.recommended(), checked=PV.CHECKED), 200
+        return dict(tiers=PV.recommended(), checked=PV.CHECKED, i18n=PV.i18n()), 200
     if path == "/api/models/test" and method == "POST":
         from .video import providers as PV
         i = str((body or {}).get("id", ""))

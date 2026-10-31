@@ -201,5 +201,14 @@
  "cs_role_narrator": "narrador",
  "cs_role_cameo": "cameo",
  "opt_dialogue_scene": "Escena de diálogo (elenco)",
- "seat_lipsync": "SINCRONÍA LABIAL"
+ "seat_lipsync": "SINCRONÍA LABIAL",
+ "set_approve_auto_approve": "Aprobar videos automáticamente",
+ "set_load_samples": "Cargar un ejemplo al iniciar",
+ "set_speaker_colors": "Subtítulos con color por hablante",
+ "set_max_video_usd": "Gasto máximo por video (USD)",
+ "set_cast": "Reparto por defecto (Estudio de personajes)",
+ "set_image_backend": "Servicio de imagen (auto = el mejor disponible)",
+ "set_keyframes": "Crear primero una imagen clave",
+ "set_lipsync_backend": "Servicio de sincronía labial",
+ "set_continuity_qc": "Revisar continuidad de personajes"
 }

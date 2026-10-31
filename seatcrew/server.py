@@ -34,6 +34,9 @@ def make_handler(wf):
             if p in ("/", "/index.html"): return self.send((WEB / "index.html").read_bytes(), ctype="text/html; charset=utf-8")
             if p == "/neon.css": return self.send(NEON.read_bytes(), ctype="text/css; charset=utf-8")
             if p == "/api/state": return self.send(wf.snapshot())
+            if p == "/api/sample":
+                from .assistant import sample_for
+                return self.send(dict(data=sample_for(wf, cfg.data.get("language") or "en")))
             st = AS.static(p)
             if st: return self.send(st[0], ctype=st[1])
             r = AS.route(chat, "GET", p)
