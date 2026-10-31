@@ -78,7 +78,7 @@ def install(engine, data_dir, device="cpu", runner=subprocess.run):
             for i, cmd in enumerate(steps):
                 job["step"] = i + 1; job["log"] = (job["log"] + ["$ " + " ".join(Path(cmd[0]).name if j == 0 else c for j, c in enumerate(cmd))[:200]])[-30:]
                 if cmd[1:3] == ["clone", "--depth"] and Path(cmd[-1]).exists(): continue
-                r = runner(cmd, capture_output=True, text=True, timeout=7200)
+                r = runner(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=7200)
                 if r.returncode: raise VoiceEngineError((r.stderr or r.stdout or "")[-400:])
             if engine == "cosyvoice": (d / "seatcrew_cosy_run.py").write_text(RUNNER, encoding="utf-8")
             (d / ".installed").write_text(json.dumps(dict(at=time.strftime("%Y-%m-%d %H:%M"), device=device)), encoding="utf-8"); job["ok"] = True
@@ -131,7 +131,7 @@ def cosyvoice(text, out, voice=None, lang="en", data_dir=None, runner=subprocess
     else:
         spk = voice if voice in ENGINES["cosyvoice"]["speakers"] else ("中文女" if lang.startswith("zh") else "日语男" if lang == "ja" else "英文男")
         req.update(mode="sft", model=str(d / "models" / "CosyVoice-300M-SFT"), spk=spk)
-    r = runner([str(_py(d)), str(d / "seatcrew_cosy_run.py")], input=json.dumps(req), capture_output=True, text=True, timeout=timeout)
+    r = runner([str(_py(d)), str(d / "seatcrew_cosy_run.py")], input=json.dumps(req), capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=timeout)
     if r.returncode or not Path(req["out"]).exists(): raise VoiceEngineError("CosyVoice failed: " + (r.stderr or r.stdout or "")[-300:])
     return req["out"]
 

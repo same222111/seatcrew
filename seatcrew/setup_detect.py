@@ -5,7 +5,7 @@ from pathlib import Path
 from . import cli_ai, llm
 
 def _run(args, timeout=6):
-    try: return subprocess.run(args, capture_output=True, text=True, timeout=timeout,
+    try: return subprocess.run(args, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=timeout,
                                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0)).stdout
     except Exception: return ""
 

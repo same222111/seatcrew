@@ -5,6 +5,7 @@ from .i18n import t
 DISCLAIMER = "TradeCrew is PAPER TRADING ONLY. Educational software, not financial advice. No live orders are ever sent."
 
 def main(argv=None):
+    from seatcrew.textio import utf8_stdio; utf8_stdio()
     ap = argparse.ArgumentParser(prog="tradecrew", description=DISCLAIMER)
     ap.add_argument("--config", default="config.yaml"); ap.add_argument("--env", default=".env")
     ap.add_argument("--lang", choices=list(LANGUAGES), help="message language (default: config.yaml language)")

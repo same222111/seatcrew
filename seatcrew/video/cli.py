@@ -177,6 +177,7 @@ def check(a):
     return 0 if rep["passed"] else 1
 
 def main(argv):
+    from ..textio import utf8_stdio; utf8_stdio()
     ap = argparse.ArgumentParser(prog="seatcrew video", description="Short-video tools: init a storyboard folder, assemble a finished video, quality-check it.")
     sp = ap.add_subparsers(dest="c", required=True)
     i = sp.add_parser("init", help="create a folder with storyboard.yaml + clips/"); i.add_argument("folder")

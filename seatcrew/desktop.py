@@ -324,6 +324,7 @@ def gui_backend():
     except ImportError: return "qt"
 
 def main(argv=None):
+    from .textio import utf8_stdio; utf8_stdio()
     ap = argparse.ArgumentParser(prog="seatcrew-desktop", description="SeatCrew desktop app")
     ap.add_argument("--no-window", action="store_true", help="open in the default browser instead of an app window")
     ap.add_argument("--smoke", type=float, default=0, help="quit automatically after N seconds (CI / tests)")
