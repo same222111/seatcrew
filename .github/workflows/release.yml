@@ -1,10 +1,12 @@
-# Build desktop apps on a version tag (git tag v0.4.0 && git push --tags) and attach them to a GitHub Release.
+# Build (and smoke-test) desktop apps on every PR to main; on a version tag (git tag v0.4.0 && git push --tags) and attach them to a GitHub Release.
 # Windows: SeatCrew-<v>-windows-setup.exe (Inno Setup, desktop shortcut) + portable .zip
 # macOS:   SeatCrew-<v>-macos.dmg (unsigned)      Linux: SeatCrew-<v>-x86_64.AppImage
 name: release
 on:
   push:
     tags: ["v*"]
+  pull_request:
+    branches: [main]      # build + smoke every installer before a merge (nothing is published)
   workflow_dispatch:
 permissions:
   contents: write
