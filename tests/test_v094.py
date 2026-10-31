@@ -251,3 +251,78 @@ def test_cjk_wrap_never_starts_a_line_with_punctuation():
         lines = wrap_cjk("天空为什么是蓝色的?", n); assert "".join(lines) == "天空为什么是蓝色的?"
         assert all(l[0] not in "?？。，" for l in lines)
     assert wrap_cjk("天空为什么是蓝色的?", 9) == ["天空为什么是蓝色的?"]
+
+
+# ---- v0.9.4 round 2: translated log / QC, workflow label, subtitle line breaks ----
+def test_log_lines_translate_for_display_only():
+    from seatcrew import logi18n as LI
+    msgs = ["cycle 3 start", "cycle 2: 0 passed, 0 blocked, 1 waiting / 1", "1 new item(s)", "settings saved: language",
+            "[天空] #1 5 shots, ~24s (template)", "[天空] #1 readable, safe words, ~24s", "#1 PASS [DRAFT] · 13/14 checks",
+            "[天空] #1 waiting for a human to approve", "#2 sent back to WRITER (round 1): total ~5s outside 8-60s",
+            "#1 voice edge voice, exact word timing · visuals draft×5 · DRAFT · lipsync off (shots keep their original mouths)"]
+    for m in msgs:
+        z = LI.text(m, "zh-CN")
+        assert re.search(r"[\u4e00-\u9fff]", z) and not re.search(r"\b(cycle|passed|shots|readable|waiting|sent|round|voice|visuals|lipsync|checks)\b", z), (m, z)
+    assert LI.text("cycle 3 start", "zh-TW") == "第 3 輪開始" and LI.kind("CHECK_OK", "zh-CN") == "通过" and LI.text("cycle 3 start", "en") == "cycle 3 start"
+    assert LI.text("cycle 3 start", "es").startswith("inicio") and LI.text("cycle 3 start", "ja").startswith("サイクル")
+    ev = [dict(agent="CHIEF", kind="CYCLE", sym="-", msg="cycle 1 start", ts="2026-01-01T00:00:00")]
+    snap = LI.localize_snapshot(dict(events=ev, items=[]), "zh-CN")
+    assert snap["events"][0]["msg_l"] == "第 1 轮开始" and snap["events"][0]["agent_l"] == "导演" and "msg_l" not in ev[0]
+
+def test_qc_details_translate():
+    from seatcrew import logi18n as LI
+    for d in ["25.8s (planned 25.7s, allowed 10-108s)", "all sources >= 66% of output", "every clip covers its shot", "none", "-14.0 LUFS (target -14 +-1)",
+              "true peak -1.5 dBTP (max -1)", "narration audible", "no gap > 1.6s", "100% of subtitle words start on speech", "1 character(s), one voice each",
+              "DRAFT PREVIEW - offline voice/visuals; not final quality", "FAIL -> VOICE: voice_present: voice track is silent"]:
+        z = LI.text(d, "zh-CN"); assert re.search(r"[\u4e00-\u9fff]", z) and not re.search(r"\b(of|shot|target|max|gap|words|offline|final|silent|voice)\b", z), (d, z)
+
+def test_workflow_label_is_translated():
+    for l, want in {"zh-CN": "短视频", "zh-TW": "短影音", "en": "Short video"}.items():
+        j = json.loads((ROOT / f"examples/short_video/locales/{l}.json").read_text(encoding="utf-8")); assert j["wf_label"] == want
+
+def _zh_words(text, step=0.3):
+    import re as _re
+    toks = _re.findall(r"[\u4e00-\u9fff]{1,2}|[，。？！、；：]", text)
+    return [dict(w=t, start=i * step, end=i * step + step * .9, shot="s1") for i, t in enumerate(toks)]
+
+@pytest.mark.parametrize("seg", ["jieba", "none"])
+def test_subtitles_break_on_punctuation_and_balance(seg, monkeypatch):
+    from seatcrew.video import subs as SU
+    from seatcrew.video.subs import chunk, NO_START
+    if seg == "none": monkeypatch.setattr(SU, "_jieba", None)
+    elif SU._jieba is None: pytest.skip("jieba not installed")
+    L = dict(max_chars=16, max_cjk=10)
+    text = "空气分子更容易散射波长短的蓝光，红光则很少被散射。所以无论你看向天空哪里，都有蓝光进入眼睛。天空为什么是蓝色的？这就是为什么晚霞是橙红色的。"
+    lines = ["".join(x["w"] for x in g) for g in chunk(_zh_words(text), L)]
+    assert "".join(lines) == text
+    for t in lines:
+        assert t[0] not in NO_START, lines                      # no punctuation at a line start
+        assert len(t.strip("，。？！、；：")) >= 3, lines          # no lone ? / 。 or 1-2 char orphan
+        assert len(t) <= L["max_cjk"] + 1, lines
+    assert any(t.endswith("？") for t in lines) and "蓝光，" in "".join(lines)
+    # a long clause splits into even halves (not 10 + 2)
+    g = chunk(_zh_words("傍晚时阳光要穿过更厚的空气层才能到达"), L); n = [len("".join(x["w"] for x in l)) for l in g]
+    assert len(n) == 2 and max(n) - min(n) <= 2, n
+
+def test_separate_punctuation_tokens_glue_to_previous_word():
+    from seatcrew.video.subs import chunk
+    ws = [dict(w=w, start=i * .3, end=i * .3 + .25, shot=0) for i, w in enumerate(["天空", "为什么", "是", "蓝色", "的", "？"])]
+    g = chunk(ws, dict(max_chars=16, max_cjk=10)); assert ["".join(x["w"] for x in l) for l in g] == ["天空为什么是蓝色的？"]
+
+def test_cjk_title_is_wrapped_by_hand_without_auto_wrap():
+    from seatcrew.video.subs import build_ass, wrap_title, NO_START
+    w = wrap_title("为什么天空是蓝色的？晚霞又为什么是红的？", 9).split("\n")
+    assert len(w) >= 2 and all(x[0] not in NO_START for x in w) and max(map(len, w)) - min(map(len, w)) <= 3, w
+    ass, cues = build_ass(_zh_words("天空为什么是蓝色的？"), [(0, 2, "为什么天空是蓝色的？晚霞又为什么是红的？")], 1080, 1920, 3.0)
+    assert "\\q2" in ass and "\\N" in ass and all(not c["text"].startswith("？") for c in cues)
+
+def test_per_character_tokens_break_between_words(monkeypatch):
+    """edge-tts gives one token per Chinese character; with jieba a line never splits a word like 散射 / 穿过."""
+    from seatcrew.video import subs as SU
+    if SU._jieba is None: pytest.skip("jieba not installed")
+    t = "空气分子更容易散射波长短的蓝光，傍晚时阳光要穿过更厚的空气，那么，为什么晚霞是橙红色的呢？"
+    ws = [dict(w=c, start=i * .2, end=i * .2 + .18, shot=0) for i, c in enumerate(t)]
+    lines = ["".join(x["w"] for x in g) for g in SU.chunk(ws, dict(max_chars=16, max_cjk=10))]
+    joined = "|".join(lines)
+    for w in ("散射", "穿过", "晚霞", "蓝光"): assert w in joined.replace("|", "") and w[0] + "|" + w[1] not in joined, lines
+    assert not any(l in ("那么，", "？") for l in lines), lines

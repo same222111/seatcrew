@@ -71,7 +71,7 @@ def test_only_ai_seats_offer_a_model(server):
 
 def test_chinese_dashboard_has_no_english_chrome(server):
     async def f(pg):
-        return await pg.evaluate("""()=>{const out=[];const skip=e=>e.closest('.term,#log,table,.qc,.sum,.adv,video,#ccM,#ccG,.vst+.steps~.dim,.bk,[data-v],option,.tip,.mono');
+        return await pg.evaluate("""()=>{const out=[];const skip=e=>e.closest('table,.adv,video,#ccM,#ccG,.vst+.steps~.dim,.bk,[data-v],option,.tip,.mono');
           const w=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT);let n;while(n=w.nextNode()){const e=n.parentElement;const t=n.textContent.trim();
           if(!t||!/[A-Za-z]{3,}/.test(t)||/[\\u4e00-\\u9fff]/.test(t)||!e||e.offsetParent===null||skip(e)||e.closest('script,style'))continue;out.push(t)}return out}""")
     leak = [t for t in page_run(server, f) if not ALLOW.match(t)]
@@ -96,3 +96,17 @@ def test_storyboard_cells_do_not_wrap_per_character(server):
     async def f(pg):
         return await pg.evaluate("Math.min(...[...document.querySelectorAll('#studio .sbt td.n')].map(e=>e.getBoundingClientRect().width))")
     assert page_run(server, f) >= 150
+
+def test_log_and_qc_are_chinese_and_no_internal_name(server):
+    async def f(pg):
+        await pg.wait_for_timeout(600)
+        return await pg.evaluate("""()=>({log:[...document.querySelectorAll('#log div')].slice(0,20).map(e=>e.textContent),
+          qc:[...document.querySelectorAll('#studio .qc .dim')].map(e=>e.textContent),sum:document.querySelector('#studio .sum').textContent,
+          head:document.querySelector('header').innerText,sub:Math.min(...[...document.querySelectorAll('#flow .node .sub')].map(e=>e.getBoundingClientRect().height)),
+          lbl:Math.min(...[...document.querySelectorAll('#flow .node text.lbl')].map(e=>e.getBoundingClientRect().height))})""")
+    m = page_run(server, f)
+    assert m["log"] and all(re.search(r"[\u4e00-\u9fff]", l) for l in m["log"]), m["log"]
+    assert not any(re.search(r"\b(CHIEF|PLAN|DONE|CYCLE|CHECK_OK|WAITING)\b", l) for l in m["log"]), m["log"]
+    assert all(re.search(r"[\u4e00-\u9fff]", q) for q in m["qc"]), m["qc"]
+    assert "通过" in m["sum"] and "short_video" not in m["head"] and "短视频" in m["head"], m
+    assert m["sub"] >= 10 and m["lbl"] >= 11, m                        # was ~5 px on the 110 px flow strip
