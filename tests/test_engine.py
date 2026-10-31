@@ -148,3 +148,28 @@ def test_config_save_failure_does_not_apply_in_memory(tmp_path, monkeypatch):
     monkeypatch.setattr(cfg, 'save', fail)
     with pytest.raises(OSError): cfg.update({'language':'ja'})
     assert cfg.data == original
+
+
+@pytest.mark.parametrize("value", ["false", "true", 0, 1, None, []])
+def test_auto_approval_requires_an_actual_boolean(tmp_path, value):
+    from seatcrew import loader
+    wf = loader.build("content_review", str(tmp_path / "c.yaml"), str(tmp_path / "st"))
+    with pytest.raises(ValueError): wf.cfg.update({"settings": {"approve_auto_approve": value}})
+    # Hand-edited legacy settings must also fail closed at the gate.
+    wf.cfg.data["settings"]["approve_auto_approve"] = value
+    assert wf.seat_map["approve"].check(wf.new_item("x"))[0] is None
+
+
+def test_stale_approval_cannot_approve_another_human_gate(tmp_path):
+    wf = Workflow(Config(tmp_path / "c.yaml", base_defaults(["first", "second", "publish"])), tmp_path / "st")
+    effects = []
+    class Publish(Seat):
+        def rules(self, item): effects.append(item["id"]); return True, "published"
+    wf.setup([HumanSeat(wf, "first"), HumanSeat(wf, "second"), Publish(wf, "publish")])
+    it = wf.new_item("two approvals")
+    assert wf.run_chain(it) is None
+    assert wf.decide(it["id"], True, expected_pending=0) is None
+    with pytest.raises(ValueError): wf.decide(it["id"], True, expected_pending=0)
+    assert it["pending"] == 1 and not effects
+    assert wf.decide(it["id"], True, expected_pending=1) is True
+    assert effects == [it["id"]]

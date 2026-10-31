@@ -6,6 +6,8 @@ Scope: audit the v0.9.0 release, reproduce defects before fixing them, exercise 
 
 - The first-run detection renderer called an out-of-scope `lang()` and collided with the language input. Detection, account login and local voice panels disappeared. The real renderer is now exercised for all five UI languages.
 - Human approval accepted non-boolean values (including the string `false`) as approval. It now rejects malformed decisions before mutating the item.
+- Stale HTTP approvals now carry the rendered `pending` gate index and cannot approve a later, unseen human gate. `/api/decide` requires this integer from `/api/state`; Python/CLI callers retain optional keyword compatibility.
+- Boolean workflow settings (including `*_auto_approve`) reject strings/numbers; the gate itself accepts only literal `true`, including for hand-edited legacy files.
 - Concurrent human approvals executed downstream actions twice. Decision validation and chain resumption are serialized without holding the dashboard/event lock.
 - The 200-item history cap discarded outstanding approvals; the 40-item dashboard cap hid them. Outstanding approvals are retained, persisted and visible beyond those limits. Item snapshots are replaced atomically.
 - Malformed configuration shapes, string booleans, non-finite intervals and out-of-range timers were accepted or produced internal errors. Updates validate before application, serialize concurrent saves, and roll back memory if persistence fails.
@@ -34,6 +36,8 @@ Scope: audit the v0.9.0 release, reproduce defects before fixing them, exercise 
 | Paper trading | Demo-price strategy, backtest and check-chain tests; browser terminal verification |
 | Providers | Mocked request/response/error/polling tests. No paid live-provider validation |
 | Packaging | Wheel in clean environment; actual macOS app; Windows/macOS/Linux CI builds and installed-app smoke required before release |
+
+- Demo-mode trading disables news feeds as well as live prices; desktop workflows use absolute data paths so another working-directory change cannot redirect their writes.
 
 ## Limits
 

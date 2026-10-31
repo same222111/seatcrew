@@ -207,13 +207,13 @@ class App:
             if name in self.open: return self.open[name][2]
             if name not in {w["name"] for w in workflows(self.home)}: raise ValueError(f"unknown workflow {name}")
             first = not Path(f"config.{name}.yaml").exists()
-            wf = loader.build(name)
+            wf = loader.build(name, str(self.home / f"config.{name}.yaml"), str(self.home / "state" / name))
             if first:                            # apply wizard choices once; the dashboard owns them afterwards
                 patch = {"language": self.prefs.get("language", "en")}
                 p = self.prefs.get("default_provider")
                 if p: patch["seats"] = {s: {"provider": p} for s in wf.seat_map}
                 if self.prefs.get("ai_mode") == "demo" and "data" in wf.cfg.data:      # demo mode: offline demo prices
-                    try: wf.cfg.update({"data": {"price_source": "demo"}})
+                    try: wf.cfg.update({"data": {"price_source": "demo", "news": []}})
                     except Exception: pass
                 try: wf.cfg.update(patch)
                 except Exception: wf.cfg.update({"language": patch["language"]})

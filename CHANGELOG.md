@@ -3,11 +3,12 @@
 ## 0.9.1 — Reliability and desktop verification
 
 - Restore the first-run hardware/account/voice panels in all five languages.
-- Reject malformed approvals, prevent duplicate concurrent actions, and retain all pending approvals.
+- Reject malformed approvals and automatic-approval settings, bind browser approvals to their displayed gate, prevent duplicate concurrent actions, and retain all pending approvals.
+- HTTP clients must send the current integer `pending` gate with `/api/decide` (read it from `/api/state`).
 - Validate configuration types and timer values; recover cleanly from failed saves.
 - Fix false character-consistency warnings caused by video/image colour conversion; reuse shot decoding.
 - Include model-card translations and free Edge TTS in desktop builds; resolve bundled workflows correctly.
-- Start local servers without slow reverse DNS lookups; open the full trading terminal from the launcher.
+- Start local servers without slow reverse DNS lookups; open the full trading terminal from the launcher. Demo trading also disables news feeds, and workflows keep absolute data paths.
 - Add keyboard/touch-friendly click selection to the cast builder in all five languages.
 - Correct the API-key counter and isolate offline tests from logged-in CLI accounts.
 - Expand regression and installed-app smoke coverage; support version-checked release branches.

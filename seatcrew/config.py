@@ -65,6 +65,9 @@ class Config:
             if s not in self.defaults["seats"]: raise ValueError(f"unknown seat {s}")
             if not isinstance(v, dict): raise ValueError(f"seat {s} must be an object")
             if v["provider"] not in ["rules", *PROVIDERS]: raise ValueError(f"unknown provider {v['provider']} for seat {s}")
+        for key, value in c.get("settings", {}).items():
+            if (type(self.defaults.get("settings", {}).get(key)) is bool or key.endswith("_auto_approve")) and type(value) is not bool:
+                raise ValueError(f"settings.{key} must be a boolean")
         interval = c.get("run_interval_sec", 1)
         if type(interval) not in (int, float) or not math.isfinite(interval) or not 0 < interval <= threading.TIMEOUT_MAX:
             raise ValueError("run_interval_sec must be a finite positive number within the timer limit")

@@ -87,7 +87,9 @@ def test_http_api(chdir):
     c = call("/api/config"); assert c["definition"]["chain"][0] == "draft" and "keys" in c and all(isinstance(v, bool) for v in c["keys"].values())
     assert call("/api/submit", {"data": {"topic": "Hello", "notes": "x " * 40}})["ok"]; wf.run_cycle()
     it = next(i for i in call("/api/state")["items"] if i["title"] == "Hello"); assert it["pending"] == 3
-    assert call("/api/decide", {"id": it["id"], "approve": True})["result"] is True
+    assert call("/api/decide", {"id": it["id"], "approve": True})["ok"] is False
+    pending = it["pending"]
+    assert call("/api/decide", {"id": it["id"], "approve": True, "pending": pending})["result"] is True
     assert call("/api/decide", {"id": it["id"], "approve": True})["ok"] is False
     assert call("/api/config", {"language": "zh-TW", "interval": 60, "settings": {"min_words": 10}})["ok"] and wf.cfg["run_interval_sec"] == 60
     assert call("/api/config", {"seats": {"draft": {"provider": "nope"}}})["ok"] is False

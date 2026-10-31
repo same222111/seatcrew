@@ -60,7 +60,7 @@ class HumanSeat(Seat):
     def check(self, item):
         d = item.get("decisions", {}).get(self.name)
         if d is None:
-            if self.cfg.get("settings", {}).get(f"{self.name}_auto_approve"): return True, "auto-approved (setting)"
+            if self.cfg.get("settings", {}).get(f"{self.name}_auto_approve") is True: return True, "auto-approved (setting)"
             return None, "waiting for a human to approve"
         return (True, f"approved by human{': ' + d['note'] if d.get('note') else ''}") if d["approve"] else (False, f"rejected by human{': ' + d['note'] if d.get('note') else ''}")
 
@@ -170,14 +170,18 @@ class Workflow:
         item["status"] = self.done_status; self.save_items(); return True
     done_status = "done"
 
-    def decide(self, item_id, approve, note=""):
+    def decide(self, item_id, approve, note="", *, expected_pending=None):
         """A human approves/rejects a waiting item; the chain resumes from that seat."""
         if type(approve) is not bool: raise ValueError("approve must be a boolean")
+        if expected_pending is not None and (type(expected_pending) is not int or expected_pending < 0):
+            raise ValueError("pending must be a nonnegative integer")
         # Keep the check and resume together so two HTTP requests cannot execute an action twice.
         # Use a separate lock: long-running seats must not block dashboard reads or event logging.
         with self._decision_lock:
             it = next((i for i in self.items if i["id"] == int(item_id)), None)
             if not it or "pending" not in it: raise ValueError(f"item {item_id} is not waiting for approval")
+            if expected_pending is not None and it["pending"] != expected_pending:
+                raise ValueError("approval is stale; refresh the item before deciding")
             seat = self.chain[it["pending"]]
             it.setdefault("decisions", {})[seat.name] = dict(approve=approve, note=str(note)[:200], ts=now().isoformat(timespec="seconds"))
             return self.run_chain(it, it["pending"])

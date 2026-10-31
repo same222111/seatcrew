@@ -210,12 +210,12 @@ new MutationObserver(sampleLbl).observe(document.documentElement,{attributes:tru
 $('sampleBtn').onclick=async()=>{const r=await get('/api/sample');if(!r.data){toast('-');return}$('form').querySelectorAll('[data-f]').forEach(e=>{if(r.data[e.dataset.f]!=null)e.value=r.data[e.dataset.f]})};
 $('submitBtn').onclick=async()=>{const data={};$('form').querySelectorAll('[data-f]').forEach(e=>data[e.dataset.f]=e.value);const r=await post('/api/submit',{data});
  if(r.ok){$('form').querySelectorAll('input[data-f],textarea[data-f]').forEach(e=>e.value='');toast('#'+r.id+' ✓')}else toast('✗ '+r.error)};
-async function decide(id,ok){const r=await post('/api/decide',{id,approve:ok,note:(document.querySelector(`[data-note="${id}"]`)||{}).value||''});if(!r.ok)toast('✗ '+r.error);tick()}
+async function decide(id,ok,pending){const r=await post('/api/decide',{id,approve:ok,pending,note:(document.querySelector(`[data-note="${id}"]`)||{}).value||''});if(!r.ok)toast('✗ '+r.error);tick()}
 function itemCard(o){const ch=o.chain||[],bl=ch.find(c=>!c.ok),wait=o.pending!=null,ws=wait?DEF.chain[o.pending]:null;
  const st=bl?`<div class="stat bad">${T('blocked_at')} ${bl.seat.toUpperCase()}</div>`:wait?`<div class="stat wait">${T('waiting_at')} ${ws.toUpperCase()}</div>`:/^(done|filled)$/.test(o.status)?`<div class="stat good">✓ ${T('status_done')}</div>`:`<div class="dim">${esc(o.status)}</div>`;
  const tl=DEF.chain.map(k=>{const c=ch.find(x=>x.seat==k),s=DEF.seats.find(x=>x.name==k);
   if(c)return `<div class="st ${c.ok?'':'bad'}"><b>${k.toUpperCase()}</b> <span class="${c.ok?'ok':'bad'}">${c.ok?T('check_ok'):'<b>'+T('check_blocked')+'</b>'}</span><div class="rs">${esc(c.reason)}</div></div>`;
-  if(k==ws)return `<div class="st wait"><b>${k.toUpperCase()}</b> <span class="wait"><b>${T('waiting')}</b></span><div class="row"><input data-note="${o.id}" placeholder="${T('note')}" style="width:120px"><button class="b sm" data-ap="${o.id}">${T('approve')}</button><button class="b sm no" data-rj="${o.id}">${T('reject')}</button></div></div>`;
+  if(k==ws)return `<div class="st wait"><b>${k.toUpperCase()}</b> <span class="wait"><b>${T('waiting')}</b></span><div class="row"><input data-note="${o.id}" placeholder="${T('note')}" style="width:120px"><button class="b sm" data-ap="${o.id}" data-pending="${o.pending}">${T('approve')}</button><button class="b sm no" data-rj="${o.id}" data-pending="${o.pending}">${T('reject')}</button></div></div>`;
   return `<div class="st pend"><b>${k.toUpperCase()}</b> <span class="rs">${esc(job(s))}</span></div>`}).join('');
  return `<div class="it" data-item="${o.id}"><h4>#${o.id} ${esc(o.title)} <span class="dim">· ${esc(o.label||o.subject||'')}</span></h4>${st}<div class="tl">${tl}</div></div>`}
 let busy=false,FOCUS=null,LAST=null,SIG={},EQH=[];
@@ -290,7 +290,7 @@ async function tick(){if(!DEF||!LOC.app_sub||busy)return;if(document.activeEleme
  if(SIG.seats!==seats){$('seats').innerHTML=seats;SIG.seats=seats}const wc=whoCard(s)+LOC.app_sub;if(SIG.who!==wc){$('whoCard').innerHTML=whoCard(s);SIG.who=wc}$('online').textContent=T('online',{n:DEF.seats.length});
  $('panels').innerHTML=(s.panels||[]).map(p=>`<div class="nx-card pn"><h3>${esc(p.title)}</h3><table><tr>${p.columns.map(c=>`<th>${esc(c)}</th>`).join('')}</tr>${p.rows.map(r=>`<tr>${r.map(c=>`<td>${esc(c)}</td>`).join('')}</tr>`).join('')}</table></div>`).join('');
  const items=s.items.length?s.items.slice(0,14).map(itemCard).join(''):`<span class="dim">${T('chain_empty')}</span>`;if(SIG.items!==items){$('items').innerHTML=items;SIG.items=items;
- document.querySelectorAll('[data-ap]').forEach(b=>b.onclick=()=>decide(+b.dataset.ap,true));document.querySelectorAll('[data-rj]').forEach(b=>b.onclick=()=>decide(+b.dataset.rj,false))}
+ document.querySelectorAll('[data-ap]').forEach(b=>b.onclick=()=>decide(+b.dataset.ap,true,+b.dataset.pending));document.querySelectorAll('[data-rj]').forEach(b=>b.onclick=()=>decide(+b.dataset.rj,false,+b.dataset.pending))}
  $('logName').textContent=DEF.name+'.log';$('logN').textContent=T('lines',{n:s.events.length});
  const seen=+($('log').dataset.n||0);$('log').innerHTML=s.events.slice().reverse().map((e,i)=>`<div class="k-${e.kind} ${i<s.events.length-seen?'nx-in':''}"><span class=dim>${e.ts.slice(11,19)}</span> ${e.agent.padEnd(9)} ${e.kind.padEnd(13)} ${esc(e.sym)} ${esc(e.msg)}</div>`).join('');$('log').dataset.n=s.events.length}
 // ---------- navigation: big back button, breadcrumb, Esc / Alt+Left ----------

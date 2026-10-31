@@ -154,4 +154,5 @@ def test_desktop_trading_opens_full_terminal(app):
     assert code == 200
     base = opened["url"].split("?")[0]
     assert 'id="lab"' in get(base)
+    assert json.loads(get(base + "api/config"))["config"]["data"]["news"] == []
     assert json.loads(get(base + "api/config"))["config"]["data"]["price_source"] == "demo"
