@@ -260,7 +260,13 @@ def api_state(lang=None):
 
 def audition_file(lib, name=None, preset_id=None, text=None, emotion=None, lang=None):
     """Cached mp3 preview (voices/auditions/<hash>.mp3) of a character or a preset."""
-    prof = clean_profile("x", preset(preset_id)) if preset_id else lib.get(str(name or ""))
+    if preset_id: prof = clean_profile("x", preset(preset_id))
+    else:
+        nm = str(name or "").strip() or "narrator"
+        try: prof = lib.ensure(nm, lang or "en")            # 'narrator' always has the language's default voice
+        except (KeyError, ValueError):
+            zh = str(lang or "").startswith("zh")
+            raise ValueError(f"未找到角色「{nm}」：请先在配音库里添加它，或选一个预设音色" if zh else f"no character named '{nm}' - add it to the voice library or pick a preset") from None
     if emotion and emotion not in STYLES: raise ValueError("unknown emotion")
     lg = prof.get("lang") or lang_key(lang); txt = (str(text or "").strip() or SAMPLE_TEXT[lang_key(lg)])[:200]
     h = hashlib.sha1(json.dumps([signature(prof), prof.get("style"), emotion, txt], ensure_ascii=False).encode()).hexdigest()[:16]
