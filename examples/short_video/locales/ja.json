@@ -241,5 +241,6 @@
  "st_working": "制作中…",
  "nav_models": "モデル",
  "nav_voices": "ボイス",
- "field_cast": "キャスト（キャラクタースタジオ、任意）"
+ "field_cast": "キャスト（キャラクタースタジオ、任意）",
+ "wf_label": "ショート動画"
 }

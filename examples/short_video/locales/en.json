@@ -241,5 +241,6 @@
  "st_working": "In production…",
  "nav_models": "Models",
  "nav_voices": "Voices",
- "field_cast": "Cast (Character Studio, optional)"
+ "field_cast": "Cast (Character Studio, optional)",
+ "wf_label": "Short video"
 }

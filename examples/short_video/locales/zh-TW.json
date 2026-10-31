@@ -241,5 +241,6 @@
  "st_working": "製作中…",
  "nav_models": "模型",
  "nav_voices": "配音庫",
- "field_cast": "角色（角色工作室，可選）"
+ "field_cast": "角色（角色工作室，可選）",
+ "wf_label": "短影音"
 }
