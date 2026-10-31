@@ -7,7 +7,8 @@
 
 Run:  seatcrew-desktop   |   seatcrew app   |   python -m seatcrew.desktop [--no-window] [--smoke SECONDS]"""
 import argparse, json, os, socket, sys, threading, time, webbrowser
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from http.server import BaseHTTPRequestHandler
+from seatcrew.http import LocalHTTPServer as ThreadingHTTPServer
 from pathlib import Path
 from . import __version__, loader
 from .config import LANGUAGES, load_env
@@ -206,17 +207,22 @@ class App:
             if name in self.open: return self.open[name][2]
             if name not in {w["name"] for w in workflows(self.home)}: raise ValueError(f"unknown workflow {name}")
             first = not Path(f"config.{name}.yaml").exists()
-            wf = loader.build(name)
+            wf = loader.build(name, str(self.home / f"config.{name}.yaml"), str(self.home / "state" / name))
             if first:                            # apply wizard choices once; the dashboard owns them afterwards
                 patch = {"language": self.prefs.get("language", "en")}
                 p = self.prefs.get("default_provider")
                 if p: patch["seats"] = {s: {"provider": p} for s in wf.seat_map}
                 if self.prefs.get("ai_mode") == "demo" and "data" in wf.cfg.data:      # demo mode: offline demo prices
-                    try: wf.cfg.update({"data": {"price_source": "demo"}})
+                    try: wf.cfg.update({"data": {"price_source": "demo", "news": []}})
                     except Exception: pass
                 try: wf.cfg.update(patch)
                 except Exception: wf.cfg.update({"language": patch["language"]})
-            srv = serve(wf, "127.0.0.1", free_port())
+            from tradecrew.seats import Crew
+            if isinstance(wf, Crew):
+                from tradecrew.server import serve as serve_trading
+                srv = serve_trading(wf.cfg, wf, "127.0.0.1", free_port())
+            else:
+                srv = serve(wf, "127.0.0.1", free_port())
             threading.Thread(target=srv.serve_forever, daemon=True).start()
             Runner(wf).start()
             url = f"http://127.0.0.1:{srv.server_port}/?home={self.url}"

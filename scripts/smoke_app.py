@@ -5,11 +5,15 @@ import json, os, subprocess, sys, tempfile, time, urllib.request
 
 def req(url, body=None):
     r = urllib.request.Request(url, data=json.dumps(body).encode() if body is not None else None, headers={"Content-Type": "application/json"})
-    with urllib.request.urlopen(r, timeout=60) as f: return f.status, f.read()
+    try:
+        with urllib.request.urlopen(r, timeout=60) as f: return f.status, f.read()
+    except urllib.error.HTTPError as error:
+        from seatcrew.llm import _scrub
+        raise RuntimeError(f"{url}: HTTP {error.code}: {_scrub(error.read().decode('utf-8', 'replace'))}") from error
 
 def main():
     home = tempfile.mkdtemp(prefix="seatcrew-smoke-"); log = os.path.join(home, "app.log")
-    cmd = ([os.path.abspath(sys.argv[1])] + sys.argv[2:] if sys.argv[1:] else [sys.executable, "-m", "seatcrew.desktop"]) + ["--no-window", "--home", os.path.join(home, "data")]
+    cmd = ([os.path.abspath(sys.argv[1])] + sys.argv[2:] if sys.argv[1:] else [sys.executable, "-m", "seatcrew.desktop"]) + ["--no-window", "--smoke", "1200", "--home", os.path.join(home, "data")]
     uf = os.path.join(home, "url.txt"); env = dict(os.environ, SEATCREW_URL_FILE=uf)
     p = subprocess.Popen(cmd, stdout=open(log, "w", encoding="utf-8"), stderr=subprocess.STDOUT, cwd=home, env=env)
     try:
@@ -20,6 +24,8 @@ def main():
             if p.poll() is not None: break
         if not url: print(open(log, encoding="utf-8", errors="replace").read()); sys.exit("app did not start")
         assert req(url)[0] == 200
+        models = json.loads(req(url + "api/models")[1])
+        assert models["i18n"]["good_at"], "installer is missing translated model cards"
         assert json.loads(req(url + "api/setup", {"language": "en", "mode": "demo"})[1])["ok"]
         for wf in ("short_video", "content_review", "support_triage", "trading"):
             u = json.loads(req(url + "api/open", {"workflow": wf})[1])["url"].split("/?")[0]

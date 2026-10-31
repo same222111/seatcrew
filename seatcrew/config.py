@@ -1,13 +1,13 @@
 """Config = workflow defaults + <config>.yaml (user settings, edited from the Settings UI) + .env (API keys only).
 API keys are never written to the YAML file."""
-import copy, os, threading
+import copy, math, os, threading
 from pathlib import Path
 import yaml
 from .llm import PROVIDERS
 
 LANGUAGES = {"en": "English", "zh-CN": "简体中文", "zh-TW": "繁體中文", "ja": "日本語", "es": "Español"}
 LLM_LIMITS = {"timeout_sec": 20, "max_calls_per_hour": 60, "max_daily_usd": 0.5, "cost_per_call_usd": 0.002}
-_lock = threading.Lock()
+_lock = threading.RLock()
 
 def merge(base, over):
     """Deep merge `over` onto a copy of `base`."""
@@ -46,15 +46,32 @@ class Config:
         with _lock:
             tmp = self.path.with_suffix(".tmp"); tmp.write_text(yaml.safe_dump(self.data, sort_keys=False, allow_unicode=True), encoding="utf-8"); os.replace(tmp, self.path)
     def update(self, patch):
+        if not isinstance(patch, dict): raise ValueError("settings patch must be an object")
         bad = [k for k in (patch or {}) if k not in self.defaults]
         if bad: raise ValueError(f"unknown settings: {bad}")
-        new = merge(self.data, patch); self.validate(new); self.data = new; self.save(); return self.data
+        with _lock:
+            new = merge(self.data, patch); self.validate(new)
+            previous, self.data = self.data, new
+            try: self.save()
+            except Exception:
+                self.data = previous
+                raise
+            return self.data
     def validate(self, c):
+        for key in ("seats", "settings", "providers", "llm_limits", "display"):
+            if key in c and not isinstance(c[key], dict): raise ValueError(f"{key} must be an object")
         if c.get("language") not in LANGUAGES: raise ValueError(f"unknown language {c.get('language')}")
         for s, v in c["seats"].items():
             if s not in self.defaults["seats"]: raise ValueError(f"unknown seat {s}")
+            if not isinstance(v, dict): raise ValueError(f"seat {s} must be an object")
             if v["provider"] not in ["rules", *PROVIDERS]: raise ValueError(f"unknown provider {v['provider']} for seat {s}")
-        if float(c.get("run_interval_sec", 1)) <= 0: raise ValueError("run_interval_sec must be > 0")
+        for key, value in c.get("settings", {}).items():
+            if (type(self.defaults.get("settings", {}).get(key)) is bool or key.endswith("_auto_approve")) and type(value) is not bool:
+                raise ValueError(f"settings.{key} must be a boolean")
+        interval = c.get("run_interval_sec", 1)
+        if type(interval) not in (int, float) or not math.isfinite(interval) or not 0 < interval <= threading.TIMEOUT_MAX:
+            raise ValueError("run_interval_sec must be a finite positive number within the timer limit")
+        if "auto_run" in c and type(c["auto_run"]) is not bool: raise ValueError("auto_run must be a boolean")
         if "display" in c:
             from .profiles import validate_display; validate_display(c["display"])
         if self._validate: self._validate(c)

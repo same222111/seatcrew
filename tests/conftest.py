@@ -1,9 +1,33 @@
+import os
+from pathlib import Path
 import pytest
 from seatcrew import llm
 
 @pytest.fixture(autouse=True)
+def isolated_cli_accounts(monkeypatch):
+    """Only test-provided fake CLIs may run, never the developer's logged-in CLI."""
+    from seatcrew import cli_ai
+    for tool in cli_ai.TOOLS:
+        monkeypatch.delenv(f"SEATCREW_{tool.upper()}_BIN", raising=False)
+    for key in ("SEATCREW_CHAT_PROVIDER", "SEATCREW_DEMO"):
+        monkeypatch.delenv(key, raising=False)
+    def fake_only(tool):
+        path = os.getenv(f"SEATCREW_{tool.upper()}_BIN")
+        return path if path and Path(path).is_file() else None
+    monkeypatch.setattr(cli_ai, "which", fake_only)
+    cli_ai._cache.clear()
+    yield
+    cli_ai._cache.clear()
+
+@pytest.fixture(autouse=True)
 def no_keys(monkeypatch):
-    for k in ["OPENAI_API_KEY", "ANTHROPIC_API_KEY", "GEMINI_API_KEY", "XAI_API_KEY", "DEEPSEEK_API_KEY", "CUSTOM_API_KEY", "ELEVENLABS_API_KEY", "REPLICATE_API_TOKEN", "STABILITY_API_KEY"]: monkeypatch.delenv(k, raising=False)
+    from seatcrew.video import providers
+    keys = {p["key_env"] for p in llm.PROVIDERS.values() if p["key_env"]}
+    keys.update(key for entry in providers.CATALOG for key in entry["env"])
+    keys.add("STABILITY_API_KEY")
+    for key in keys: monkeypatch.delenv(key, raising=False)
+    def offline(*args, **kwargs): raise llm.LLMError("HTTP disabled in offline tests; provide a mock")
+    monkeypatch.setattr(llm, "_post", offline)
     llm.BUDGET.__init__()
 
 @pytest.fixture

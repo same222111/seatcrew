@@ -1,7 +1,8 @@
 """Generic dashboard server for ANY workflow: seat grid, per-item check-chain timeline, live log, settings,
 submit form and human approval. stdlib only; binds 127.0.0.1 (no auth - do not expose publicly)."""
 import json
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from http.server import BaseHTTPRequestHandler
+from seatcrew.http import LocalHTTPServer as ThreadingHTTPServer
 from pathlib import Path
 import os
 from . import __version__, i18n, profiles as PF, assistant as AS, loader
@@ -99,7 +100,10 @@ def make_handler(wf):
                     cfg.update(patch); wf.log("chief", "CONFIG", "settings saved: " + ", ".join(patch)); return self.send(dict(ok=True))
                 if p == "/api/test-connection": return self.send(test_connection(b["provider"], cfg.data, b.get("model") or None))
                 if p == "/api/submit": it = wf.submit(data=b.get("data") or {}); return self.send(dict(ok=True, id=it["id"]))
-                if p == "/api/decide": r = wf.decide(b["id"], b["approve"], b.get("note", "")); return self.send(dict(ok=True, result=r))
+                if p == "/api/decide":
+                    if type(b.get("pending")) is not int or b["pending"] < 0: raise ValueError("pending gate is required; refresh the item")
+                    r = wf.decide(b["id"], b["approve"], b.get("note", ""), expected_pending=b["pending"])
+                    return self.send(dict(ok=True, result=r))
                 if p.startswith("/api/profiles/"):
                     op = p.rsplit("/", 1)[1]; name = (b.get("name") or "").strip()
                     if op == "apply": w = PF.apply(wf, b["data"]); wf.log("chief", "CONFIG", "settings applied from editor"); return self.send(dict(ok=True, warnings=w))

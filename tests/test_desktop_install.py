@@ -117,3 +117,42 @@ def test_launcher_animation_pref_and_shared_css(app):
     assert json.loads(get(app.url + "api/home"))["animations"] is False
     base = post(app.url + "api/open", {"workflow": "content_review"})[1]["url"].split("?")[0]
     assert "prefers-reduced-motion" in get(base + "neon.css")
+
+
+def test_local_servers_do_not_need_reverse_dns(tmp_path, monkeypatch):
+    import socket
+    from seatcrew import loader, server
+    def dns_unavailable(*args): raise AssertionError('local startup must not wait for reverse DNS')
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(socket, 'getfqdn', dns_unavailable)
+    a = desktop.App(tmp_path / 'app')
+    a.launcher.server_close()
+    wf = loader.build('support_triage', str(tmp_path / 'cfg.yaml'), str(tmp_path / 'state'))
+    srv = server.serve(wf, port=0)
+    assert srv.server_port > 0 and srv.server_name == '127.0.0.1'
+    srv.server_close()
+
+
+def test_bundled_namespace_examples_are_loadable(tmp_path, monkeypatch):
+    from types import ModuleType
+    from seatcrew import loader
+    bundle = ModuleType("seatcrew_examples")
+    bundle.__file__ = None
+    bundle.__path__ = [str(tmp_path)]
+    monkeypatch.setitem(sys.modules, "seatcrew_examples", bundle)
+    sample = tmp_path / "sample"
+    sample.mkdir()
+    (sample / "workflow.yaml").write_text("name: sample", encoding="utf-8")
+    assert loader.examples_dir() == tmp_path
+    assert loader.list_examples() == ["sample"]
+    assert loader.find("sample") == sample / "workflow.yaml"
+
+
+def test_desktop_trading_opens_full_terminal(app):
+    post(app.url + "api/setup", {"mode": "demo", "language": "zh-CN"})
+    code, opened = post(app.url + "api/open", {"workflow": "trading"})
+    assert code == 200
+    base = opened["url"].split("?")[0]
+    assert 'id="lab"' in get(base)
+    assert json.loads(get(base + "api/config"))["config"]["data"]["news"] == []
+    assert json.loads(get(base + "api/config"))["config"]["data"]["price_source"] == "demo"
