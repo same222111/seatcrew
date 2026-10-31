@@ -157,5 +157,9 @@
  "help_check": "un control: deja pasar o BLOQUEA (reglas + IA opcional).",
  "help_human": "puerta humana: espera tu Aprobar / Rechazar.",
  "help_producer": "un productor: escribe algo (p. ej. un borrador) y los siguientes puestos lo revisan.",
- "p_simple": "Modo simple"
+ "p_simple": "Modo simple",
+ "pmk_login": "inicia sesión en Inicio",
+ "noai_tool": "Paso de herramienta: sin IA. Elige sus backends en Ajustes.",
+ "noai_human": "Aquí decides tú: sin IA.",
+ "default_model": "predeterminado"
 }

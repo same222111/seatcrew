@@ -10,8 +10,8 @@
  "run_now": "立即執行",
  "cycle": "輪次",
  "last": "上次",
- "check_ok": "CHECK OK",
- "check_blocked": "CHECK BLOCKED",
+ "check_ok": "通過",
+ "check_blocked": "攔截",
  "waiting": "等待中",
  "blocked_at": "攔截於",
  "waiting_at": "等待審批：",
@@ -157,5 +157,9 @@
  "help_check": "檢查席位:通過或攔截(規則 + 可選 AI)。",
  "help_human": "人工關卡:項目等待你核准 / 駁回。",
  "help_producer": "產出席位:先寫出內容,再交給後面的席位檢查。",
- "p_simple": "簡單模式"
+ "p_simple": "簡單模式",
+ "pmk_login": "請在首頁登入",
+ "noai_tool": "工具步驟，不用 AI。後端在「設定」裡選（配音 / 畫面 / 對嘴服務）。",
+ "noai_human": "這裡由你決定，不用 AI。",
+ "default_model": "預設"
 }
