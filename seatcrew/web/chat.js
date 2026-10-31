@@ -1,23 +1,23 @@
 /* CHIEF chat widget - floating button + panel (or full page when window.CHAT_FULL). Shared by every SeatCrew page.
    Proposals from the AI are shown with a preview and only run when the user presses Confirm. */
 (function(){
-const S={en:{btn:"CHIEF chat",title:"CHIEF chat",ph:"Ask anything… e.g. who decides?",send:"Send",clear:"Clear",full:"Open full page",close:"Close",confirm:"Confirm",cancel:"Cancel",
+const S={en:{you:"YOU",chief:"CHIEF",btn:"CHIEF chat",title:"CHIEF chat",ph:"Ask anything… e.g. who decides?",send:"Send",clear:"Clear",full:"Open full page",close:"Close",confirm:"Confirm",cancel:"Cancel",
   offline:"offline FAQ",demo:"demo mode",pending:"waiting for your confirmation",applied:"applied",cancelled:"cancelled",failed:"failed",
   guideT:"Connect an AI for full chat",guide:"Get a key from one provider (or install free Ollama), then paste it in the setup wizard or the AI Seats tab. Keys stay on this computer.",
   wizard:"Run setup wizard",q:["Who decides?","Explain the check chain","Create a workflow that reviews blog posts","Troubleshoot","Run a sample item"],cleared:"History cleared"},
- "zh-CN":{btn:"总指挥对话",title:"总指挥对话 CHIEF",ph:"随便问… 比如:谁来做决定?",send:"发送",clear:"清空",full:"全屏打开",close:"关闭",confirm:"确认",cancel:"取消",
+ "zh-CN":{you:"你",chief:"总指挥",btn:"总指挥对话",title:"总指挥对话 CHIEF",ph:"随便问… 比如:谁来做决定?",send:"发送",clear:"清空",full:"全屏打开",close:"关闭",confirm:"确认",cancel:"取消",
   offline:"离线问答",demo:"演示模式",pending:"等待你确认",applied:"已应用",cancelled:"已取消",failed:"失败",
   guideT:"连接一个 AI 即可完整对话",guide:"从任一服务商获取密钥(或安装免费的 Ollama),然后在设置向导或「AI 席位」页粘贴。密钥只保存在本机。",
   wizard:"运行设置向导",q:["谁来做决定?","解释一下检查链","创建一个工作流,用来审核博客文章","故障排查","运行一个示例"],cleared:"记录已清空"},
- "zh-TW":{btn:"總指揮對話",title:"總指揮對話 CHIEF",ph:"隨便問… 例如:誰來做決定?",send:"送出",clear:"清空",full:"全頁開啟",close:"關閉",confirm:"確認",cancel:"取消",
+ "zh-TW":{you:"你",chief:"總指揮",btn:"總指揮對話",title:"總指揮對話 CHIEF",ph:"隨便問… 例如:誰來做決定?",send:"送出",clear:"清空",full:"全頁開啟",close:"關閉",confirm:"確認",cancel:"取消",
   offline:"離線問答",demo:"展示模式",pending:"等待你確認",applied:"已套用",cancelled:"已取消",failed:"失敗",
   guideT:"連接一個 AI 即可完整對話",guide:"從任一服務商取得金鑰(或安裝免費的 Ollama),再到設定精靈或「AI 席位」頁貼上。金鑰只存在本機。",
   wizard:"執行設定精靈",q:["誰來做決定?","解釋檢查鏈","建立一個流程,用來審核部落格文章","故障排除","執行一個範例"],cleared:"紀錄已清空"},
- ja:{btn:"CHIEF チャット",title:"CHIEF チャット",ph:"何でも質問… 例: 誰が決めるの?",send:"送信",clear:"消去",full:"全画面で開く",close:"閉じる",confirm:"確認",cancel:"キャンセル",
+ ja:{you:"あなた",chief:"CHIEF",btn:"CHIEF チャット",title:"CHIEF チャット",ph:"何でも質問… 例: 誰が決めるの?",send:"送信",clear:"消去",full:"全画面で開く",close:"閉じる",confirm:"確認",cancel:"キャンセル",
   offline:"オフライン FAQ",demo:"デモモード",pending:"確認待ち",applied:"適用済み",cancelled:"キャンセル済み",failed:"失敗",
   guideT:"AI を接続すると会話できます",guide:"いずれかのプロバイダーでキーを取得(または無料の Ollama をインストール)し、セットアップか AI シート画面に貼り付けます。キーはこの PC にのみ保存。",
   wizard:"セットアップを開く",q:["誰が決めるの?","チェックチェーンを説明して","ブログ記事をレビューするワークフローを作って","トラブルシュート","サンプルを実行"],cleared:"履歴を消去しました"},
- es:{btn:"Chat CHIEF",title:"Chat CHIEF",ph:"Pregunta lo que sea… p. ej. ¿quién decide?",send:"Enviar",clear:"Borrar",full:"Abrir a pantalla completa",close:"Cerrar",confirm:"Confirmar",cancel:"Cancelar",
+ es:{you:"TÚ",chief:"CHIEF",btn:"Chat CHIEF",title:"Chat CHIEF",ph:"Pregunta lo que sea… p. ej. ¿quién decide?",send:"Enviar",clear:"Borrar",full:"Abrir a pantalla completa",close:"Cerrar",confirm:"Confirmar",cancel:"Cancelar",
   offline:"FAQ sin conexión",demo:"modo demo",pending:"esperando tu confirmación",applied:"aplicado",cancelled:"cancelado",failed:"falló",
   guideT:"Conecta una IA para chatear",guide:"Consigue una clave de un proveedor (o instala Ollama gratis) y pégala en el asistente inicial o en la pestaña de puestos IA. Las claves se quedan en este equipo.",
   wizard:"Abrir asistente inicial",q:["¿Quién decide?","Explica la cadena de controles","Crea un flujo que revise artículos de blog","Diagnosticar","Ejecutar un ejemplo"],cleared:"Historial borrado"}};
@@ -49,7 +49,7 @@ body[data-theme=light] #ccP{background:#fff;color:#111}body[data-theme=light] #c
 body[data-theme=light] #ccBtn,body[data-theme=contrast] #ccBtn{box-shadow:none}`;
 function el(h){const d=document.createElement("div");d.innerHTML=h;return d.firstElementChild}
 async function api(p,b){const r=await fetch(p,b?{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(b)}:{});return r.json()}
-function msg(m){if(m.typing)return `<div class="cm chief typing"><i></i><i></i><i></i></div>`;const who=m.role=="user"?"YOU":"CHIEF";let x=`<div class="who">${who}</div>${esc(m.text)}`;
+function msg(m){if(m.typing)return `<div class="cm chief typing"><i></i><i></i><i></i></div>`;const who=m.role=="user"?t("you"):t("chief");let x=`<div class="who">${who}</div>${esc(m.text)}`;
  if(m.kind=="proposal"){const p=m.proposal||{};x+=`<div><b>▶ ${esc(p.title||p.tool)}</b></div><pre>${esc(p.preview)}</pre>`;
   x+=m.status=="pending"?`<div class="acts"><button data-ok="${m.id}">✓ ${t("confirm")}</button><button class="no" data-no="${m.id}">✕ ${t("cancel")}</button></div><div class="stt">${t("pending")}</div>`:`<div class="stt ${m.status}">● ${t(m.status)||m.status}</div>`}
  return `<div class="cm ${m.role} ${m.kind=="warn"?"warn":""} ${m.kind=="tool"?"tool":""} ${m.kind=="proposal"?"prop":""}" data-mid="${m.id}">${x}</div>`}
@@ -76,6 +76,7 @@ function mount(){const st=document.createElement("style");st.textContent=css;doc
  const ta=p.querySelector("textarea");ta.onkeydown=e=>{if(e.key=="Enter"&&!e.shiftKey){e.preventDefault();send(ta.value)}if(e.key=="Escape"){e.stopPropagation();if(!FULL)toggle(false)}};p.querySelector("#ccF button").onclick=()=>send(ta.value);
  refresh()}
 function toggle(v){open=v===undefined?!open:v;document.getElementById("ccP").classList.toggle("open",open);document.body.classList.toggle("cc-open",open&&!FULL);if(open){refresh();setTimeout(()=>document.querySelector("#ccF textarea").focus(),50)}}
+window.addEventListener("seatcrew:lang",e=>{L=e.detail||L;if(ST){ST.lang=L;render()}refresh()});   // re-render in the new language at once
 window.ChiefChat={open:()=>toggle(true),close:()=>toggle(false),ask:q=>{toggle(true);setTimeout(()=>send(q),200)},refresh};
 if(document.readyState=="loading")document.addEventListener("DOMContentLoaded",mount);else mount();
 })();
