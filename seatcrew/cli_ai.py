@@ -36,7 +36,7 @@ def which(tool):
     return None
 
 def _run(args, timeout=20, stdin=None, cwd=None):
-    return subprocess.run(args, capture_output=True, text=True, timeout=timeout, input=stdin, cwd=cwd,
+    return subprocess.run(args, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=timeout, input=stdin, cwd=cwd,
                           creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
 
 def status(tool, fresh=False):
@@ -64,7 +64,7 @@ def login(tool, device=False):
     if not p: raise CLIError(f"{TOOLS[tool]['label']} is not installed - run: {TOOLS[tool]['install']}")
     args = TOOLS[tool]["device"] if device and TOOLS[tool]["device"] else TOOLS[tool]["login"]
     jid = uuid.uuid4().hex[:10]; job = dict(id=jid, tool=tool, lines=[], url=None, code=None, done=False, ok=None, started=time.time())
-    proc = subprocess.Popen([p, *args], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, stdin=subprocess.PIPE, text=True, bufsize=1,
+    proc = subprocess.Popen([p, *args], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, stdin=subprocess.PIPE, text=True, encoding="utf-8", errors="replace", bufsize=1,
                             creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
     def pump():
         for line in proc.stdout:

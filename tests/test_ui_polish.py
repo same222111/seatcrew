@@ -105,10 +105,9 @@ def test_malformed_profile_is_a_clean_error(data):
     with pytest.raises(ValueError): PF.clean(C, data)
 
 def test_every_python_package_ships_in_the_wheel():
-    import tomllib
-    from pathlib import Path
-    root = HERE.parent; cfg = tomllib.loads((root / "pyproject.toml").read_text(encoding="utf-8"))["tool"]["setuptools"]
-    pkgs = set(cfg["packages"])
+    import re
+    root = HERE.parent; txt = (root / "pyproject.toml").read_text(encoding="utf-8")
+    pkgs = set(re.findall(r'"([\w.]+)"', re.search(r"^packages = \[(.*)\]", txt, re.M).group(1)))
     for init in (root / "seatcrew").rglob("__init__.py"):
         assert ".".join(init.parent.relative_to(root).parts) in pkgs, f"{init.parent} missing from pyproject packages"
 

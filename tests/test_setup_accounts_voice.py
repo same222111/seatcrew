@@ -29,6 +29,7 @@ sys.exit(2)
 
 @pytest.fixture
 def fake(tmp_path, monkeypatch):
+    if sys.platform == "win32": pytest.skip("the fake CLI is a POSIX script (#!/usr/bin/env python3)")
     p = tmp_path / "fakecli"; p.write_text(FAKE); p.chmod(p.stat().st_mode | stat.S_IEXEC)
     st = tmp_path / "logged"; monkeypatch.setenv("FAKE_STATE", str(st))
     for t in ("codex", "claude"): monkeypatch.setenv(f"SEATCREW_{t.upper()}_BIN", str(p))

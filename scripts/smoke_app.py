@@ -9,9 +9,9 @@ def req(url, body=None):
 
 def main():
     home = tempfile.mkdtemp(prefix="seatcrew-smoke-"); log = os.path.join(home, "app.log")
-    cmd = (sys.argv[1:] or [sys.executable, "-m", "seatcrew.desktop"]) + ["--no-window", "--home", os.path.join(home, "data")]
+    cmd = ([os.path.abspath(sys.argv[1])] + sys.argv[2:] if sys.argv[1:] else [sys.executable, "-m", "seatcrew.desktop"]) + ["--no-window", "--home", os.path.join(home, "data")]
     uf = os.path.join(home, "url.txt"); env = dict(os.environ, SEATCREW_URL_FILE=uf)
-    p = subprocess.Popen(cmd, stdout=open(log, "w"), stderr=subprocess.STDOUT, cwd=home, env=env)
+    p = subprocess.Popen(cmd, stdout=open(log, "w", encoding="utf-8"), stderr=subprocess.STDOUT, cwd=home, env=env)
     try:
         url = None
         for _ in range(240):
