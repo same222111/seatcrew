@@ -182,10 +182,11 @@ async function load(){META=await get('/api/config');DEF=META.definition;document
  $('form').innerHTML=DEF.submit.map(f=>`<div class="row" style="display:block"><label>${esc(LOC['field_'+f.name]||f.label||f.name)}</label>${f.type=='textarea'?`<textarea data-f="${f.name}"></textarea>`:f.type=='select'?`<select data-f="${f.name}" style="width:100%">${(f.options||[]).map(o=>`<option value="${esc(o)}" ${o==((META.settings||{})[f.name]??f.default)?'selected':''}>${esc(LOC['opt_'+o]||o)}</option>`).join('')}</select>`:`<input data-f="${f.name}" style="width:100%">`}</div>`).join('');
  if(DEF.studio&&!window.STUDIO_LOADED){window.STUDIO_LOADED=1;const sc=document.createElement('script');sc.src='/studio.js';document.body.appendChild(sc)}
  await setLang(META.language||'en',false)}
+const PMK=p=>p=='rules'||!META.keys?'':META.keys[p]?' ✓':(META.providers[p]||{}).kind=='cli'?' ✕ log in on Home':' ✕';
 function renderCfg(){if(!META)return;const P=['rules',...Object.keys(META.providers)];
  $('form').querySelectorAll('[data-f]').forEach(e=>{const f=DEF.submit.find(x=>x.name==e.dataset.f);e.previousElementSibling.textContent=LOC['field_'+f.name]||f.label||f.name;if(e.tagName=='SELECT')[...e.options].forEach(op=>op.textContent=LOC['opt_'+op.value]||op.value)});
  $('seatcfg').innerHTML=DEF.seats.map(s=>{const v=META.seats[s.name];return `<div class="agent"><span class="n">${s.name.toUpperCase()}</span> <span class="dim">— ${esc(job(s))}${s.labels.length?' · AI: '+s.labels.join('|')+(s.block_labels.length?' (blocks on '+s.block_labels.join('|')+')':''):''}</span>
-  <div class="row"><label>${T('provider')}</label><select data-sp="${s.name}">${P.map(p=>`<option ${p==v.provider?'selected':''}>${p}</option>`).join('')}</select>
+  <div class="row"><label>${T('provider')}</label><select data-sp="${s.name}">${P.map(p=>`<option value="${p}" ${p==v.provider?'selected':''}>${p}${PMK(p)}</option>`).join('')}</select>
   <label class="adv">${T('model')}</label><input class="adv" data-sm="${s.name}" value="${esc(v.model)}" placeholder="default"><button class="b sm" data-st="${s.name}">${T('test')}</button><span id="tr-${s.name}" class="dim"></span></div>
   <textarea class="adv" data-spr="${s.name}">${esc(v.prompt)}</textarea></div>`}).join('');
  document.querySelectorAll('[data-st]').forEach(b=>b.onclick=async()=>{const n=b.dataset.st,p=document.querySelector(`[data-sp=${n}]`).value;if(p=='rules')return;$('tr-'+n).textContent='…';
@@ -303,7 +304,7 @@ const lab=k=>LOC['p_'+k]||LOC['set_'+k]||k.replace(/_/g,' ');
 function fld(p,v){const k=p.split('.').pop(),a=`data-pp="${esc(p)}"`;
  if(p=='language')return `<select ${a} data-ty=s>${Object.entries(META.languages).map(([c,n])=>`<option value="${c}" ${c==v?'selected':''}>${n}</option>`).join('')}</select>`;
  if(p=='display.theme'||p=='display.density')return `<select ${a} data-ty=s>${(p.endsWith('theme')?PROF.themes:PROF.densities).map(x=>`<option ${x==v?'selected':''} value="${x}">${esc(LOC['opt_'+x]||x)}</option>`).join('')}</select>`;
- if(k=='provider'&&p.startsWith('seats.'))return `<select ${a} data-ty=s>${['rules',...Object.keys(META.providers)].map(x=>`<option ${x==v?'selected':''}>${x}</option>`).join('')}</select>`;
+ if(k=='provider'&&p.startsWith('seats.'))return `<select ${a} data-ty=s>${['rules',...Object.keys(META.providers)].map(x=>`<option value="${x}" ${x==v?'selected':''}>${x}${PMK(x)}</option>`).join('')}</select>`;
  if(typeof v=='boolean')return `<input type=checkbox ${a} data-ty=b ${v?'checked':''}>`;
  if(typeof v=='number')return `<input type=number step=any ${a} data-ty=n value="${v}" ${p=='display.font_size'?'min=10 max=22':''}>`;
  if(v===null)return `<input ${a} data-ty=z value="">`;

@@ -6,6 +6,8 @@ Quality tiers
   openai       final  - gpt-4o-mini-tts / tts-1-hd voice; word times from whisper-1 word timestamps (exact), else estimated
   edge         final  - free Microsoft neural voices via the `edge-tts` package (pip install edge-tts); WordBoundary times
   draft        DRAFT  - offline: ffmpeg flite robot voice (or silence) + estimated timings. Labeled draft everywhere.
+  cosyvoice    local, free (Apache-2.0) - built-in speakers or a CONSENTED clone (voice="clone:<id>"); see localvoice.py
+  gpt_sovits   local, free (MIT) - talks to your own GPT-SoVITS api_v2 server; consented clone only
   mock         tests only
 Keys come from the environment only (OPENAI_API_KEY, ELEVENLABS_API_KEY) and are never written anywhere."""
 import base64, json, os, re, urllib.request, uuid
@@ -17,7 +19,7 @@ OPENAI_VOICE, OPENAI_MODEL = "alloy", "gpt-4o-mini-tts"
 OPENAI_VOICES = ("alloy", "ash", "ballad", "coral", "echo", "fable", "nova", "onyx", "sage", "shimmer", "verse")
 ELEVEN_VOICE, ELEVEN_MODEL = "21m00Tcm4TlvDq8ikWAM", "eleven_multilingual_v2"
 CJK = re.compile(r"[\u3040-\u30ff\u3400-\u9fff\uf900-\ufaff]")
-FINAL = ("elevenlabs", "minimax", "doubao", "azure", "openai", "edge")
+FINAL = ("elevenlabs", "minimax", "doubao", "azure", "openai", "edge", "cosyvoice", "gpt_sovits")
 
 class TTSError(RuntimeError): pass
 
@@ -162,8 +164,16 @@ def mock(text, out, voice=None, lang="en", model=None):
     ff.run(["-f", "lavfi", "-i", f"sine=frequency=440:sample_rate=48000:duration={dur:.2f}", "-af", "volume=0.25", "-ac", "1", out])
     return out, [dict(w=w, start=round(0.1 + i * per, 3), end=round(0.1 + i * per + per * 0.9, 3)) for i, w in enumerate(ws)], dict(backend="mock", voice="sine", sync="exact")
 
+def _local(engine):
+    def run(text, out, voice=None, lang="en", model=None):
+        from . import localvoice as LV
+        try: path = getattr(LV, engine)(text, out, voice=voice, lang=lang)
+        except LV.VoiceEngineError as e: raise TTSError(str(e)) from None
+        return path, estimate(text, ff.duration(path)), dict(backend=engine, voice=voice or "default", sync="estimated", local=True)
+    return run
+
 from . import tts_cloud as TC
-BACKENDS = dict(elevenlabs=elevenlabs, minimax=TC.minimax, doubao=TC.doubao, azure=TC.azure, openai=openai, edge=edge, draft=draft, mock=mock)
+BACKENDS = dict(cosyvoice=_local("cosyvoice"), gpt_sovits=_local("gpt_sovits"), elevenlabs=elevenlabs, minimax=TC.minimax, doubao=TC.doubao, azure=TC.azure, openai=openai, edge=edge, draft=draft, mock=mock)
 
 def auto_order(pref="auto"):
     if pref and pref != "auto": return [pref]
@@ -187,7 +197,7 @@ def synth(text, out, pref="auto", voice=None, lang="en", allow_draft=True, model
     for b in auto_order(pref):
         if b not in BACKENDS: raise TTSError(f"unknown TTS backend {b}")
         try:
-            ext = ".wav" if b in ("openai", "draft", "mock") else ".mp3"
+            ext = ".wav" if b in ("openai", "draft", "mock", "cosyvoice", "gpt_sovits") else ".mp3"
             kw, v = {}, voice                       # each backend gets its own voice id + emotion controls
             if b == "edge": kw = {k: x for k, x in dict(rate=rate, pitch=pitch, volume=volume).items() if x}
             elif b == "openai": v = openai_voice or (voice if voice in OPENAI_VOICES else None); kw = dict(instructions=instructions) if instructions else {}

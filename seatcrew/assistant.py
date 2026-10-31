@@ -168,7 +168,7 @@ class Assistant:
         cands = [chosen] + [s.get("provider") for s in self.cfg()["seats"].values()]
         for p in cands:
             if p in llm.PROVIDERS and (p in ("ollama", "custom") or keys.get(p)): return p
-        return next((p for p in llm.PROVIDERS if p not in ("ollama", "custom") and keys.get(p)), None)
+        return next((p for p in llm.PROVIDERS if p not in ("ollama", "custom") and keys.get(p)), None)  # cli = installed+signed in
 
     def status(self):
         p = self.provider()

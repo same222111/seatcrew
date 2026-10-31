@@ -11,7 +11,9 @@
 ## Get started in 3 minutes
 
 1. **Install** (any option below) and open SeatCrew. A 3-step wizard appears.
-2. **Pick your language, then connect one AI**: paste a key for any of 7 providers and press **Test connection**, or choose free local **Ollama**, or pick **Demo mode** (no AI, nothing to set up).
+2. **SeatCrew checks this PC** (OS, NVIDIA GPU/VRAM, RAM, disk, installed `codex` / `claude` / `ollama`, keys already in the environment) and offers **Use recommended setup** - one click, works immediately with zero keys.
+   - **Log in with ChatGPT / Codex** or **Log in with Claude**: use your own subscription through the vendors' official CLIs (`codex login`, `claude auth login`). Seats and CHIEF then call `codex exec` / `claude -p`. SeatCrew only shows the sign-in link / one-time code; it never reads or stores your tokens. Not installed? The wizard shows the install command (`npm install -g @openai/codex`, `npm install -g @anthropic-ai/claude-code`).
+   - Or paste a key for any of 7 providers, or use free local **Ollama**, or **Demo mode**.
 3. **Pick a starter workflow** (support triage, content review, paper trading). It opens right away.
 
 You never need your own model to start. Every seat works with plain rules, and AI is optional and seat-by-seat. **Simple mode** (on by default) hides advanced parameters. Every seat and check has a **?** tooltip, and each dashboard shows a **Who decides?** card: CHIEF assigns the work, the seats judge, the checks gate, and a human approves.
@@ -110,6 +112,13 @@ tradecrew start                        # the full trading terminal (http://127.0
 ```
 Each workflow keeps its settings in `config.<name>.yaml` and its state in `state/<name>/`. Use `--lang zh-CN` (or ja, es, zh-TW) for translated CLI output.
 
+## Free voices and voice cloning (consent required)
+- **edge-tts** (free Microsoft neural voices) is the default - nothing to install.
+- Optional local engines, one click from the wizard, installed into **your data folder** (`<data>/voice_engines`, so choosing `D:\SeatCrewData` keeps the models off C:):
+  **CosyVoice** (Apache-2.0, built-in speakers + zero-shot cloning) and **GPT-SoVITS** (MIT, via its own `api_v2.py` server). An NVIDIA GPU with 6 GB+ is recommended; without one they run on CPU and are slow (the wizard warns you).
+- **F5-TTS** and **Fish Speech** weights are **non-commercial** (CC-BY-NC / CC-BY-NC-SA). They are labelled as such and never installed by default.
+- **Never clone a voice without the speaker's permission.** Only clone your own voice or a recording whose speaker explicitly agreed. SeatCrew requires a consent checkbox per cloned voice and stores the consent statement and date next to it. Do not use cloned voices to impersonate or deceive anyone.
+
 ## Make it yours with your own AI
 This repo is a **template**. Hand it to Codex, Claude, ChatGPT or Cursor together with a prompt from [CUSTOMIZE.md](CUSTOMIZE.md). [AGENTS.md](AGENTS.md) gives your AI the architecture map, the extension points and the rules it must keep. [ARCHITECTURE.md](ARCHITECTURE.md) explains how the engine works.
 
@@ -161,7 +170,11 @@ MIT licensed. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ### 3 分钟上手
 1. 安装并打开 SeatCrew，首次启动出现 3 步向导。
-2. 选语言，再接入一个 AI：在 7 家服务商里任选一家粘贴密钥，点「测试连接」；或选择免费本地 **Ollama**；或选 **演示模式**（无需 AI，零配置）。
+2. SeatCrew 自动检测本机（系统、NVIDIA 显卡/显存、内存、磁盘、已安装的 `codex` / `claude` / `ollama`、已有密钥），给出推荐方案，点 **一键使用推荐设置** 即可，零密钥也能马上用。
+   - **用 ChatGPT / Codex 登录** 或 **用 Claude 登录**：通过官方 CLI（`codex login`、`claude auth login`）使用你自己的订阅，席位和 CHIEF 调用 `codex exec` / `claude -p`。SeatCrew 只显示登录链接/验证码，绝不读取或保存你的令牌。
+   - 也可以粘贴 7 家服务商之一的密钥，或用免费本地 **Ollama**，或 **演示模式**。
+
+**免费配音**：默认 edge-tts（免费）。可在向导里一键安装本地引擎 **CosyVoice**（Apache-2.0）或 **GPT-SoVITS**（MIT），装到你选的数据目录（例如 D 盘）。没有 NVIDIA 显卡会用 CPU，速度慢。F5-TTS、Fish Speech 权重仅限非商业，默认不安装。**未经本人许可禁止克隆任何人的声音**：只能克隆你自己或已明确同意者的录音，每个克隆声音都必须勾选同意并记录日期，不得用于冒充或欺骗。
 3. 选择一个入门工作流（客服分流 / 内容审核 / 模拟交易），立即打开。
 
 不需要自备模型：每个席位都能只用规则运行，AI 可按席位选择开启。「简洁模式」默认开启，隐藏高级参数；每个席位和检查都有 **?** 提示；每个面板都有「谁来决定?」卡片：CHIEF 分派 → 席位判断 → 检查把关 → 人工批准。

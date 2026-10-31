@@ -188,3 +188,18 @@ Available after a run, or on any video: `python -m seatcrew video check final.mp
 
 ### What was tested
 Image, 3D and lip-sync adapters were tested with **mocked HTTP only** (`tests/test_characters.py`); none has been run against the real services. Store, cast rules, export/import, continuity checks on synthetic clips, the dialogue template, the cast workflow, server routes, CHIEF intents and the CLI were tested offline with ffmpeg.
+
+## Local voice engines (v0.9.1)
+| backend | licence | how | notes |
+|---|---|---|---|
+| `edge` | free service | default, nothing to install | Microsoft neural voices |
+| `cosyvoice` | Apache-2.0 | wizard → Free voices → Install (into `<data>/voice_engines/cosyvoice`) | `voice="英文男"` etc. (built-in speakers of CosyVoice-300M-SFT) or `voice="clone:<id>"` (CosyVoice2-0.5B zero-shot) |
+| `gpt_sovits` | MIT | clone + its own installer, then `python api_v2.py -a 127.0.0.1 -p 9880` | `voice="clone:<id>"`; `SEATCREW_GPTSOVITS_URL` to change the address |
+| F5-TTS, Fish Speech | **non-commercial weights** | not installed | listed for information only |
+
+Clone voices are created with a recording + its exact transcript + a **required consent checkbox**
+(`POST /api/voice-clone`, stored under `<data>/voice_engines/clones/` with the consent statement and date).
+A clone without recorded consent is refused at synthesis time. Never clone anyone's voice without permission.
+
+Measured on the CI-less dev box (8 CPU cores, no GPU): CosyVoice-300M-SFT took ~200 s to load + speak a 4.3 s English line;
+use a NVIDIA GPU for real work. The engine runs in its own venv as a subprocess, so SeatCrew itself does not depend on torch.

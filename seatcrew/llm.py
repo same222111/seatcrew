@@ -15,6 +15,9 @@ PROVIDERS = {  # kind, default base_url, default model, env var for key. Add an 
     "deepseek":  dict(kind="openai",    base_url="https://api.deepseek.com/v1", model="deepseek-chat", key_env="DEEPSEEK_API_KEY"),
     "custom":    dict(kind="openai",    base_url="http://localhost:1234/v1", model="local-model", key_env="CUSTOM_API_KEY"),
     "ollama":    dict(kind="ollama",    base_url="http://localhost:11434", model="llama3.2", key_env=""),
+    # Your own ChatGPT / Claude subscription via the vendors' official CLIs (no API key; SeatCrew never sees a token).
+    "codex_cli":  dict(kind="cli", base_url="", model="", key_env="", tool="codex", label="ChatGPT (Codex CLI login)"),
+    "claude_cli": dict(kind="cli", base_url="", model="", key_env="", tool="claude", label="Claude (Claude Code login)"),
 }
 
 class LLMError(Exception): pass
@@ -62,6 +65,10 @@ def chat(name, system, user, cfg, model=None, max_tokens=200, timeout=None):
                       dict(systemInstruction={"parts": [{"text": system}]}, contents=[{"role": "user", "parts": [{"text": user}]}],
                            generationConfig={"temperature": 0, "maxOutputTokens": max_tokens}), timeout)
             return r["candidates"][0]["content"]["parts"][0]["text"], model
+        if p["kind"] == "cli":
+            from . import cli_ai
+            try: return cli_ai.ask(p["tool"], system, user, model=model or None, timeout=max(timeout, 90)), model or p["tool"]
+            except cli_ai.CLIError as e: raise LLMError(str(e)) from None
         if p["kind"] == "ollama":
             r = _post(f"{base}/api/chat", {}, dict(model=model, stream=False, messages=msgs, options={"temperature": 0}), timeout)
             return r["message"]["content"], model
@@ -123,4 +130,9 @@ def write(role, user, cfg, max_tokens=600):
 
 def key_status():
     """Which provider keys are present (booleans only - keys are never returned)."""
-    return {n: (True if not p["key_env"] else bool(os.getenv(p["key_env"]))) for n, p in PROVIDERS.items()}
+    out = {n: (True if not p["key_env"] else bool(os.getenv(p["key_env"]))) for n, p in PROVIDERS.items()}
+    from . import cli_ai
+    for n, p in PROVIDERS.items():
+        if p["kind"] == "cli":
+            st = cli_ai.status(p["tool"]); out[n] = bool(st["installed"] and st["logged_in"])
+    return out
