@@ -170,7 +170,7 @@
  "cs_need_sample": "Elige primero una grabación",
  "cs_stills_ok": "Vistas guardadas",
  "cs_cast_title": "Constructor de elenco",
- "cs_cast_hint": "Arrastra hasta 5 personajes a los huecos, dales un rol y notas, y rueda una escena de diálogo.",
+ "cs_cast_hint": "Haz clic para añadir un personaje o arrastra hasta 5 a las posiciones. Define sus papeles y notas y rueda una escena de diálogo.",
  "cs_load": "Cargar elenco",
  "cs_export": "Exportar",
  "cs_import": "Importar",

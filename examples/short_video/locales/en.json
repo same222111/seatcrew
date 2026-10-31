@@ -170,7 +170,7 @@
  "cs_need_sample": "Pick a recording first",
  "cs_stills_ok": "Stills saved",
  "cs_cast_title": "Cast builder",
- "cs_cast_hint": "Drag up to 5 characters into the slots, give each a role and notes, then shoot a dialogue scene with them.",
+ "cs_cast_hint": "Click a character to add them, or drag up to 5 characters into slots. Set roles and notes, then shoot a dialogue scene.",
  "cs_load": "Load cast",
  "cs_export": "Export",
  "cs_import": "Import",

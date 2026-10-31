@@ -121,3 +121,13 @@ def test_character_without_choice_gets_voice_by_gender_age(tmp_path):
     st.create("老张", "x", "male", "adult", ""); st.create("小美", "x", "female", "young", "")
     a, b = st.bind_voice("老张")[1], st.bind_voice("小美")[1]
     assert a["gender"] == "male" and b["gender"] == "female" and a["voice"] != b["voice"]
+
+
+def test_setup_renderer_in_every_language():
+    """The asynchronous detection renderer must not resolve #lang as a JS function."""
+    import subprocess
+    node = os.environ.get('SEATCREW_TEST_NODE') or shutil.which('node')
+    if not node:
+        if os.environ.get('CI'): pytest.fail('Node is required for the setup renderer regression test')
+        pytest.skip('Node is needed for the setup renderer regression test')
+    subprocess.run([node, str(HERE / 'ui' / 'setup.cjs'), str(HERE.parent / 'seatcrew' / 'web' / 'setup.js')], check=True)

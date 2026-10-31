@@ -7,7 +7,8 @@
 
 Run:  seatcrew-desktop   |   seatcrew app   |   python -m seatcrew.desktop [--no-window] [--smoke SECONDS]"""
 import argparse, json, os, socket, sys, threading, time, webbrowser
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from http.server import BaseHTTPRequestHandler
+from seatcrew.http import LocalHTTPServer as ThreadingHTTPServer
 from pathlib import Path
 from . import __version__, loader
 from .config import LANGUAGES, load_env
@@ -216,7 +217,12 @@ class App:
                     except Exception: pass
                 try: wf.cfg.update(patch)
                 except Exception: wf.cfg.update({"language": patch["language"]})
-            srv = serve(wf, "127.0.0.1", free_port())
+            from tradecrew.seats import Crew
+            if isinstance(wf, Crew):
+                from tradecrew.server import serve as serve_trading
+                srv = serve_trading(wf.cfg, wf, "127.0.0.1", free_port())
+            else:
+                srv = serve(wf, "127.0.0.1", free_port())
             threading.Thread(target=srv.serve_forever, daemon=True).start()
             Runner(wf).start()
             url = f"http://127.0.0.1:{srv.server_port}/?home={self.url}"

@@ -14,6 +14,7 @@ for ex in ("trading", "content_review", "support_triage", "short_video"):  # wor
         if f.is_file() and "tests" not in f.parts and "__pycache__" not in f.parts and f.suffix in (".py", ".yaml", ".json", ".md"):
             datas.append((str(f), str(Path("seatcrew_examples") / f.relative_to(ROOT / "examples").parent)))
 datas += collect_data_files("webview")
+datas += collect_data_files("seatcrew.video", includes=["*.json"])
 
 hidden = collect_submodules("seatcrew") + collect_submodules("tradecrew") + ["seatcrew_examples", "yaml"]
 if sys.platform.startswith("linux"): hidden += ["webview.platforms.qt", "qtpy", "PyQt6.QtWebEngineWidgets", "PyQt6.QtWebEngineCore", "PyQt6.QtWebChannel"]
@@ -28,4 +29,4 @@ exe = EXE(pyz, a.scripts, [], exclude_binaries=True, name="SeatCrew", console=Fa
 coll = COLLECT(exe, a.binaries, a.datas, name="SeatCrew")
 if sys.platform == "darwin":
     app = BUNDLE(coll, name="SeatCrew.app", icon=str(ROOT / "packaging" / "icon.icns"), bundle_identifier="io.github.seatcrew",
-                 info_plist={"CFBundleShortVersionString": "0.9.0", "NSHighResolutionCapable": True})
+                 info_plist={"CFBundleShortVersionString": "0.9.1", "NSHighResolutionCapable": True})

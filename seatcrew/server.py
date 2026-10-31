@@ -1,7 +1,8 @@
 """Generic dashboard server for ANY workflow: seat grid, per-item check-chain timeline, live log, settings,
 submit form and human approval. stdlib only; binds 127.0.0.1 (no auth - do not expose publicly)."""
 import json
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from http.server import BaseHTTPRequestHandler
+from seatcrew.http import LocalHTTPServer as ThreadingHTTPServer
 from pathlib import Path
 import os
 from . import __version__, i18n, profiles as PF, assistant as AS, loader

@@ -8,6 +8,12 @@
 
 *v0.6 "Night Shift" UI: seat cards with status badges, an animated check chain, live log. Animations follow `prefers-reduced-motion` and can be switched off (Settings → display → animations, or the **motion** button). [Watch the MP4](docs/demo.mp4).*
 
+## New in 0.9.1
+
+Reliability fixes for setup, human approval, pending-item retention, settings saves, video consistency checks and desktop packaging. [QA scope and limitations](docs/qa-v0.9.1.md).
+
+Video rendering requires **FFmpeg and ffprobe on PATH**; desktop installs include the free Edge TTS package.
+
 ## New in 0.9.0
 - **Character Studio + casts**: consistent characters, voices and dialogue scenes, which also work without keys as labeled DRAFTs.
 - **Zero-key sample**: one click makes a real short video with a free voice.

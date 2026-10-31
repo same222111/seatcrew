@@ -9,7 +9,7 @@ from pathlib import Path
 
 def examples_dir():
     try:
-        import seatcrew_examples; return Path(seatcrew_examples.__file__).parent
+        import seatcrew_examples; return Path(next(iter(seatcrew_examples.__path__)))
     except ImportError: return Path(__file__).resolve().parent.parent / "examples"
 
 def find(name):

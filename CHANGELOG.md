@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.9.1 — Reliability and desktop verification
+
+- Restore the first-run hardware/account/voice panels in all five languages.
+- Reject malformed approvals, prevent duplicate concurrent actions, and retain all pending approvals.
+- Validate configuration types and timer values; recover cleanly from failed saves.
+- Fix false character-consistency warnings caused by video/image colour conversion; reuse shot decoding.
+- Include model-card translations and free Edge TTS in desktop builds; resolve bundled workflows correctly.
+- Start local servers without slow reverse DNS lookups; open the full trading terminal from the launcher.
+- Add keyboard/touch-friendly click selection to the cast builder in all five languages.
+- Correct the API-key counter and isolate offline tests from logged-in CLI accounts.
+- Expand regression and installed-app smoke coverage; support version-checked release branches.
+
+See [QA evidence and limitations](docs/qa-v0.9.1.md).
+
 ## 0.9.0 - 2026-10-31
 
 ### Added

@@ -10,7 +10,7 @@ if that label is in `block_labels` the seat blocks. The AI can therefore only ma
 and any AI failure (no key, timeout, bad JSON, budget) abstains so the rules stay in control.
 
 Subclass Workflow and override collect() (where items come from), or describe everything in YAML (yamlflow.py)."""
-import itertools, json, threading, time, traceback
+import itertools, json, os, threading, time, traceback
 from datetime import datetime
 from pathlib import Path
 from .llm import ask_role
@@ -84,6 +84,7 @@ class Workflow:
     def __init__(self, cfg, state_dir="state", seats=(), chain=None):
         self.cfg = cfg; self.state_dir = Path(state_dir); self.state_dir.mkdir(exist_ok=True, parents=True)
         self.log_f = self.state_dir / "log.jsonl"; self.items_f = self.state_dir / "items.json"; self.lock = threading.RLock()
+        self._decision_lock = threading.RLock()
         self.stop = threading.Event(); self.wake = threading.Event(); self.inbox = []; self._ids = itertools.count(1)
         self.events, self.items = [], []; self.cycle_no = 0; self.last_cycle = None; self.active = None
         if self.log_f.exists(): self.events = [json.loads(l) for l in self.log_f.read_text(encoding="utf-8").splitlines()[-300:] if l.strip()]
@@ -130,7 +131,15 @@ class Workflow:
 
     def save_items(self):
         if self.persist_items:
-            with self.lock: self.items_f.write_text(json.dumps(self.items[:200], ensure_ascii=False, default=str, indent=0), encoding="utf-8")
+            with self.lock:
+                self.items = self._retained_items(200)
+                tmp = self.items_f.with_suffix(".tmp")
+                tmp.write_text(json.dumps(self.items, ensure_ascii=False, default=str, indent=0), encoding="utf-8")
+                os.replace(tmp, self.items_f)
+
+    def _retained_items(self, limit):
+        """Bound completed history, but never discard outstanding human approvals."""
+        return [item for index, item in enumerate(self.items) if index < limit or "pending" in item]
 
     def gate(self, seat, item):
         """Hook: return (ok, reason) to override a seat's own check for this item (e.g. CHIEF hold), else None."""
@@ -141,7 +150,9 @@ class Workflow:
         """Walk one item through the check chain from `start`. Returns True (passed every seat), False (blocked) or None (waiting)."""
         item.setdefault("chain", [])
         with self.lock:
-            if item not in self.items: self.items = ([item] + self.items)[:200]
+            if item not in self.items:
+                self.items.insert(0, item)
+                self.items = self._retained_items(200)
         for i, seat in enumerate(self.chain[start:], start):
             g = self.gate(seat, item)
             if g is not None: ok, why = g
@@ -161,11 +172,15 @@ class Workflow:
 
     def decide(self, item_id, approve, note=""):
         """A human approves/rejects a waiting item; the chain resumes from that seat."""
-        it = next((i for i in self.items if i["id"] == int(item_id)), None)
-        if not it or "pending" not in it: raise ValueError(f"item {item_id} is not waiting for approval")
-        seat = self.chain[it["pending"]]
-        it.setdefault("decisions", {})[seat.name] = dict(approve=bool(approve), note=str(note)[:200], ts=now().isoformat(timespec="seconds"))
-        return self.run_chain(it, it["pending"])
+        if type(approve) is not bool: raise ValueError("approve must be a boolean")
+        # Keep the check and resume together so two HTTP requests cannot execute an action twice.
+        # Use a separate lock: long-running seats must not block dashboard reads or event logging.
+        with self._decision_lock:
+            it = next((i for i in self.items if i["id"] == int(item_id)), None)
+            if not it or "pending" not in it: raise ValueError(f"item {item_id} is not waiting for approval")
+            seat = self.chain[it["pending"]]
+            it.setdefault("decisions", {})[seat.name] = dict(approve=approve, note=str(note)[:200], ts=now().isoformat(timespec="seconds"))
+            return self.run_chain(it, it["pending"])
 
     # ---------- cycle ----------
     def run_cycle(self):
@@ -196,7 +211,7 @@ class Workflow:
         seats = {k: dict(v, active=(self.active == k) or (time.time() - v["t"] < 4),
                          ai=cfg["seats"][k]["provider"] + (f"/{cfg['seats'][k]['model']}" if cfg["seats"][k].get("model") else "")) for k, v in self.seats.items()}
         return dict(workflow=self.name, title=self.title, time=now().isoformat(timespec="seconds"), cycle=self.cycle_no, last_cycle=self.last_cycle,
-                    seats=seats, items=[self.item_view(i) for i in self.items[:40]], events=self.events[-120:], panels=self.panels(),
+                    seats=seats, items=[self.item_view(i) for i in self._retained_items(40)], events=self.events[-120:], panels=self.panels(),
                     language=cfg["language"], runner=dict(interval=cfg[self.interval_key], running=not self.stop.is_set()))
 
 class Runner:

@@ -96,7 +96,6 @@ async function inst(en){const o=g("vj-"+en);const p=await J("/api/voice-engine/p
 async function load(){[D,V]=await Promise.all([J("/api/detect"),J("/api/voice-engines")]);paintDetect();paintVoice()}
 window.SCSetup={load,paint:()=>{paintDetect();paintVoice()}};
 addEventListener("load",()=>{load();const l=g("lang");if(l)l.addEventListener("change",()=>setTimeout(SCSetup.paint,0))});
-})();
 
 const REC={en:{w_key:"API key found for {a}",w_codex:"Signed in to Codex CLI (your ChatGPT plan)",w_claude:"Signed in to Claude Code (your Claude plan)",w_ol:"Ollama is running with {a}",w_demo:"No account or local model yet - starting in free demo mode; sign in with ChatGPT or Claude any time",x_mps:"CosyVoice does not use the Apple GPU yet - CPU is slow (about 5-20x realtime)",x_nogpu:"No NVIDIA GPU - local voice cloning would run on CPU and be slow; edge-tts stays the default",x_disk:"Less than 8 GB free in the data folder - local voice engine not recommended"},
 "zh-CN":{w_key:"找到 {a} 的 API 密钥",w_codex:"已登录 Codex CLI(你的 ChatGPT 套餐)",w_claude:"已登录 Claude Code(你的 Claude 套餐)",w_ol:"Ollama 正在运行,模型 {a}",w_demo:"还没有账号或本地模型 - 先用免费演示模式;随时可以用 ChatGPT 或 Claude 登录",x_mps:"CosyVoice 还不能用苹果 GPU - CPU 很慢(约 5-20 倍实时)",x_nogpu:"没有 NVIDIA 显卡 - 本地声音克隆会在 CPU 上运行且很慢;默认仍用 edge-tts",x_disk:"数据目录剩余空间不足 8 GB - 不建议安装本地语音引擎"},
@@ -104,3 +103,5 @@ const REC={en:{w_key:"API key found for {a}",w_codex:"Signed in to Codex CLI (yo
 ja:{w_key:"{a} の API キーが見つかりました",w_codex:"Codex CLI にログイン済み(ChatGPT プラン)",w_claude:"Claude Code にログイン済み(Claude プラン)",w_ol:"Ollama が {a} で動作中",w_demo:"アカウントもローカルモデルもまだありません - 無料デモで開始します。ChatGPT や Claude でいつでもログインできます",x_mps:"CosyVoice はまだ Apple GPU を使えません - CPU は遅いです(実時間の約 5-20 倍)",x_nogpu:"NVIDIA GPU がありません - ローカル音声クローンは CPU で遅くなります。既定は edge-tts のまま",x_disk:"データフォルダーの空きが 8 GB 未満 - ローカル音声エンジンは非推奨"},
 es:{w_key:"Clave API encontrada para {a}",w_codex:"Sesión iniciada en Codex CLI (tu plan de ChatGPT)",w_claude:"Sesión iniciada en Claude Code (tu plan de Claude)",w_ol:"Ollama en marcha con {a}",w_demo:"Aún no hay cuenta ni modelo local - empiezas en modo demo gratis; inicia sesión con ChatGPT o Claude cuando quieras",x_mps:"CosyVoice aún no usa la GPU de Apple - la CPU es lenta (unas 5-20x tiempo real)",x_nogpu:"Sin GPU NVIDIA - la clonación de voz local iría en CPU y lenta; edge-tts sigue por defecto",x_disk:"Menos de 8 GB libres en la carpeta de datos - no se recomienda el motor de voz local"}};
 function recT(k){if(!k||!k[0])return "";const l=lang()||"en",d=REC[l]||REC[l.slice(0,2)]||REC.en;return (d[k[0]]||"").replace("{a}",k[1]||"")}
+
+})();

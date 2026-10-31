@@ -1,9 +1,22 @@
 """Record docs/demo.gif (~30 s): seat grid lighting up, items walking the check chain, one getting blocked.
 Needs: pip install playwright pillow && playwright install chromium (or CHROME=/path/to/chrome), ffmpeg on PATH.
-    python scripts/make_demo_gif.py [out.gif]"""
+    python scripts/make_demo_gif.py [out.gif]
+    python scripts/make_demo_gif.py --frames /path/to/captured/pngs [out.gif]"""
 import os, shutil, subprocess, sys, tempfile, threading, time
 from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent; sys.path[:0] = [str(ROOT), str(ROOT / "examples" / "trading")]
+# A connected browser can supply real UI captures without a second browser driver.
+if len(sys.argv) > 2 and sys.argv[1] == "--frames":
+    from PIL import Image
+    paths = sorted(Path(sys.argv[2]).glob("*.png"))
+    if not paths: raise SystemExit("No PNG frames found")
+    frames = [Image.open(p).convert("RGB") for p in paths]
+    if len({im.size for im in frames}) != 1: raise SystemExit("Frames must have matching dimensions")
+    out = Path(sys.argv[3]) if len(sys.argv) > 3 else ROOT / "docs" / "demo.gif"
+    frames[0].save(out, save_all=True, append_images=frames[1:], duration=1800, loop=0)
+    print(f"{out}: {len(frames)} captured frames")
+    raise SystemExit(0)
+
 from playwright.sync_api import sync_playwright
 from seatcrew import loader
 from seatcrew.server import serve

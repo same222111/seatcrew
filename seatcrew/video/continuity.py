@@ -14,7 +14,9 @@ def frames(video, times, w=W, h=H):
     for t in times:
         try:
             seek = ["-ss", f"{t:.3f}"] if t and t > 0 else []
-            r = subprocess.run(["ffmpeg", "-v", "error", *seek, "-i", str(video), "-frames:v", "1", "-vf", f"scale={w}:{h}",
+            # Convert before resizing: YUV-first video scaling and RGB-first PNG scaling
+            # otherwise disagree enough to put identical colours in different histogram bins.
+            r = subprocess.run(["ffmpeg", "-v", "error", *seek, "-i", str(video), "-frames:v", "1", "-vf", f"format=rgb24,scale={w}:{h}",
                                 "-f", "rawvideo", "-pix_fmt", "rgb24", "-"], capture_output=True, timeout=60)
         except (OSError, subprocess.TimeoutExpired): r = None
         out.append(np.frombuffer(r.stdout, np.uint8).reshape(h, w, 3) if r and len(r.stdout) == w * h * 3 else None)
@@ -147,12 +149,13 @@ def analyse(video, shots, refs=None, set_sheet=None, thresholds=None):
     chk("glitch_jump", not bad_glitch, "glitch / jump cut inside shot: " + ", ".join(bad_glitch) if bad_glitch else "no glitches or jumps inside shots", None, "fail")
     # 2) character consistency vs locked refs (best ref, best frame)
     if refs:
-        ref_img = {c: [image(p, 224, 224) for p in ps][:4] for c, ps in refs.items()}
+        ref_img = {c: [image(p, 224, 224) for p in ps[:4]] for c, ps in refs.items()}
         low, scores = [], {}
         for s in shots:
+            if not any(c in ref_img for c in s.get("characters") or []): continue
+            fr = [f for f in frames(video, [s["start"] + s["dur"] * k for k in (.25, .5, .75)], 224, 224) if f is not None]
             for c in s.get("characters") or []:
                 if c not in ref_img: continue
-                fr = [f for f in frames(video, [s["start"] + s["dur"] * k for k in (.25, .5, .75)], 224, 224) if f is not None]
                 sc = max((identity(f, r) for f in fr for r in ref_img[c] if r is not None), default=0)
                 scores[f"{s['id']}/{c}"] = sc
                 if sc < t["identity"]: low.append(f"{s['id']}:{c}({sc:.2f})")

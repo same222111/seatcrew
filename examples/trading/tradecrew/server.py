@@ -1,6 +1,7 @@
 """HTTP server: dashboard + JSON API. Binds to 127.0.0.1 by default (no auth - do not expose publicly)."""
 import json, threading, traceback
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from http.server import BaseHTTPRequestHandler
+from seatcrew.http import LocalHTTPServer as ThreadingHTTPServer
 from pathlib import Path
 from . import __version__
 from .config import PROVIDERS, SEATS, LANGUAGES, DEFAULT_PROMPTS, key_status

@@ -87,3 +87,64 @@ def test_config_validation(tmp_path):
         with pytest.raises(ValueError): c.update(bad)
     c.update({"seats": {"a": {"provider": "ollama"}}, "language": "ja"}); c2 = Config(c.path, base_defaults(["a"]))
     assert c2["seats"]["a"]["provider"] == "ollama" and c2["language"] == "ja" and "KEY" not in c.path.read_text(encoding="utf-8")
+
+@pytest.mark.parametrize('approve', ['false', 'true', 0, 1, None, [], {}])
+def test_human_decision_requires_a_boolean(tmp_path, approve):
+    wf = make(tmp_path, human=True)
+    it = wf.new_item('approval', dict(x=1, y=1, z=1)); wf.run_chain(it)
+    with pytest.raises(ValueError, match='boolean'):
+        wf.decide(it['id'], approve)
+    assert 'pending' in it and not it.get('decisions')
+
+
+def test_concurrent_approvals_execute_the_action_once(tmp_path):
+    from concurrent.futures import ThreadPoolExecutor
+    import threading
+    wf = make(tmp_path, human=True)
+    it = wf.new_item('approval', dict(x=1, y=1, z=1)); wf.run_chain(it)
+    entered = threading.Event(); release = threading.Event(); calls = []
+    original = wf.chain[2].check
+    def slow_gate(item):
+        entered.set(); release.wait(2); return original(item)
+    wf.chain[2].check = slow_gate
+    wf.chain[3].rules = lambda item: (calls.append(item['id']) is None, 'action')
+    def approve():
+        try: return wf.decide(it['id'], True)
+        except ValueError: return 'already decided'
+    with ThreadPoolExecutor(2) as pool:
+        first = pool.submit(approve); assert entered.wait(2)
+        second = pool.submit(approve)
+        release.set()
+        results = [first.result(), second.result()]
+    assert calls == [it['id']]
+    assert sorted(map(str, results)) == ['True', 'already decided']
+
+
+def test_waiting_items_survive_more_than_200_new_items(tmp_path):
+    wf = make(tmp_path, human=True)
+    first = wf.new_item('first', dict(x=1, y=1, z=1)); wf.run_chain(first)
+    for n in range(200):
+        wf.run_chain(wf.new_item(str(n), dict(x=1, y=1, z=1)))
+    restored = make(tmp_path, human=True)
+    assert any(i['id'] == first['id'] for i in restored.snapshot()['items'])
+    assert restored.decide(first['id'], True) is True
+
+@pytest.mark.parametrize('patch', [[], {'seats': 'oops'}, {'seats': {'a': None}}, {'settings': []},
+    {'auto_run': 'false'}, {'run_interval_sec': float('nan')}, {'run_interval_sec': float('inf')},
+    {'run_interval_sec': True}])
+def test_invalid_config_patch_is_rejected_without_mutation(tmp_path, patch):
+    import copy
+    cfg = Config(tmp_path / 'config.yaml', base_defaults(['a']))
+    original = copy.deepcopy(cfg.data)
+    with pytest.raises(ValueError): cfg.update(patch)
+    assert cfg.data == original and not cfg.path.exists()
+
+
+def test_config_save_failure_does_not_apply_in_memory(tmp_path, monkeypatch):
+    import copy
+    cfg = Config(tmp_path / 'config.yaml', base_defaults(['a']))
+    original = copy.deepcopy(cfg.data)
+    def fail(): raise OSError('disk full')
+    monkeypatch.setattr(cfg, 'save', fail)
+    with pytest.raises(OSError): cfg.update({'language':'ja'})
+    assert cfg.data == original
