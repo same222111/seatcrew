@@ -92,7 +92,7 @@ class Writer(Seat):
             err, self.ai_err = getattr(self, "ai_err", None), None
             return False, (f"AI: {err} · " + msg) if err else msg
         else: sb, who = self.from_notes(d, tp, fb), "template"
-        d["storyboard"] = sb; d.pop("feedback", None) if fb else None
+        d["storyboard"] = sb; d["writer_source"] = who; d.pop("feedback", None) if fb else None
         return True, f"{len(sb['shots'])} shots, ~{sum(s['duration'] for s in sb['shots']):.0f}s ({who})"
     def ai_write(self, d, tp, fb):
         if d.get("cast"):
@@ -415,7 +415,7 @@ TIPS = {
 class ShortVideo(Workflow):
     name = "short_video"; title = "AI short-video studio"; studio = "video"
     locale_dirs = (Path(__file__).parent / "locales",)
-    submit_fields = [dict(name="topic", label="Topic"), dict(name="notes", label="Notes or your script (one sentence per line = one shot)", type="textarea"),
+    submit_fields = [dict(name="topic", label="Topic"), dict(name="notes", label="Notes or your script (one line = one shot)", type="textarea"),
                      dict(name="template", label="Template", type="select", options=list(TEMPLATES)), dict(name="aspect", label="Aspect", type="select", options=list(SIZES)),
                      dict(name="clips_dir", label="Clips folder (optional)"), dict(name="cast", label="Cast (Character Studio, optional)")]
     size_override = None; editor_opts = {}; qc_opts = {}; qc_total = None          # tests use tiny frames
@@ -424,7 +424,7 @@ class ShortVideo(Workflow):
         self.setup([Director(self), Writer(self), ScriptCheck(self), Production(self), EditQC(self), Approve(self)], chain=SEATS)
         self.steps = {n: st.sub[n] for st in (self.seat_map["production"], self.seat_map["editqc"]) for n in st.sub}
         if not self.items and cfg["settings"]["load_samples"]:
-            lang = cfg.get("language") or "en"
+            lang = cfg.data.get("language") or "en"
             s = next((x for x in SAMPLES if x.get("lang") == lang), SAMPLES[0]); s = {k: v for k, v in s.items() if k != "lang"}
             self.inbox.append(self.new_item(s["topic"], s, "video"))
     def submit(self, title=None, data=None, subject="video"):
@@ -443,9 +443,9 @@ class ShortVideo(Workflow):
         """A send-back that cannot change anything (rules writer, silent draft voice, draft cards) stops at once with an actionable tip."""
         d = item["data"]; why = item["chain"][-1]["reason"] if item.get("chain") else ""
         if item.pop("_tip", None) == "fill_placeholder": return self.tip("placeholder")
-        if back == "writer" and self.cfg.data["seats"].get("writer", {}).get("provider", "rules") == "rules":
+        if back == "writer" and d.get("writer_source") == "template":   # rules writer: same notes -> same script, a rewrite cannot help
             sb = d.get("storyboard") or {}; tp = TEMPLATES.get(d.get("template"), {}); lo, hi = (tp.get("total_sec") or (0, 0))
-            n = max(1, len(sb.get("shots") or [])); total = float(sb.get("total_sec") or 0); per = max(1.0, total / n)
+            n = max(1, len(sb.get("shots") or [])); total = float(sum(x.get("duration") or 0 for x in sb.get("shots") or [])); per = max(1.0, total / n)
             if total and lo and total < lo: return self.tip("short", total=total, lo=lo, more=max(1, int((lo - total) / per + 0.999)))
             if total and hi and total > hi: return self.tip("long", total=total, hi=hi, less=max(1, int((total - hi) / per + 0.999)))
             return self.tip("rules", why=why[:120])

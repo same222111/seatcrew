@@ -65,7 +65,8 @@ def check(manifest, plan=None, **opts):
     err = ff.run(["-i", path, "-vn", "-af", "ebur128=peak=true", "-f", "null", "-"])
     I = re.findall(r"I:\s*(-?[\d.]+|-inf) LUFS", err); tp = re.findall(r"Peak:\s*(-?[\d.]+|-inf) dBFS", err)
     I = float(I[-1]) if I and I[-1] != "-inf" else -99.0; tp = float(tp[-1]) if tp and tp[-1] != "-inf" else -99.0
-    R.append(_chk("loudness", abs(I - o["lufs"]) <= o["lufs_tol"], "editor", f"{I:.1f} LUFS (target {o['lufs']:g} +-{o['lufs_tol']:g})", I))
+    sd0 = bool((plan or {}).get("silent_draft"))
+    R.append(_chk("loudness", abs(I - o["lufs"]) <= o["lufs_tol"], "editor", f"{I:.1f} LUFS (target {o['lufs']:g} +-{o['lufs_tol']:g})" + (" - silent DRAFT voice" if sd0 else ""), I, "warn" if sd0 else "fail"))
     R.append(_chk("clipping", tp <= o["max_true_peak"], "editor", f"true peak {tp:.1f} dBTP (max {o['max_true_peak']:g})", tp))
     # narration: silence gaps + subtitle sync on the voice stem
     vs = manifest.get("voice_stem"); words = manifest.get("words") or []
