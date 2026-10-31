@@ -57,7 +57,7 @@ def stability_image(shot, out_dir, aspect, model=None, style=""):
 
 NO_LINE_START = set("?？!！。，,、；;：:）)」』】》〉…—~～’”%")
 def wrap_cjk(txt, n):
-    """Hard-wrap text without spaces every n chars, but never start a line with closing punctuation (避头尾):
+    """Kept for callers of v0.9.3; draft cards now use subs.break_text. Hard-wrap text without spaces every n chars, but never start a line with closing punctuation (避头尾):
     the '?' of "天空为什么是蓝色的?" stays on the line before instead of standing alone."""
     n = max(2, int(n)); lines = [txt[i:i + n] for i in range(0, len(txt), n)]
     for i in range(1, len(lines)):
@@ -71,9 +71,9 @@ def draft_card(shot, out_dir, aspect, model=None, style="", size=None):
     w, h = size or SIZES[aspect]; p = Path(out_dir) / f"{shot['id']}.png"
     txt = (shot.get("caption") or shot.get("visual") or shot["id"])[:110].replace("'", "").replace(":", " ").replace("%", " ").replace("\\", " ")
     hue = (sum(map(ord, shot["id"])) * 47) % 360
-    import textwrap
-    per = max(8, int(w * 0.84 / (h * 0.035 * 0.7)))
-    txt = "\n".join(textwrap.wrap(txt, per)[:4]) if " " in txt else "\n".join(wrap_cjk(txt, per // 2))[:200]
+    from .subs import break_text
+    per = max(8, int(w * 0.84 / (h * 0.035 * 0.7)))                  # Latin chars per line; CJK glyphs are ~2x wider
+    txt = "\n".join(break_text(txt, per if " " in txt else per // 2, max_lines=4))
     tf = Path(out_dir) / f"{shot['id']}.card.txt"; tf.write_text(txt, encoding="utf-8")
     from .typography import text_font
     selected, _ = text_font(txt)
