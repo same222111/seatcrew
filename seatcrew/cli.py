@@ -9,6 +9,7 @@ from . import loader
 def _lang(a, wf=None): return a.lang or (wf.cfg.data.get("language") if wf else None) or "en"
 
 def main(argv=None):
+    from .textio import utf8_stdio; utf8_stdio()
     ap = argparse.ArgumentParser(prog="seatcrew", description="Multi-AI seat workflows: every job gets a seat, every item walks a check chain.")
     ap.add_argument("--env", default=".env"); ap.add_argument("--lang", choices=list(LANGUAGES))
     sp = ap.add_subparsers(dest="cmd", required=True)
@@ -64,6 +65,7 @@ def main(argv=None):
             for c in it.get("chain", []): print(f"    {'OK ' if c['ok'] else 'BLK'} {c['seat'].upper():<10} {c['reason']}")
         print(t("cli_summary", L, ok=sum(i.get("status") in ("done", "filled") for i in items), blocked=sum(str(i.get("status", "")).startswith("blocked") for i in items),
                 waiting=sum("pending" in i for i in items))); return 0
+    if a.lang: wf.cfg.data["language"] = a.lang          # --lang also sets the dashboard / CHIEF chat language for this session
     from .core import Runner
     from .server import serve
     url = f"http://{a.host}:{a.port}"

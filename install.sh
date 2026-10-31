@@ -21,7 +21,8 @@ while [ $# -gt 0 ]; do case "$1" in
 
 say() { printf '\033[1;32m==>\033[0m %s\n' "$*"; }
 run() { if [ "$DRY" = 1 ]; then echo "DRY-RUN: $*"; else "$@"; fi; }
-write() { if [ "$DRY" = 1 ]; then echo "DRY-RUN: write $1"; else mkdir -p "$(dirname "$1")"; cat > "$1"; fi; }
+# dry-run still drains stdin: otherwise `printf ... | write f` can die of SIGPIPE (exit 141) under pipefail
+write() { if [ "$DRY" = 1 ]; then cat >/dev/null; echo "DRY-RUN: write $1"; else mkdir -p "$(dirname "$1")"; cat > "$1"; fi; }
 
 case "$OS" in
   Darwin) APPDIR="$HOME/Library/Application Support/SeatCrew/app";;

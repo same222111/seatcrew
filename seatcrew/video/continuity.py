@@ -18,7 +18,7 @@ def frames(video, times, w=W, h=H):
             # otherwise disagree enough to put identical colours in different histogram bins.
             r = subprocess.run(["ffmpeg", "-v", "error", *seek, "-i", str(video), "-frames:v", "1", "-vf", f"format=rgb24,scale={w}:{h}",
                                 "-f", "rawvideo", "-pix_fmt", "rgb24", "-"], capture_output=True, timeout=60)
-        except (OSError, subprocess.TimeoutExpired): r = None
+        except (OSError, subprocess.TimeoutExpired, UnicodeError): r = None
         out.append(np.frombuffer(r.stdout, np.uint8).reshape(h, w, 3) if r and len(r.stdout) == w * h * 3 else None)
     return out
 
@@ -27,7 +27,7 @@ def frame_diffs(video, w=64, h=36, max_s=600):
     try:
         r = subprocess.run(["ffmpeg", "-v", "error", "-t", str(max_s), "-i", str(video), "-vf", f"scale={w}:{h},format=gray", "-f", "rawvideo", "-"], capture_output=True, timeout=300)
         fps = 24.0
-        p = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", "stream=avg_frame_rate", "-of", "csv=p=0", str(video)], capture_output=True, text=True, timeout=30)
+        p = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", "stream=avg_frame_rate", "-of", "csv=p=0", str(video)], capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=30)
         a, _, b = p.stdout.strip().partition("/"); fps = float(a) / float(b or 1) if a and float(b or 1) else fps
     except (OSError, subprocess.TimeoutExpired, ValueError): return 24.0, []
     n = len(r.stdout) // (w * h)
@@ -40,7 +40,7 @@ def image(path, w=W, h=H):
 
 def duration(video):
     try:
-        r = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", str(video)], capture_output=True, text=True, timeout=30)
+        r = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", str(video)], capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=30)
         return float(r.stdout.strip())
     except (OSError, ValueError, subprocess.TimeoutExpired): return 0.0
 
@@ -102,8 +102,8 @@ def ocr_text(a):
     with tempfile.TemporaryDirectory() as td:
         p = Path(td) / "f.ppm"; h, w = a.shape[:2]; top = a[: int(h * 0.78)]
         p.write_bytes(f"P6 {w} {top.shape[0]} 255\n".encode() + top.tobytes())
-        try: r = subprocess.run(["tesseract", str(p), "-", "--psm", "11"], capture_output=True, text=True, timeout=60)
-        except (OSError, subprocess.TimeoutExpired): return None
+        try: r = subprocess.run(["tesseract", str(p), "-", "--psm", "11"], capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=60)
+        except (OSError, subprocess.TimeoutExpired, UnicodeError): return None
         return "".join(ch for ch in r.stdout if ch.isalnum())
 
 # ---------------- checks ----------------

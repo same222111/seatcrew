@@ -217,8 +217,9 @@ class App:
                     except Exception: pass
                 try: wf.cfg.update(patch)
                 except Exception: wf.cfg.update({"language": patch["language"]})
-            from tradecrew.seats import Crew
-            if isinstance(wf, Crew):
+            try: from tradecrew.seats import Crew          # only the trading example ships tradecrew; a source checkout may not have it on the path
+            except ImportError: Crew = None
+            if Crew is not None and isinstance(wf, Crew):
                 from tradecrew.server import serve as serve_trading
                 srv = serve_trading(wf.cfg, wf, "127.0.0.1", free_port())
             else:
@@ -323,6 +324,7 @@ def gui_backend():
     except ImportError: return "qt"
 
 def main(argv=None):
+    from .textio import utf8_stdio; utf8_stdio()
     ap = argparse.ArgumentParser(prog="seatcrew-desktop", description="SeatCrew desktop app")
     ap.add_argument("--no-window", action="store_true", help="open in the default browser instead of an app window")
     ap.add_argument("--smoke", type=float, default=0, help="quit automatically after N seconds (CI / tests)")

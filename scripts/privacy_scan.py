@@ -17,7 +17,7 @@ FAKE = re.compile(r"(test|abcdef|zzzz|xxxx|SECRET|REAL|FAKE|EXAMPLE|ABCDEFGHIJ|0
 KNOWN = {"docs/demo.mp4", "docs/demo.gif"}   # the project's own UI demo (no personal data), reviewed in v0.6.0
 
 def main():
-    files = subprocess.run(["git", "ls-files", "-z"], capture_output=True, check=True).stdout.decode().split("\0")
+    files = subprocess.run(["git", "ls-files", "-z"], capture_output=True, check=True).stdout.decode("utf-8").split("\0")
     bad = []
     for f in filter(None, files):
         p = Path(f)

@@ -1,5 +1,7 @@
-import os
+import os, sys
 from pathlib import Path
+# test this checkout's examples (tradecrew), not whatever copy the venv has installed
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "examples" / "trading"))
 import pytest
 from seatcrew import llm
 

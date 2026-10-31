@@ -14,27 +14,32 @@
 * Anything made with a draft backend is marked "DRAFT PREVIEW - NOT FINAL QUALITY" in the UI, the video and its name.
 Run:  seatcrew ui short_video      CLI assembly from your own clips:  seatcrew video assemble <folder>"""
 from seatcrew import i18n
-import json, re, shutil
+import json, re, shutil, threading
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from seatcrew import Seat, HumanSeat, Chief, Workflow, llm
+from seatcrew.core import now
 from seatcrew.config import Config, base_defaults
 from seatcrew.video import TEMPLATES, SIZES, validate_storyboard, key_status, tts as TTS, visuals as VIS, editor as ED, qc as QC, voices as VO, providers as PV
 from seatcrew.video import characters as CH, imagegen as IG, lipsync as LS, storyboard as SB
 from seatcrew.video.ff import have_ffmpeg, FFError
 
-SEATS = ["chief", "topic", "writer", "scriptcheck", "voice", "visuals", "lipsync", "editor", "qc", "approve"]
+SEATS = ["chief", "writer", "scriptcheck", "production", "editqc", "approve"]     # v0.9.4: 6 visible seats (was 10)
+AI_SEATS = ("chief", "writer", "scriptcheck")                                     # only these make AI decisions
+STEPS = {"production": ("voice", "visuals", "lipsync"), "editqc": ("editor", "qc")}  # tool sub-steps (logs, QC routing)
+OWNER = {"writer": "writer", **{st: seat for seat, sts in STEPS.items() for st in sts}}
 PROMPTS = {
-    "chief": "You are CHIEF of a short-video studio. Given today's video topics, answer proceed or hold.",
+    "chief": "You are CHIEF (director) of a short-video studio. Given today's video topics, answer proceed or hold.",
     "writer": "You are WRITER, a short-video scriptwriter. Write tight spoken narration (plain words, short sentences) and a shot-by-shot storyboard.",
     "scriptcheck": "You are SCRIPT CHECK. Is this script safe and honest (no medical/financial promises, hate, personal data, misleading claims)? Answer ok or unsafe.",
 }
 SETTINGS = {"template": "knowledge_explainer", "aspect": "9:16", "tts_backend": "auto", "tts_voice": "", "visuals_backend": "auto",
             "video_model": "", "image_model": "", "clips_dir": "", "bgm_path": "", "bgm_gain_db": -18.0, "allow_draft": True,
-            "max_rewrites": 2, "banned_phrases": ["guaranteed", "risk-free", "miracle", "100% safe", "cure", "get rich"],
-            "min_sharpness": 12.0, "crf": 18, "preset": "slow", "approve_auto_approve": False, "load_samples": False, "speaker_colors": True,
+            "max_rewrites": 2, "max_total_rewrites": 3, "parallel_steps": True, "banned_phrases": ["guaranteed", "risk-free", "miracle", "100% safe", "cure", "get rich"],
+            "min_sharpness": 12.0, "crf": 18, "preset": "slow", "draft_preset": "veryfast", "parallel_items": 2, "parallel_shots": 3, "parallel_segments": 4, "approve_auto_approve": False, "load_samples": False, "speaker_colors": True,
             "max_video_usd": 20.0, "cast": "", "image_backend": "auto", "keyframes": False, "lipsync_backend": "none", "continuity_qc": True}
 CHOICES = {"template": list(TEMPLATES), "aspect": list(SIZES), "tts_backend": ["auto", "elevenlabs", "minimax", "doubao", "azure", "openai", "edge", "draft"],
-           "visuals_backend": ["auto", "kling", "runway", "gemini", "minimax", "luma", "replicate", "openai", "stability", "draft"], "preset": ["slow", "medium", "fast", "veryfast", "ultrafast"],
+           "visuals_backend": ["auto", "kling", "runway", "gemini", "minimax", "luma", "replicate", "openai", "stability", "draft"], "preset": ["slow", "medium", "fast", "veryfast", "ultrafast"], "draft_preset": ["slow", "medium", "fast", "veryfast", "ultrafast"],
            "image_backend": ["auto", *IG.ADAPTERS, "draft"], "lipsync_backend": ["none", *LS.ADAPTERS]}
 SAMPLES = [dict(topic="Why is the sky blue?", template="knowledge_explainer",
                 notes="Sunlight looks white, but it is a mix of every color. Air molecules scatter short blue waves much more than long red ones. "
@@ -76,6 +81,7 @@ class Topic(Seat):
         return True, f"{TEMPLATES[d['template']]['label']} · {d['aspect']} · {d['topic'][:60]}"
 
 class Writer(Seat):
+    uses_ai = True
     name = "writer"; job = "script + storyboard"; kind = "producer"
     def rules(self, it):
         d = it["data"]; tp = TEMPLATES[d["template"]]; fb = d.get("feedback", {}).get("writer")
@@ -86,7 +92,7 @@ class Writer(Seat):
             err, self.ai_err = getattr(self, "ai_err", None), None
             return False, (f"AI: {err} · " + msg) if err else msg
         else: sb, who = self.from_notes(d, tp, fb), "template"
-        d["storyboard"] = sb; d.pop("feedback", None) if fb else None
+        d["storyboard"] = sb; d["writer_source"] = who; d.pop("feedback", None) if fb else None
         return True, f"{len(sb['shots'])} shots, ~{sum(s['duration'] for s in sb['shots']):.0f}s ({who})"
     def ai_write(self, d, tp, fb):
         if d.get("cast"):
@@ -143,9 +149,25 @@ class Writer(Seat):
         if d.get("cast"): return self.from_cast(d, tp)
         """No AI: each sentence of your notes/script becomes narration; long sentences are split; the template sets camera,
         captions and pacing. Honest: it never invents facts."""
-        lim = tp["max_words_per_sentence"]; maxw = int(tp["shot_sec"][1] * tp["wpm"] / 60) - 1; out = []
-        wc = lambda x: len(TTS.tokens(x))
-        for s in sentences(d.get("notes") or d["topic"]):
+        lim = tp["max_words_per_sentence"]; maxw = int(tp["shot_sec"][1] * tp["wpm"] / 60) - 1
+        wc = lambda x: len(TTS.tokens(x)); notes = (d.get("notes") or d["topic"]).strip()
+        if "\n" in notes:                                         # the form says "one line = one shot": keep it (only very long lines are split)
+            shots = []
+            for ln in [x.strip() for x in notes.splitlines() if x.strip()]:
+                shots += [ln] if wc(ln) <= max(maxw, lim * 2) else self.split_long(ln, lim)
+            return self.build(d, tp, shots)
+        out = self.split_long(notes, lim)
+        shots, cur = [], ""
+        for s in out:                                              # one paragraph: merge very short sentences into one shot
+            if cur and wc(cur + " " + s) <= maxw and wc(cur) < 6: cur += ("" if TTS.CJK.search(cur) else " ") + s
+            else:
+                if cur: shots.append(cur)
+                cur = s
+        if cur: shots.append(cur)
+        return self.build(d, tp, shots)
+    def split_long(self, text, lim):
+        wc = lambda x: len(TTS.tokens(x)); out = []
+        for s in sentences(text):
             if TTS.CJK.search(s):                                  # CJK: no spaces - split long sentences at commas
                 parts, cur = [], ""
                 for seg in [x for x in re.split(r"(?<=[,，、;；])", s) if x]:
@@ -157,13 +179,8 @@ class Writer(Seat):
                 cut = next((i + 1 for i in range(len(ws) // 2, len(ws) - 2) if ws[i].endswith(",")), None) or next((i + 1 for i in range(len(ws) // 2, 1, -1) if ws[i].endswith(",")), None) or len(ws) // 2
                 out.append(" ".join(ws[:cut])); ws = ws[cut:]
             out.append(" ".join(ws))
-        shots, cur = [], ""
-        for s in out:                                              # merge very short lines into one shot
-            if cur and wc(cur + " " + s) <= maxw and wc(cur) < 6: cur += ("" if TTS.CJK.search(cur) else " ") + s
-            else:
-                if cur: shots.append(cur)
-                cur = s
-        if cur: shots.append(cur)
+        return out
+    def build(self, d, tp, shots):
         cams = tp["cameras"]; sb = dict(title=d["topic"], aspect=d["aspect"], language=self.cfg["language"], template=d["template"], shots=[])
         for i, n in enumerate(shots):
             sb["shots"].append(dict(id=f"s{i + 1:02d}", narration=n, duration=round(min(max(estimate_sec(n, tp["wpm"]), tp["shot_sec"][0]), tp["shot_sec"][1] + 2), 1),
@@ -171,9 +188,12 @@ class Writer(Seat):
                                     transition=tp["transition"] if i < len(shots) - 1 else "crossfade"))
         return validate_storyboard(sb)
 
+SB_PLACEHOLDER = re.compile(r"<[^<>\n]{3,}>")
+
 def it_subject(d): return d.get("topic", "-")[:30]
 
 class ScriptCheck(Seat):
+    uses_ai = True
     name = "scriptcheck"; job = "readability, safety, timing"; labels = ("ok", "unsafe"); block_labels = ("unsafe",)
     def rules(self, it):
         d = it["data"]; sb = d.get("storyboard"); tp = TEMPLATES[d["template"]]; s = self.cfg["settings"]
@@ -186,6 +206,8 @@ class ScriptCheck(Seat):
             outside = sorted({l["speaker"] for x in sb["shots"] for l in x.get("lines") or [] if l["speaker"] not in names} | {c for x in sb["shots"] for c in x.get("characters") or [] if c not in names})
             if outside: probs.append("not in the cast: " + ", ".join(outside))
         if re.search(r"[\w.+-]+@[\w-]+\.[\w.]+|\b\d{3}[- ]?\d{3}[- ]?\d{4}\b", text): probs.append("contains an email address or phone number")
+        ph = [x["id"] for x in sb["shots"] if SB_PLACEHOLDER.search(x["narration"] or "") or SB_PLACEHOLDER.search(x.get("caption") or "")]
+        if ph: it["_tip"] = "fill_placeholder"; probs.append("template placeholder text in " + ", ".join(ph) + " - write the narration first")
         empty = [x["id"] for x in sb["shots"] if not x["narration"]]
         if empty: probs.append("shots without narration: " + ", ".join(empty))
         long_ = [f"{x['id']} ({len(t.split())} words)" for x in sb["shots"] for t in sentences(x["narration"]) if not TTS.CJK.search(t) and len(t.split()) > tp["max_words_per_sentence"]]
@@ -224,8 +246,10 @@ class Voice(Seat):
             sh["audio"], sh["words"] = str(p), words; info.append(i)
         if not info: return False, "no narration"
         d["voice"] = dict(backend=sorted({i["backend"] for i in info}), sync="estimated" if any(i["sync"] != "exact" for i in info) else "exact",
-                          draft=any(i.get("draft") for i in info), voice=info[0].get("voice"), fallback=info[0].get("fallback_reasons"))
-        return True, f"{'/'.join(d['voice']['backend'])} voice, {d['voice']['sync']} word timing" + (" · DRAFT" if d["voice"]["draft"] else "")
+                          draft=any(i.get("draft") for i in info), voice=info[0].get("voice"), fallback=info[0].get("fallback_reasons"),
+                          silent=any(i.get("voice") == "silent" for i in info))
+        if d["voice"]["silent"]: self.wf.log(self.name, "VOICE", "no voice engine for this language: the DRAFT voice is silent - install edge-tts (pip install edge-tts) for a free real voice", it_subject(d))
+        return True, f"{'/'.join(d['voice']['backend'])} voice, {d['voice']['sync']} word timing" + (" · DRAFT" if d["voice"]["draft"] else "") + (" · SILENT (pip install edge-tts)" if d["voice"]["silent"] else "")
 
 class Visuals(Seat):
     name = "visuals"; job = "per-shot images / clips"; kind = "producer"
@@ -243,10 +267,13 @@ class Visuals(Seat):
         if d.get("cast"):                                   # locked character refs win for cast members
             st = CH.Store(); cast = st.cast(d["cast"]); refs.update({n: r[0] for n, r in st.cast_refs(cast).items()}); set_sheet = cast.get("set_sheet") or None
             allrefs = st.cast_refs(cast)
+        jobs = []
         for sh in d["storyboard"]["shots"]:
             if sh.get("clip_path") and sh["id"] not in redo and Path(sh["clip_path"]).exists(): continue
             if sh["id"] in redo and sh.get("visual_info", {}).get("backend") == "local":
                 return False, f"{sh['id']}: your clip {sh['visual_info']['source']} failed QC - replace it in the clips folder"
+            jobs.append(sh)
+        def one(sh):
             if d.get("cast") and s.get("keyframes"):       # keyframe: one image with the set sheet + every character in the shot, then image-to-video
                 kr = ([set_sheet] if set_sheet else []) + [allrefs[c][0] for c in sh.get("characters") or [] if c in allrefs]
                 try:
@@ -254,8 +281,15 @@ class Visuals(Seat):
                     if not ki.get("draft"): sh["ref_image"] = str(kp)
                 except (PV.ProviderError, FFError) as e: self.wf.log(self.name, "KEYFRAME", f"{sh['id']}: {e}", it_subject(d))
             try: p, info = VIS.make(sh, work, d["aspect"], pref=s["visuals_backend"], clips_dir=clips, video_model=s["video_model"], image_model=s["image_model"], style=tp["visual_style"], allow_draft=s["allow_draft"], refs=refs)
-            except (VIS.VisualError, PV.ProviderError, FFError) as e: return False, f"{sh['id']}: {e}"
+            except (VIS.VisualError, PV.ProviderError, FFError) as e: return f"{sh['id']}: {e}"
             sh["clip_path"], sh["visual_info"] = str(p), info
+        # paid video models take 30-120 s per clip: generate shots in parallel (capped by parallel_shots), results keep storyboard order
+        n = 1 if (d.get("cast") and s.get("keyframes")) else max(1, min(int(s.get("parallel_shots") or 1), len(jobs) or 1))
+        if n > 1:
+            with ThreadPoolExecutor(n, thread_name_prefix="shot") as ex: errs = list(ex.map(one, jobs))
+        else: errs = [one(sh) for sh in jobs]
+        err = next((e for e in errs if e), None)
+        if err: return False, err
         bk = [x["visual_info"]["backend"] for x in d["storyboard"]["shots"]]
         d["visuals"] = dict(backends=sorted(set(bk)), draft="draft" in bk)
         return True, " · ".join(f"{b}×{bk.count(b)}" for b in sorted(set(bk))) + (" · DRAFT" if "draft" in bk else "")
@@ -286,9 +320,9 @@ class Editor(Seat):
         room = dict(room_tone_db=tp["room_tone_db"], reverb=tp.get("reverb", 0)) if tp.get("room_tone_db") is not None else {}
         for f in od.glob("final*.mp4"): f.unlink()
         try:
-            man = ED.assemble(shots, od / "final.mp4", od / "work", aspect=d["aspect"], size=self.wf.size_override, bgm=bgm, draft=draft,
+            man = ED.assemble(shots, od / "final.mp4", od / "work", aspect=d["aspect"], size=self.wf.size_override, bgm=bgm, draft=draft, lang=self.cfg["language"],
                               transition_sec=tp["transition_sec"], speaker_colors=cols, bgm_gain_db=s["bgm_gain_db"] if s["bgm_gain_db"] != -18.0 else tp["bgm_gain_db"],
-                              **dict(dict(crf=s["crf"], preset=s["preset"], **room), **self.wf.editor_opts))
+                              **dict(dict(crf=s["crf"], preset=(s.get("draft_preset") or s["preset"]) if draft else s["preset"], workers=int(s.get("parallel_segments") or 1), **room), **self.wf.editor_opts))
         except (FFError, ValueError) as e: return False, str(e)[-400:]
         d["video"] = dict(file=Path(man["output"]).name, total=man["total"], size=man["size"], draft=draft)
         d["timeline"] = [dict(id=x["id"], start=x["start"], dur=x["dur"], kind=x.get("kind"), src=f"{x.get('src_w')}x{x.get('src_h')}") for x in man["shots"]]
@@ -305,7 +339,7 @@ class QualityCheck(Seat):
             man["continuity"] = dict(refs=st.cast_refs(cast), set_sheet=cast.get("set_sheet") or None,
                                      shots=[dict(id=x["id"], start=x["start"], dur=x["dur"], camera=x.get("camera"), characters=by.get(x["id"], {}).get("characters") or []) for x in man["shots"]],
                                      thresholds=self.wf.qc_opts.get("continuity_thresholds"))
-        r = QC.check(man, dict(total_sec=self.wf.qc_total or (tp["total_sec"][0] * 0.5, tp["total_sec"][1] * 1.2), sync=d.get("voice", {}).get("sync")),
+        r = QC.check(man, dict(total_sec=self.wf.qc_total or (tp["total_sec"][0] * 0.5, tp["total_sec"][1] * 1.2), sync=d.get("voice", {}).get("sync"), silent_draft=bool(d.get("voice", {}).get("silent"))),
                      **dict(dict(min_sharpness=self.cfg["settings"]["min_sharpness"]), **{k: v for k, v in self.wf.qc_opts.items() if k != "continuity_thresholds"}))
         d["qc"] = r; (od / "quality_report.json").write_text(json.dumps(r, ensure_ascii=False, indent=1), encoding="utf-8")
         if not r["passed"]:
@@ -320,18 +354,77 @@ class QualityCheck(Seat):
 class Approve(HumanSeat):
     name = "approve"; job = "human sign-off"
 
+class Director(Chief):
+    """导演 = old CHIEF + TOPIC: checks every brief with rules, and (with an AI) votes proceed/hold on each new batch."""
+    name = "chief"; job = "director: brief check + go/hold"; labels = ("proceed", "hold"); uses_ai = True
+    rules = Topic.rules
+    def check(self, it): return self.rules(it)          # per item: rules only (the AI vote happens once per batch in plan())
+
+class Stage(Seat):
+    """A visible seat made of tool sub-steps (no AI). Each sub-step keeps its own backend picker in settings and its own log lines;
+    the result of every step is kept in data.steps so the dashboard can show 配音 / 画面 / 口型 progress inside one seat."""
+    kind = "producer"; uses_ai = False; steps = ()
+    def __init__(self, wf):
+        super().__init__(wf); self.sub = {c.name: c(wf) for c in self.steps}
+    def run_step(self, n, it):
+        try: ok, why = self.sub[n].check(it)
+        except Exception as e: ok, why = False, f"seat error: {type(e).__name__}: {e}"
+        it["data"].setdefault("steps", {})[n] = dict(ok=bool(ok), reason=why, ts=now().strftime("%H:%M:%S"))
+        self.wf.log(n, "CHECK_OK" if ok else "CHECK_BLOCKED", f"#{it['id']} {why}", it_subject(it["data"]))
+        return bool(ok), why
+
+class Production(Stage):
+    name = "production"; job = "voice · visuals · lip-sync"; steps = (Voice, Visuals, LipSync)
+    def check(self, it):
+        frm = it.pop("_from", None)                         # QC sent back one sub-step: redo only that one (+ lip-sync, which needs both)
+        par = [n for n in ("voice", "visuals") if frm in (None, n)]
+        if len(par) == 2 and self.cfg["settings"].get("parallel_steps", True):
+            # voice and visuals do not depend on each other: run them at the same time
+            with ThreadPoolExecutor(2, thread_name_prefix="prod") as ex: res = dict(zip(par, ex.map(lambda n: self.run_step(n, it), par)))
+        else: res = {n: self.run_step(n, it) for n in par}
+        for n in par:
+            if not res[n][0]: it["_step"] = n; return False, f"{n}: {res[n][1]}"
+        ok, why = self.run_step("lipsync", it)
+        if not ok: it["_step"] = "lipsync"; return False, f"lipsync: {why}"
+        st = it["data"]["steps"]; return True, " · ".join(f"{n} {st[n]['reason']}" for n in ("voice", "visuals", "lipsync") if n in st)
+
+class EditQC(Stage):
+    name = "editqc"; job = "edit + quality check"; steps = (Editor, QualityCheck)
+    def check(self, it):
+        it.pop("_from", None)
+        for n in ("editor", "qc"):
+            ok, why = self.run_step(n, it)
+            if not ok: it["_step"] = n; return False, f"{n}: {why}"
+        return True, it["data"]["steps"]["qc"]["reason"]
+
+TIPS = {
+    "short": {"en": "script too short ({total:.0f}s, needs {lo}s+): add about {more} more sentence(s) (one per line) or pick a longer template",
+              "zh": "稿子太短（约 {total:.0f} 秒，至少要 {lo} 秒）：再加约 {more} 句（每行一句），或换更长的模板"},
+    "long": {"en": "script too long ({total:.0f}s, max {hi}s): cut about {less} sentence(s) or pick a longer template",
+             "zh": "稿子太长（约 {total:.0f} 秒，最多 {hi} 秒）：删掉约 {less} 句，或换更长的模板"},
+    "rules": {"en": "the rules writer cannot rewrite on its own: fix the script ({why}) or pick an AI writer under WRITER",
+              "zh": "规则模式不会自动改稿：请按提示修改稿子（{why}），或给编剧选一个 AI"},
+    "placeholder": {"en": "the script still has template placeholders <...>: replace them with your own words",
+                    "zh": "稿子里还有模板占位符 <...>：请换成你自己的话"},
+    "silent": {"en": "no voice engine for this language: install edge-tts (pip install edge-tts) or set a TTS key, then retry",
+               "zh": "当前语言没有可用的配音引擎：请安装 edge-tts（pip install edge-tts）或填写配音服务的 key，再重试"},
+    "draft_vis": {"en": "draft title cards look the same on every retry: add your own clips or a video model key, then retry",
+                  "zh": "草稿字卡每次重试都一样：请放入自己的素材或填写视频模型 key，再重试"},
+}
+
 class ShortVideo(Workflow):
     name = "short_video"; title = "AI short-video studio"; studio = "video"
     locale_dirs = (Path(__file__).parent / "locales",)
-    submit_fields = [dict(name="topic", label="Topic"), dict(name="notes", label="Notes or your script (one sentence per line = one shot)", type="textarea"),
+    submit_fields = [dict(name="topic", label="Topic"), dict(name="notes", label="Notes or your script (one line = one shot)", type="textarea"),
                      dict(name="template", label="Template", type="select", options=list(TEMPLATES)), dict(name="aspect", label="Aspect", type="select", options=list(SIZES)),
                      dict(name="clips_dir", label="Clips folder (optional)"), dict(name="cast", label="Cast (Character Studio, optional)")]
     size_override = None; editor_opts = {}; qc_opts = {}; qc_total = None          # tests use tiny frames
     def __init__(self, cfg, state_dir):
         super().__init__(cfg, state_dir)
-        self.setup([Chief(self), Topic(self), Writer(self), ScriptCheck(self), Voice(self), Visuals(self), LipSync(self), Editor(self), QualityCheck(self), Approve(self)])
+        self.setup([Director(self), Writer(self), ScriptCheck(self), Production(self), EditQC(self), Approve(self)], chain=SEATS)
+        self.steps = {n: st.sub[n] for st in (self.seat_map["production"], self.seat_map["editqc"]) for n in st.sub}
         if not self.items and cfg["settings"]["load_samples"]:
-            lang = cfg.get("language") or "en"
+            lang = cfg.data.get("language") or "en"
             s = next((x for x in SAMPLES if x.get("lang") == lang), SAMPLES[0]); s = {k: v for k, v in s.items() if k != "lang"}
             self.inbox.append(self.new_item(s["topic"], s, "video"))
     def submit(self, title=None, data=None, subject="video"):
@@ -343,17 +436,41 @@ class ShortVideo(Workflow):
         """Files the dashboard may fetch: the video, its report and storyboard. Nothing outside the item folder."""
         if not re.fullmatch(r"\d{1,9}", str(item_id)) or not re.fullmatch(r"(final(_DRAFT)?\.mp4|quality_report\.json|storyboard\.json)", name): return None
         p = self.state_dir / "videos" / str(item_id) / name; return p if p.is_file() else None
+    def tip(self, key, **kw):
+        lang = "zh" if str(self.cfg.data.get("language") or "en").startswith("zh") else "en"
+        return TIPS[key][lang].format(**kw)
+    def futile(self, item, back):
+        """A send-back that cannot change anything (rules writer, silent draft voice, draft cards) stops at once with an actionable tip."""
+        d = item["data"]; why = item["chain"][-1]["reason"] if item.get("chain") else ""
+        if item.pop("_tip", None) == "fill_placeholder": return self.tip("placeholder")
+        if back == "writer" and d.get("writer_source") == "template":   # rules writer: same notes -> same script, a rewrite cannot help
+            sb = d.get("storyboard") or {}; tp = TEMPLATES.get(d.get("template"), {}); lo, hi = (tp.get("total_sec") or (0, 0))
+            n = max(1, len(sb.get("shots") or [])); total = float(sum(x.get("duration") or 0 for x in sb.get("shots") or [])); per = max(1.0, total / n)
+            if total and lo and total < lo: return self.tip("short", total=total, lo=lo, more=max(1, int((lo - total) / per + 0.999)))
+            if total and hi and total > hi: return self.tip("long", total=total, hi=hi, less=max(1, int((total - hi) / per + 0.999)))
+            return self.tip("rules", why=why[:120])
+        if back == "voice" and d.get("voice", {}).get("silent"): return self.tip("silent")
+        if back == "visuals" and d.get("visuals", {}).get("backends") == ["draft"]: return self.tip("draft_vis")
+        return None
     def run_chain(self, item, start=0):
-        """Seats may send an item back (SCRIPT CHECK -> WRITER, QC -> the responsible seat). Bounded by max_rewrites per seat."""
+        """Seats may send an item back (SCRIPT CHECK -> WRITER, QC -> the responsible sub-step). Bounded by max_rewrites per step
+        and max_total_rewrites per video; a retry that would give the same result stops at once with a tip."""
+        names = [s.name for s in self.chain]
         while True:
-            r = super().run_chain(item, start); back = item.pop("_back", None)
-            if r is not False or not back or back not in [s.name for s in self.chain]: return r
-            rounds = item["data"].setdefault("rounds", {}); n = rounds.get(back, 0)
-            if n >= int(self.cfg.data["settings"]["max_rewrites"]):
-                self.log(back, "HOLD", f"#{item['id']} still failing after {n} round(s) - needs you", self.subject(item)); return r
-            rounds[back] = n + 1; start = [s.name for s in self.chain].index(back)
-            self.log(back, "REWRITE", f"#{item['id']} sent back to {back.upper()} (round {n + 1}): {item['chain'][-1]['reason'][:160]}", self.subject(item))
-            item["status"] = f"rework at {back.upper()}"
+            r = super().run_chain(item, start); back = item.pop("_back", None); item.pop("_step", None)
+            if r is not False or not back: item.pop("_tip", None); return r
+            owner = OWNER.get(back, back)
+            if owner not in names: return r
+            st = self.cfg.data["settings"]; rounds = item["data"].setdefault("rounds", {}); n = rounds.get(back, 0)
+            tip = self.futile(item, back)
+            if tip:
+                item["data"]["tip"] = tip; self.log(owner, "HOLD", f"#{item['id']} {tip}", self.subject(item)); return r
+            if n >= int(st["max_rewrites"]) or sum(rounds.values()) >= int(st.get("max_total_rewrites", 3)):
+                self.log(owner, "HOLD", f"#{item['id']} still failing after {sum(rounds.values())} round(s) - needs you", self.subject(item)); return r
+            rounds[back] = n + 1; start = names.index(owner)
+            if owner != back: item["_from"] = back
+            self.log(owner, "REWRITE", f"#{item['id']} sent back to {back.upper()} (round {n + 1}): {item['chain'][-1]['reason'][:160]}", self.subject(item))
+            item["status"] = f"rework at {owner.upper()}"
     def item_view(self, it):
         v = super().item_view(it); d = dict(v.get("data", {}))
         if d.get("storyboard"):
@@ -368,6 +485,9 @@ def validate(c):
         if s.get(k) not in opts: raise ValueError(f"settings.{k} must be one of {opts}")
     if not 0 <= int(s["crf"]) <= 28: raise ValueError("settings.crf must be 0-28 (18 = high quality)")
     if not 0 <= int(s["max_rewrites"]) <= 5: raise ValueError("settings.max_rewrites must be 0-5")
+    if not 0 <= int(s.get("max_total_rewrites", 3)) <= 10: raise ValueError("settings.max_total_rewrites must be 0-10")
+    for k in ("parallel_items", "parallel_shots", "parallel_segments"):
+        if not 1 <= int(s.get(k, 1)) <= 8: raise ValueError(f"settings.{k} must be 1-8")
     if not -40 <= float(s["bgm_gain_db"]) <= 0: raise ValueError("settings.bgm_gain_db must be -40..0")
 
 def build(config_path, state_dir):

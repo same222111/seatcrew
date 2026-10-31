@@ -8,8 +8,12 @@ import importlib.util
 from pathlib import Path
 
 def examples_dir():
+    local = Path(__file__).resolve().parent.parent / "examples"
     try:
-        import seatcrew_examples; return Path(next(iter(seatcrew_examples.__path__)))
+        import seatcrew_examples; bundled = Path(next(iter(seatcrew_examples.__path__)))
+        # a source checkout run next to an editable install of ANOTHER checkout must use its own examples
+        if (local / "short_video" / "workflow.py").is_file() and bundled.resolve() != local and (bundled.parent / "seatcrew" / "__init__.py").is_file(): return local
+        return bundled
     except ImportError: return Path(__file__).resolve().parent.parent / "examples"
 
 def find(name):

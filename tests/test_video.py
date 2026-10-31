@@ -85,7 +85,8 @@ def test_qc_fail_then_fixed_by_rerun(tmp_path, monkeypatch):
 def test_scriptcheck_blocks_and_writer_rewrites(tmp_path, monkeypatch):
     wf = wf_(tmp_path, max_rewrites=2)
     it = run(wf, notes="This miracle cream is guaranteed to work.")
-    assert "pending" not in it and it["data"]["rounds"].get("writer") == 2
+    # v0.9.4: the rules writer would produce the same script again -> no futile rewrite rounds, an actionable tip instead
+    assert "pending" not in it and not it["data"]["rounds"].get("writer") and it["data"]["tip"]
     assert any("guaranteed" in c["reason"] or "miracle" in c["reason"] for c in it["chain"] if c["seat"] == "scriptcheck")
 
 def test_ai_writer_gets_feedback_and_fixes_script(tmp_path, monkeypatch):
@@ -118,7 +119,7 @@ def test_no_draft_when_not_allowed(tmp_path, monkeypatch):
     monkeypatch.setattr(TTS, "auto_order", lambda pref="auto": [])               # no keys, no edge-tts: nothing final available
     wf = wf_(tmp_path, tts_backend="auto", visuals_backend="auto", allow_draft=False)
     it = run(wf); blk = [c for c in it["chain"] if not c["ok"]]
-    assert blk and blk[-1]["seat"] in ("voice", "visuals") and "video" not in it["data"]
+    assert blk and blk[-1]["seat"] == "production" and blk[-1]["reason"].split(":")[0] in ("voice", "visuals") and "video" not in it["data"]
 
 @FF
 def test_no_secrets_in_state(tmp_path, monkeypatch):

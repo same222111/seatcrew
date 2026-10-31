@@ -157,5 +157,9 @@
  "help_check": "a check: passes or BLOCKS the item (rules + optional AI).",
  "help_human": "a human gate: the item waits for your Approve / Reject.",
  "help_producer": "a producer: writes something (e.g. a draft), then the next seats check it.",
- "p_simple": "Simple mode"
+ "p_simple": "Simple mode",
+ "pmk_login": "log in on Home",
+ "noai_tool": "Tool step - no AI here. Pick its backends under Settings (voice / visuals / lip-sync backend).",
+ "noai_human": "You decide here - no AI.",
+ "default_model": "default"
 }

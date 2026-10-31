@@ -65,7 +65,8 @@ def check(manifest, plan=None, **opts):
     err = ff.run(["-i", path, "-vn", "-af", "ebur128=peak=true", "-f", "null", "-"])
     I = re.findall(r"I:\s*(-?[\d.]+|-inf) LUFS", err); tp = re.findall(r"Peak:\s*(-?[\d.]+|-inf) dBFS", err)
     I = float(I[-1]) if I and I[-1] != "-inf" else -99.0; tp = float(tp[-1]) if tp and tp[-1] != "-inf" else -99.0
-    R.append(_chk("loudness", abs(I - o["lufs"]) <= o["lufs_tol"], "editor", f"{I:.1f} LUFS (target {o['lufs']:g} +-{o['lufs_tol']:g})", I))
+    sd0 = bool((plan or {}).get("silent_draft"))
+    R.append(_chk("loudness", abs(I - o["lufs"]) <= o["lufs_tol"], "editor", f"{I:.1f} LUFS (target {o['lufs']:g} +-{o['lufs_tol']:g})" + (" - silent DRAFT voice" if sd0 else ""), I, "warn" if sd0 else "fail"))
     R.append(_chk("clipping", tp <= o["max_true_peak"], "editor", f"true peak {tp:.1f} dBTP (max {o['max_true_peak']:g})", tp))
     # narration: silence gaps + subtitle sync on the voice stem
     vs = manifest.get("voice_stem"); words = manifest.get("words") or []
@@ -76,8 +77,9 @@ def check(manifest, plan=None, **opts):
         first, last = words[0]["start"], words[-1]["end"]
         gaps = [(a_, b_) for a_, b_ in sil if a_ > first and b_ < last and b_ - a_ > o["max_gap_sec"]]
         speech = sum(1 for a_, b_ in sil if a_ <= first and b_ >= last) == 0
-        R.append(_chk("voice_present", speech, "voice", "narration audible" if speech else "voice track is silent"))
-        R.append(_chk("silence_gaps", not gaps, "voice", ("gaps " + ", ".join(f"{a_:.1f}-{b_:.1f}s" for a_, b_ in gaps)) if gaps else f"no gap > {o['max_gap_sec']}s"))
+        sd = bool((plan or {}).get("silent_draft"))     # labeled silent DRAFT voice (no engine for this language): warn, never a futile send-back
+        R.append(_chk("voice_present", speech, "voice", "narration audible" if speech else ("voice track is silent (DRAFT - install edge-tts for a real voice)" if sd else "voice track is silent"), severity="warn" if sd else "fail"))
+        R.append(_chk("silence_gaps", not gaps, "voice", ("gaps " + ", ".join(f"{a_:.1f}-{b_:.1f}s" for a_, b_ in gaps)) if gaps else f"no gap > {o['max_gap_sec']}s", severity="warn" if sd else "fail"))
         def in_speech(t): return not any(a_ + 0.15 < t < b_ - 0.15 for a_, b_ in sil)
         starts = [t for c in manifest.get("cues", []) for t in c["words"]]
         good = sum(in_speech(t) for t in starts) / max(1, len(starts)) if speech else 0.0

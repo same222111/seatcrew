@@ -223,7 +223,7 @@ def test_cast_workflow_dialogue_scene(env, tmp_path):
     assert sb["shots"][0]["shot_type"] == "wide" and set(sb["shots"][0]["characters"]) == {"Mia", "Leo"} and all(s["transition"] == "cut" for s in sb["shots"])
     assert "pending" in it, [c["reason"] for c in it["chain"]]
     names = {c["name"] for c in d["qc"]["checks"]}; assert {"character_consistency", "shot_drift", "glitch_jump", "set_continuity", "stray_text", "local_change"} <= names
-    lip = next(c for c in it["chain"] if c["seat"] == "lipsync"); assert "off" in lip["reason"]
+    lip = it["data"]["steps"]["lipsync"]; assert "off" in lip["reason"]
 
 @FF
 def test_scriptcheck_rejects_speaker_outside_cast(env, tmp_path, monkeypatch):
@@ -244,12 +244,12 @@ def test_lipsync_seat_uses_backend_and_keeps_wide(env, tmp_path, monkeypatch):
         calls.append(Path(video).name); shutil.copy(video, out); return Path(out), dict(lipsync=pref)
     monkeypatch.setattr(LS, "apply", fake)
     it = wf.submit(data=dict(topic="t", cast="Duo", template="dialogue_scene")); wf.run_cycle(); it = next(i for i in wf.items if i["id"] == it["id"])
-    lip = next(c for c in it["chain"] if c["seat"] == "lipsync")
+    lip = it["data"]["steps"]["lipsync"]
     # mock visuals give still keyframes (nothing to lip-sync) -> 0 synced, originals kept; video clips go through LS.apply
     assert lip["ok"] and "replicate: synced 0" in lip["reason"] and calls == []
     sb = {"shots": [dict(id="s01", audio=__file__, clip_path=str(tmp_path / "a.mp4"), shot_type="close"), dict(id="s02", audio=__file__, clip_path=str(tmp_path / "b.mp4"), shot_type="wide")]}
     (tmp_path / "a.mp4").write_bytes(b"x"); (tmp_path / "b.mp4").write_bytes(b"x")
-    seat = next(s for s in wf.chain if s.name == "lipsync"); ok, why = seat.rules(dict(id=99, data=dict(storyboard=sb)))
+    seat = wf.steps["lipsync"]; ok, why = seat.rules(dict(id=99, data=dict(storyboard=sb)))
     assert ok and "synced 1" in why and calls == ["a.mp4"] and sb["shots"][0]["lipsync"]
 
 # ---------- server + chat + CLI

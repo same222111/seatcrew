@@ -178,7 +178,20 @@ class Assistant:
         m = dict(id=uuid.uuid4().hex[:10], role=role, text=scrub(text)[0], t=time.strftime("%Y-%m-%dT%H:%M:%S"), **extra)
         self.hist.append(m); return m
 
-    lang = property(lambda self: (self.ctx.get("lang") or (lambda: "en"))())
+    _qlang = None
+    @property
+    def lang(self):
+        """The UI language - unless the user just wrote in another script: a Chinese question gets a Chinese answer."""
+        ui = (self.ctx.get("lang") or (lambda: "en"))() or "en"
+        q = self._qlang
+        if q and not (q.startswith("zh") and str(ui).startswith("zh")) and q != ui: return q
+        return ui
+    @staticmethod
+    def question_lang(text):
+        t = str(text or "")
+        if re.search(r"[\u3040-\u30ff]", t): return "ja"
+        if re.search(r"[\u4e00-\u9fff]", t): return "zh-CN"
+        return None
     def cfg(self):
         c = (self.ctx.get("cfg") or (lambda: None))() or {}
         return dict(providers=c.get("providers", {}), llm_limits=dict(LLM_LIMITS, **c.get("llm_limits", {})), seats=c.get("seats", {}))
@@ -357,7 +370,7 @@ class Assistant:
     def send(self, text):
         text = str(text or "").strip()[:4000]
         if not text: raise ValueError("empty message")
-        clean, removed = scrub(text); out = []
+        clean, removed = scrub(text); out = []; self._qlang = self.question_lang(clean)
         with self.lock:
             self._add("user", clean)
             if removed: out.append(self._add("chief", tx(self.lang, "key_removed"), kind="warn"))

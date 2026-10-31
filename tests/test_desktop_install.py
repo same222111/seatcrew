@@ -156,3 +156,12 @@ def test_desktop_trading_opens_full_terminal(app):
     assert 'id="lab"' in get(base)
     assert json.loads(get(base + "api/config"))["config"]["data"]["news"] == []
     assert json.loads(get(base + "api/config"))["config"]["data"]["price_source"] == "demo"
+
+def test_source_checkout_without_tradecrew_opens_video_workflow(app, monkeypatch):
+    """v0.9.4: a source checkout has no `tradecrew` on sys.path; every non-trading workflow must still open."""
+    import sys
+    for k in [k for k in sys.modules if k == "tradecrew" or k.startswith("tradecrew.")]: monkeypatch.delitem(sys.modules, k)
+    monkeypatch.setitem(sys.modules, "tradecrew", None)           # `import tradecrew...` now raises ImportError
+    for wf in ("short_video", "content_review"):
+        code, r = post(app.url + "api/open", {"workflow": wf}); assert code == 200 and r.get("url"), r
+        assert json.loads(get(r["url"].split("?")[0] + "api/state"))["workflow"] == wf

@@ -23,30 +23,56 @@ def _sb_path(folder, given):
         if (Path(folder) / n).is_file(): return Path(folder) / n
     raise SystemExit(f"no storyboard.yaml in {folder} (run: seatcrew video init {folder})")
 
+INIT_SAMPLE = {   # a real, speakable first video - never placeholder text (it would be read aloud and burned into the frames)
+    "en": ("Why is the sky blue?", ["Sunlight looks white, but it is a mix of every color.", "Air molecules scatter short blue waves much more than long red ones.",
+            "So blue light reaches your eyes from every part of the sky.", "At sunset, light travels through more air and the blue is scattered away.",
+            "That is why sunsets glow orange and red."]),
+    "zh-CN": ("天空为什么是蓝色的？", ["阳光看起来是白色的，其实混合了所有颜色。", "空气分子更容易散射波长短的蓝光，红光则很少被散射。",
+               "所以无论你看向天空哪里，都有蓝光进入眼睛。", "傍晚时阳光要穿过更厚的空气，蓝光在路上就被散射掉了。", "所以晚霞是橙色和红色的。"]),
+}
+def default_lang(env=None):
+    """Chinese system locale -> Chinese sample + CJK font by default."""
+    import os
+    env = os.environ if env is None else env
+    loc = " ".join(str(env.get(k) or "") for k in ("SEATCREW_LANG", "LC_ALL", "LC_MESSAGES", "LANG")).lower()
+    if not loc.strip() and sys.platform == "win32":
+        try: import locale; loc = (locale.getlocale()[0] or "").lower()
+        except Exception: pass
+    return "zh-CN" if ("zh" in loc or "chinese" in loc) else "en"
+
 def init(a):
     d = Path(a.folder); (d / "clips").mkdir(parents=True, exist_ok=True); f = d / "storyboard.yaml"
     if f.exists(): print(f"{f} already exists"); return 1
-    tp = TEMPLATES[a.template]; cams = tp["cameras"]
-    lines = [f"# SeatCrew storyboard ({tp['label']}). One shot = one clip in clips/<id>.mp4|mov|png|jpg.",
-             "# duration is a minimum: the editor stretches a shot to fit its narration.",
-             f"title: My {tp['label'].lower()}", f"aspect: \"{a.aspect}\"", "language: en", f"template: {a.template}", "shots:"]
-    for i, beat in enumerate(tp["arc"], 1):
-        lines += [f"  - id: s{i:02d}", f"    narration: \"<{beat}: one short spoken sentence>\"", f"    caption: \"\"", f"    duration: {tp['shot_sec'][0]}",
-                  f"    visual: \"<what the shot shows, for an AI generator>\"", f"    camera: {cams[(i - 1) % len(cams)]}", f"    transition: {tp['transition']}"]
-    f.write_text("\n".join(lines) + "\n", encoding="utf-8"); print(f"created {f} and {d / 'clips'}/"); return 0
+    lang = a.lang or default_lang(); key = "zh-CN" if lang.startswith("zh") else "en"
+    tp = TEMPLATES[a.template]; cams = tp["cameras"]; title, sents = INIT_SAMPLE[key]
+    q = lambda x: json.dumps(x, ensure_ascii=False)
+    lines = [f"# SeatCrew storyboard ({tp['label']}). One shot = one clip in clips/<id>.mp4|mov|png|jpg (missing clips become labeled DRAFT cards).",
+             "# Replace the sample narration with your own sentences; duration is a minimum: the editor stretches a shot to fit its narration.",
+             f"title: {q(title)}", f"aspect: \"{a.aspect}\"", f"language: {key}", f"template: {a.template}", "shots:"]
+    for i, text in enumerate(sents, 1):
+        lines += [f"  - id: s{i:02d}", f"    narration: {q(text)}", f"    caption: \"\"", f"    duration: {tp['shot_sec'][0]}",
+                  f"    visual: {q(text)}", f"    camera: {cams[(i - 1) % len(cams)]}", f"    transition: {tp['transition']}"]
+    f.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    print(f"created {f} and {d / 'clips'}/\nnext: seatcrew video assemble {d}   (makes a labeled DRAFT right away; add clips/ for the real one)"); return 0
 
 def assemble(a):
     if not have_ffmpeg(): print("ffmpeg not found"); return 2
     folder = Path(a.folder); sb = load_storyboard(_sb_path(folder, a.storyboard)); aspect = a.aspect or sb["aspect"]
     work = folder / "work"; work.mkdir(parents=True, exist_ok=True); draft = False; shots = []
+    import re
+    ph = [s["id"] for s in sb["shots"] if re.search(r"<[^<>\n]{3,}>", (s.get("narration") or "") + (s.get("caption") or ""))]
+    if ph: print(f"shots {', '.join(ph)} still have template placeholders <...> - write the narration in storyboard.yaml first"); return 1
+    a.allow_draft = not a.strict                      # beginners: the first run makes a labeled DRAFT without extra flags
+    missing = [s["id"] for s in sb["shots"] if not (s.get("clip") or find_clip(folder, s["id"]))]
+    if missing and not a.strict: print(f"no clip for {', '.join(missing)}: using labeled {DRAFT_LABEL} cards (add clips/<id>.mp4 for the real video, or --strict to stop)")
     for s in sb["shots"]:
         clip = Path(s["clip"]) if s.get("clip") else find_clip(folder, s["id"])
         if clip and not clip.is_absolute(): clip = (folder / clip) if not clip.is_file() else clip
         if not clip or not Path(clip).is_file():
-            if not a.allow_draft: print(f"missing clip for shot {s['id']} (put clips/{s['id']}.mp4 or .png, or pass --allow-draft)"); return 1
+            if a.strict: print(f"missing clip for shot {s['id']} (put clips/{s['id']}.mp4 or .png, or drop --strict)"); return 1
             clip = VIS.draft_card(s, work, aspect); draft = True
         shots.append(dict(id=s["id"], clip=str(clip), camera=s["camera"], transition=s["transition"], caption=s["caption"], duration=s["duration"]))
-    voice = None; sync = "exact"; lib = VO.Library(a.voices_lib, overlay=folder / "characters.yaml")
+    voice = None; sync = "exact"; silent = False; lib = VO.Library(a.voices_lib, overlay=folder / "characters.yaml")
     if a.voice:
         words = json.loads(Path(a.words).read_text(encoding="utf-8")) if a.words else TTS.estimate(" ".join(s["narration"] for s in sb["shots"]), __import__("seatcrew.video.ff", fromlist=["x"]).duration(a.voice))
         if not a.words: sync = "estimated"
@@ -60,17 +86,18 @@ def assemble(a):
                 try: p, words, infos = VO.render_lines(s["lines"], work / f"voice_{s['id']}.wav", lib, lang=sb["language"], pref=None if a.tts == "auto" else a.tts, allow_draft=a.allow_draft)
                 except (TTS.TTSError, ValueError) as e: print(f"voice for {s['id']}: {e}"); return 1
                 sh["audio"], sh["words"], sh["voices"] = p, words, infos
-                draft |= any(i["draft"] for i in infos); sync = sync if all(i["sync"] == "exact" for i in infos) else "estimated"
+                draft |= any(i["draft"] for i in infos); silent |= any(i.get("voice") == "silent" for i in infos); sync = sync if all(i["sync"] == "exact" for i in infos) else "estimated"
                 print(f"  voice {s['id']}: " + " | ".join(f"{i['speaker']}={i['voice']} {i['style']}" for i in infos)); continue
             try: p, words, info = TTS.synth(s["narration"], work / f"voice_{s['id']}", pref=a.tts, voice=a.tts_voice, lang=sb["language"], allow_draft=a.allow_draft, rate=a.tts_rate, pitch=a.tts_pitch)
             except TTS.TTSError as e: print(f"voice for {s['id']}: {e}"); return 1
-            sh["audio"], sh["words"] = str(p), words; draft |= bool(info.get("draft")); sync = sync if info["sync"] == "exact" else "estimated"
+            sh["audio"], sh["words"] = str(p), words; draft |= bool(info.get("draft")); silent |= info.get("voice") == "silent"; sync = sync if info["sync"] == "exact" else "estimated"
             print(f"  voice {s['id']}: {info['backend']} ({info['sync']} timing)")
     out = Path(a.output or folder / "final.mp4")
-    man = ED.assemble(shots, out, work, aspect=aspect, voice=voice, bgm=a.bgm, draft=draft, crf=a.crf, preset=a.preset, bgm_gain_db=a.bgm_gain_db, fonts_dir=a.fonts_dir,
+    man = ED.assemble(shots, out, work, aspect=aspect, voice=voice, bgm=a.bgm, draft=draft, lang=sb.get("language"), crf=a.crf, preset=a.preset or ("veryfast" if draft else "slow"), workers=4, bgm_gain_db=a.bgm_gain_db, fonts_dir=a.fonts_dir,
                       speaker_colors={n: p["color"] for n, p in lib.all().items() if p.get("color") and n != "narrator"} if a.speaker_colors and not a.voice else None)
     tot = sum(s["duration"] for s in sb["shots"])
-    rep = QC.check(man, dict(total_sec=(min(3, tot), max(600, tot * 2)), sync=sync))
+    rep = QC.check(man, dict(total_sec=(min(3, tot), max(600, tot * 2)), sync=sync, silent_draft=silent))
+    if silent: print("note: no voice engine for this language - the DRAFT voice is silent. Install edge-tts (pip install edge-tts) for a free real voice.")
     (Path(man["output"]).parent / "quality_report.json").write_text(json.dumps(rep, indent=1), encoding="utf-8")
     print(f"\n{man['output']}  {man['size'][0]}x{man['size'][1]}  {man['total']:.1f}s" + (f"   [{DRAFT_LABEL}]" if draft else ""))
     _print(rep); return 0 if rep["passed"] else 1
@@ -177,17 +204,20 @@ def check(a):
     return 0 if rep["passed"] else 1
 
 def main(argv):
+    from ..textio import utf8_stdio; utf8_stdio()
     ap = argparse.ArgumentParser(prog="seatcrew video", description="Short-video tools: init a storyboard folder, assemble a finished video, quality-check it.")
     sp = ap.add_subparsers(dest="c", required=True)
     i = sp.add_parser("init", help="create a folder with storyboard.yaml + clips/"); i.add_argument("folder")
     i.add_argument("--template", choices=list(TEMPLATES), default="knowledge_explainer"); i.add_argument("--aspect", choices=["9:16", "16:9"], default="9:16")
+    i.add_argument("--lang", choices=["en", "zh-CN"], help="sample script language (default: your system language)")
     s = sp.add_parser("assemble", help="folder (storyboard.yaml + clips/) -> final.mp4 + quality_report.json"); s.add_argument("folder")
     s.add_argument("--storyboard"); s.add_argument("-o", "--output"); s.add_argument("--aspect", choices=["9:16", "16:9"])
     s.add_argument("--tts", default="auto", choices=["auto", "elevenlabs", "minimax", "doubao", "azure", "openai", "edge", "draft"]); s.add_argument("--tts-voice"); s.add_argument("--tts-rate", help="edge-tts speaking rate, e.g. -8%%"); s.add_argument("--tts-pitch", help="edge-tts pitch, e.g. -2Hz"); s.add_argument("--fonts-dir", help="extra fonts (e.g. Noto Sans SC for Chinese subtitles)")
     s.add_argument("--voices-lib", help="character voice library (default voices/characters.yaml in the data folder)"); s.add_argument("--speaker-colors", action="store_true", help="color subtitles per speaker")
     s.add_argument("--voice", help="your own narration file (instead of TTS)"); s.add_argument("--words", help="word timings JSON [{w,start,end}] for --voice")
     s.add_argument("--bgm", help="background music (ducked under the voice)"); s.add_argument("--bgm-gain-db", type=float)
-    s.add_argument("--crf", type=int, default=18); s.add_argument("--preset", default="slow"); s.add_argument("--allow-draft", action="store_true", help=f"fill gaps offline; output is labeled {DRAFT_LABEL}")
+    s.add_argument("--crf", type=int, default=18); s.add_argument("--preset", help="x264 preset (default: slow, or veryfast for a DRAFT)"); s.add_argument("--allow-draft", action="store_true", help=f"(default now) fill gaps offline; output is labeled {DRAFT_LABEL}")
+    s.add_argument("--strict", action="store_true", help="stop on a missing clip / voice instead of making a DRAFT")
     q = sp.add_parser("qc", help="re-run the quality check (video folder, final.mp4 or work/manifest.json)"); q.add_argument("manifest")
     v = sp.add_parser("voices", help="character voice library: presets, characters, audition")
     v.add_argument("op", choices=["presets", "list", "set", "delete", "audition", "clone"]); v.add_argument("name", nargs="?")
