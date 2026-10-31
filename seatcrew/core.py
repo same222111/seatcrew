@@ -200,7 +200,7 @@ class Workflow:
     def definition(self):
         """Everything the generic dashboard needs to draw this workflow."""
         return dict(name=self.name, title=self.title, interval_key=self.interval_key,
-                    seats=[dict(name=s.name, job=s.job, kind=s.kind, labels=list(s.labels), block_labels=list(s.block_labels)) for s in self.seat_map.values()],
+                    seats=[dict(name=s.name, job=s.job, kind=s.kind, labels=list(s.labels), block_labels=list(s.block_labels), uses_ai=bool(getattr(s, "uses_ai", bool(s.labels)))) for s in self.seat_map.values()],
                     chain=[s.name for s in self.chain], submit=getattr(self, "submit_fields", []))
 
     def panels(self):

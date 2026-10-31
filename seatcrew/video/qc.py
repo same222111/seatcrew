@@ -76,8 +76,9 @@ def check(manifest, plan=None, **opts):
         first, last = words[0]["start"], words[-1]["end"]
         gaps = [(a_, b_) for a_, b_ in sil if a_ > first and b_ < last and b_ - a_ > o["max_gap_sec"]]
         speech = sum(1 for a_, b_ in sil if a_ <= first and b_ >= last) == 0
-        R.append(_chk("voice_present", speech, "voice", "narration audible" if speech else "voice track is silent"))
-        R.append(_chk("silence_gaps", not gaps, "voice", ("gaps " + ", ".join(f"{a_:.1f}-{b_:.1f}s" for a_, b_ in gaps)) if gaps else f"no gap > {o['max_gap_sec']}s"))
+        sd = bool((plan or {}).get("silent_draft"))     # labeled silent DRAFT voice (no engine for this language): warn, never a futile send-back
+        R.append(_chk("voice_present", speech, "voice", "narration audible" if speech else ("voice track is silent (DRAFT - install edge-tts for a real voice)" if sd else "voice track is silent"), severity="warn" if sd else "fail"))
+        R.append(_chk("silence_gaps", not gaps, "voice", ("gaps " + ", ".join(f"{a_:.1f}-{b_:.1f}s" for a_, b_ in gaps)) if gaps else f"no gap > {o['max_gap_sec']}s", severity="warn" if sd else "fail"))
         def in_speech(t): return not any(a_ + 0.15 < t < b_ - 0.15 for a_, b_ in sil)
         starts = [t for c in manifest.get("cues", []) for t in c["words"]]
         good = sum(in_speech(t) for t in starts) / max(1, len(starts)) if speech else 0.0
