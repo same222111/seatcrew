@@ -2,7 +2,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <!-- Generic SeatCrew dashboard. It knows nothing about any domain: everything is drawn from /api/config (definition)
      and /api/state (snapshot). All strings come from /api/locale/<code> (core + workflow locales). No build step. -->
-<link rel="stylesheet" href="/neon.css">
+
 <style>
 *{box-sizing:border-box}body{margin:0;font-size:13px;line-height:1.45}
 header{display:flex;gap:14px;align-items:center;padding:8px 14px;border-bottom:1px solid var(--ln);background:#0a0e15cc;backdrop-filter:blur(6px);flex-wrap:wrap}
@@ -97,7 +97,8 @@ body[data-theme=contrast]{--bg:#000;--pn:#000;--ln:#9a9a9a;--fg:#fff;--dim:#d0d0
 body[data-theme=contrast] header,body[data-theme=contrast] .seat,body[data-theme=contrast] .it{background:#000}
 body[data-density=compact] main{padding:6px}body[data-density=compact] .pn{padding:6px}body[data-density=compact] .grid,body[data-density=compact] .seats{gap:5px}
 body[data-density=comfy] main{padding:20px}body[data-density=comfy] .pn{padding:16px}body[data-density=comfy] .grid,body[data-density=comfy] .seats{gap:16px}
-</style></head><body>
+</style><link rel="stylesheet" href="/neon.css">
+</head><body>
 <div class="bar2"><a id="homeBtn" class="home" href="#" data-i18n="back_home"></a><span class="crumb"><span id="crumbHome" data-i18n="home"></span> › <b id="crumbWf"></b></span><span class="dim" style="margin-left:auto;font-size:11px" data-i18n="back_keys"></span></div>
 <header><b id="title">▌SeatCrew</b><span class="dim" data-i18n="app_sub"></span><span id="wfname" class="pill"></span><span id="clk" class="dim"></span>
 <button id="simpleBtn" class="b sm" onclick="toggleSimple()"></button><button id="motionBtn" class="b sm" title="" onclick="toggleMotion()" data-i18n="motion"></button><select id="langSel"></select>
@@ -134,7 +135,7 @@ body[data-density=comfy] main{padding:20px}body[data-density=comfy] .pn{padding:
    <div class="nx-card detail" id="detail"></div>
   </div>
   <div class="right">
-   <div class="nx-card pn" id="submitPn"><h3 data-i18n="new_item"></h3><div id="form"></div><button class="b" id="submitBtn" data-i18n="submit"></button></div>
+   <div class="nx-card pn" id="submitPn"><h3 data-i18n="new_item"></h3><div id="form"></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="b" id="submitBtn" data-i18n="submit"></button><button class="b sec" id="sampleBtn"></button></div></div>
    <div id="panels"></div>
    <div class="nx-card term"><div class="nx-h"><span class="acc">$ tail -f</span> <span id="logName"></span><span style="margin-left:auto" id="logN"></span></div><div id="log"></div><span class="nx-cursor"></span></div>
   </div>
@@ -182,12 +183,16 @@ async function load(){META=await get('/api/config');DEF=META.definition;document
  $('form').innerHTML=DEF.submit.map(f=>`<div class="row" style="display:block"><label>${esc(LOC['field_'+f.name]||f.label||f.name)}</label>${f.type=='textarea'?`<textarea data-f="${f.name}"></textarea>`:f.type=='select'?`<select data-f="${f.name}" style="width:100%">${(f.options||[]).map(o=>`<option value="${esc(o)}" ${o==((META.settings||{})[f.name]??f.default)?'selected':''}>${esc(LOC['opt_'+o]||o)}</option>`).join('')}</select>`:`<input data-f="${f.name}" style="width:100%">`}</div>`).join('');
  if(DEF.studio&&!window.STUDIO_LOADED){window.STUDIO_LOADED=1;const sc=document.createElement('script');sc.src='/studio.js';document.body.appendChild(sc)}
  await setLang(META.language||'en',false)}
+const PMK=p=>p=='rules'||!META.keys?'':META.keys[p]?' ✓':(META.providers[p]||{}).kind=='cli'?' ✕ log in on Home':' ✕';
 function renderCfg(){if(!META)return;const P=['rules',...Object.keys(META.providers)];
  $('form').querySelectorAll('[data-f]').forEach(e=>{const f=DEF.submit.find(x=>x.name==e.dataset.f);e.previousElementSibling.textContent=LOC['field_'+f.name]||f.label||f.name;if(e.tagName=='SELECT')[...e.options].forEach(op=>op.textContent=LOC['opt_'+op.value]||op.value)});
  $('seatcfg').innerHTML=DEF.seats.map(s=>{const v=META.seats[s.name];return `<div class="agent"><span class="n">${s.name.toUpperCase()}</span> <span class="dim">— ${esc(job(s))}${s.labels.length?' · AI: '+s.labels.join('|')+(s.block_labels.length?' (blocks on '+s.block_labels.join('|')+')':''):''}</span>
-  <div class="row"><label>${T('provider')}</label><select data-sp="${s.name}">${P.map(p=>`<option ${p==v.provider?'selected':''}>${p}</option>`).join('')}</select>
+  <div class="row"><label>${T('provider')}</label><select data-sp="${s.name}">${P.map(p=>`<option value="${p}" ${p==v.provider?'selected':''}>${p}${PMK(p)}</option>`).join('')}</select>
   <label class="adv">${T('model')}</label><input class="adv" data-sm="${s.name}" value="${esc(v.model)}" placeholder="default"><button class="b sm" data-st="${s.name}">${T('test')}</button><span id="tr-${s.name}" class="dim"></span></div>
   <textarea class="adv" data-spr="${s.name}">${esc(v.prompt)}</textarea></div>`}).join('');
+ const RT={en:'Rules need no connection - pick an AI provider to test','zh-CN':'规则无需连接 - 选一个 AI 提供方再测试','zh-TW':'規則無需連線 - 選一個 AI 提供方再測試',ja:'ルールは接続不要 - AI を選ぶとテストできます',es:'Las reglas no necesitan conexión - elige un proveedor de IA para probar'};
+ const syncT=sel=>{const b=document.querySelector(`[data-st="${sel.dataset.sp}"]`);if(!b)return;b.disabled=sel.value=='rules';b.title=b.disabled?(RT[document.documentElement.lang]||RT.en):''};
+ document.querySelectorAll('[data-sp]').forEach(sel=>{syncT(sel);sel.addEventListener('change',()=>syncT(sel))});
  document.querySelectorAll('[data-st]').forEach(b=>b.onclick=async()=>{const n=b.dataset.st,p=document.querySelector(`[data-sp=${n}]`).value;if(p=='rules')return;$('tr-'+n).textContent='…';
   const r=await post('/api/test-connection',{provider:p,model:document.querySelector(`[data-sm=${n}]`).value});$('tr-'+n).textContent=r.ok?`✓ ${r.model} "${r.reply}" ${r.latency_ms}ms`:'✗ '+r.error});
  $('keys').innerHTML=Object.entries(META.keys).map(([k,ok])=>`<span class="pill" style="margin-right:6px;color:${ok?'var(--acc)':'var(--dim)'}">${k}: ${ok?T('key_set'):T('key_missing')}</span>`).join('');
@@ -199,6 +204,10 @@ $('saveSet').onclick=async()=>{const settings={};document.querySelectorAll('[dat
  const b={interval:+$('interval').value};if(META.auto_run!=null)b.auto_run=$('autorun').checked;if(Object.keys(settings).length)b.settings=settings;
  const r=await post('/api/config',b);$('setmsg').textContent=r.ok?T('saved'):'✗ '+r.error;if(r.ok){META=await get('/api/config');renderCfg()}};
 $('runNow').onclick=()=>post('/api/run',{}).then(()=>toast(T('run_now')+' ✓'));
+const SMPL={en:'Load sample','zh-CN':'填入示例','zh-TW':'填入範例',ja:'サンプルを入力',es:'Cargar ejemplo'};
+function sampleLbl(){$('sampleBtn').textContent=SMPL[document.documentElement.lang]||SMPL.en}
+new MutationObserver(sampleLbl).observe(document.documentElement,{attributes:true,attributeFilter:['lang']});sampleLbl();get('/api/sample').then(r=>{if(!r.data)$('sampleBtn').style.display='none'}).catch(()=>{});
+$('sampleBtn').onclick=async()=>{const r=await get('/api/sample');if(!r.data){toast('-');return}$('form').querySelectorAll('[data-f]').forEach(e=>{if(r.data[e.dataset.f]!=null)e.value=r.data[e.dataset.f]})};
 $('submitBtn').onclick=async()=>{const data={};$('form').querySelectorAll('[data-f]').forEach(e=>data[e.dataset.f]=e.value);const r=await post('/api/submit',{data});
  if(r.ok){$('form').querySelectorAll('input[data-f],textarea[data-f]').forEach(e=>e.value='');toast('#'+r.id+' ✓')}else toast('✗ '+r.error)};
 async function decide(id,ok){const r=await post('/api/decide',{id,approve:ok,note:(document.querySelector(`[data-note="${id}"]`)||{}).value||''});if(!r.ok)toast('✗ '+r.error);tick()}
@@ -293,17 +302,17 @@ document.addEventListener('keydown',e=>{const open=document.querySelector('.moda
  if(e.altKey&&e.key=='ArrowLeft'){e.preventDefault();goHome()}});
 document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>b.closest('.modal').classList.remove('open'));
 // ---------- display options ----------
-function applyDisplay(d){d=d||{};document.body.dataset.theme=d.theme||'dark';document.body.dataset.density=d.density||'normal';document.body.style.fontSize=(d.font_size||13)+'px';document.body.classList.toggle('noanim',d.animations===false);if(typeof SIG!='undefined'){SIG={};}if($('motionBtn'))$('motionBtn').classList.toggle('off',d.animations===false);document.body.classList.toggle('simple',d.simple!==false);if($('simpleBtn')){$('simpleBtn').classList.toggle('on',d.simple!==false);$('simpleBtn').textContent=T('simple')+': '+(d.simple!==false?T('on'):T('off'));$('simpleBtn').title=T('simple_hint')}}
+function applyDisplay(d){d=d||{};document.body.dataset.theme=d.theme||'dark';document.body.dataset.density=d.density||'normal';document.body.style.fontSize=(d.font_size||14)+'px';document.body.classList.toggle('noanim',d.animations===false);if(typeof SIG!='undefined'){SIG={};}if($('motionBtn'))$('motionBtn').classList.toggle('off',d.animations===false);document.body.classList.toggle('simple',d.simple!==false);if($('simpleBtn')){$('simpleBtn').classList.toggle('on',d.simple!==false);$('simpleBtn').textContent=T('simple')+': '+(d.simple!==false?T('on'):T('off'));$('simpleBtn').title=T('simple_hint')}}
 async function toggleMotion(){const d=Object.assign({},PF_DISPLAY(),{animations:document.body.classList.contains('noanim')});const r=await post('/api/config',{display:d});if(r.ok){META.display=d;applyDisplay(d);toast((d.animations?'✨ ':'')+T('motion')+': '+(d.animations?T('on'):T('off')))}}
 async function toggleSimple(){const d=Object.assign({},PF_DISPLAY(),{simple:!document.body.classList.contains('simple')});const r=await post('/api/config',{display:d});if(r.ok){META.display=d;applyDisplay(d);if(PROF)renderEditor(PROF.current);toast(T('simple')+': '+(d.simple?T('on'):T('off')))}}
-const PF_DISPLAY=()=>Object.assign({theme:'dark',font_size:13,density:'normal',animations:true,simple:true},META&&META.display||{});
+const PF_DISPLAY=()=>Object.assign({theme:'dark',font_size:14,density:'normal',animations:true,simple:true},META&&META.display||{});
 // ---------- profiles / parameter editor ----------
 let PROF=null;
 const lab=k=>LOC['p_'+k]||LOC['set_'+k]||k.replace(/_/g,' ');
 function fld(p,v){const k=p.split('.').pop(),a=`data-pp="${esc(p)}"`;
  if(p=='language')return `<select ${a} data-ty=s>${Object.entries(META.languages).map(([c,n])=>`<option value="${c}" ${c==v?'selected':''}>${n}</option>`).join('')}</select>`;
  if(p=='display.theme'||p=='display.density')return `<select ${a} data-ty=s>${(p.endsWith('theme')?PROF.themes:PROF.densities).map(x=>`<option ${x==v?'selected':''} value="${x}">${esc(LOC['opt_'+x]||x)}</option>`).join('')}</select>`;
- if(k=='provider'&&p.startsWith('seats.'))return `<select ${a} data-ty=s>${['rules',...Object.keys(META.providers)].map(x=>`<option ${x==v?'selected':''}>${x}</option>`).join('')}</select>`;
+ if(k=='provider'&&p.startsWith('seats.'))return `<select ${a} data-ty=s>${['rules',...Object.keys(META.providers)].map(x=>`<option value="${x}" ${x==v?'selected':''}>${x}${PMK(x)}</option>`).join('')}</select>`;
  if(typeof v=='boolean')return `<input type=checkbox ${a} data-ty=b ${v?'checked':''}>`;
  if(typeof v=='number')return `<input type=number step=any ${a} data-ty=n value="${v}" ${p=='display.font_size'?'min=10 max=22':''}>`;
  if(v===null)return `<input ${a} data-ty=z value="">`;

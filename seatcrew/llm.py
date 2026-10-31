@@ -15,6 +15,9 @@ PROVIDERS = {  # kind, default base_url, default model, env var for key. Add an 
     "deepseek":  dict(kind="openai",    base_url="https://api.deepseek.com/v1", model="deepseek-chat", key_env="DEEPSEEK_API_KEY"),
     "custom":    dict(kind="openai",    base_url="http://localhost:1234/v1", model="local-model", key_env="CUSTOM_API_KEY"),
     "ollama":    dict(kind="ollama",    base_url="http://localhost:11434", model="llama3.2", key_env=""),
+    # Your own ChatGPT / Claude subscription via the vendors' official CLIs (no API key; SeatCrew never sees a token).
+    "codex_cli":  dict(kind="cli", base_url="", model="", key_env="", tool="codex", label="ChatGPT (Codex CLI login)"),
+    "claude_cli": dict(kind="cli", base_url="", model="", key_env="", tool="claude", label="Claude (Claude Code login)"),
 }
 
 class LLMError(Exception): pass
@@ -62,8 +65,14 @@ def chat(name, system, user, cfg, model=None, max_tokens=200, timeout=None):
                       dict(systemInstruction={"parts": [{"text": system}]}, contents=[{"role": "user", "parts": [{"text": user}]}],
                            generationConfig={"temperature": 0, "maxOutputTokens": max_tokens}), timeout)
             return r["candidates"][0]["content"]["parts"][0]["text"], model
+        if p["kind"] == "cli":
+            from . import cli_ai
+            try: return cli_ai.ask(p["tool"], system, user, model=model or None, timeout=max(timeout, 90)), model or p["tool"]
+            except cli_ai.CLIError as e: raise LLMError(str(e)) from None
         if p["kind"] == "ollama":
-            r = _post(f"{base}/api/chat", {}, dict(model=model, stream=False, messages=msgs, options={"temperature": 0}), timeout)
+            model = ollama_model(base, model)
+            r = _post(f"{base}/api/chat", {}, dict(model=model, stream=False, messages=msgs, options={"temperature": 0, "num_predict": max_tokens}),
+                      max(timeout, 120))                            # local CPU models are slow - give them time
             return r["message"]["content"], model
     except LLMError: raise
     except (KeyError, IndexError, TypeError) as e:
@@ -71,6 +80,19 @@ def chat(name, system, user, cfg, model=None, max_tokens=200, timeout=None):
     except Exception as e:
         raise LLMError(_scrub(f"{type(e).__name__}: {e}")) from None
     raise LLMError(f"unsupported kind {p['kind']}")
+
+_OL = {}
+def ollama_model(base, model):
+    """Use the configured model if Ollama has it; if it is the untouched default and missing, use the first installed model."""
+    if model != PROVIDERS["ollama"]["model"]: return model
+    if base not in _OL or time.time() - _OL[base][0] > 60:
+        try:
+            with urllib.request.urlopen(base + "/api/tags", timeout=2) as r: names = [m["name"] for m in json.loads(r.read()).get("models", [])]
+        except Exception: names = []
+        _OL[base] = (time.time(), names)
+    names = _OL[base][1]
+    if not names or any(n == model or n.split(":")[0] == model for n in names): return model
+    return names[0]
 
 def test_connection(name, cfg, model=None):
     """Real minimal call. Returns dict(ok, provider, model, latency_ms, reply|error)."""
@@ -105,7 +127,13 @@ def ask_role(role, user, labels, cfg):  # role = seat name
     system = rc["prompt"] + f'\nReply ONLY with JSON: {{"label": one of {list(labels)}, "reason": "<one short sentence>"}}'
     try:
         txt, model = chat(rc["provider"], system, user, cfg, model=rc.get("model") or None)
-        m = re.search(r"\{.*\}", txt, re.S); j = json.loads(m.group(0)) if m else {}
+        m = re.search(r"\{.*\}", txt, re.S)
+        try: j = json.loads(m.group(0)) if m else {}
+        except ValueError: j = {}                                     # small/local models often emit almost-JSON
+        if not isinstance(j, dict): j = {}
+        if not j:
+            lm = re.search(r'"?label"?\s*:\s*"?(\w+)', txt); rm = re.search(r'"?reason"?\s*:\s*"([^"]*)', txt)
+            j = dict(label=lm.group(1) if lm else "", reason=rm.group(1) if rm else "")
         lab = str(j.get("label", "")).lower()
         if lab not in labels: return dict(ok=False, label="abstain", reason=f"unparseable: {txt[:80]}", provider=rc["provider"], model=model)
         return dict(ok=True, label=lab, reason=str(j.get("reason", ""))[:200], provider=rc["provider"], model=model)
@@ -123,4 +151,9 @@ def write(role, user, cfg, max_tokens=600):
 
 def key_status():
     """Which provider keys are present (booleans only - keys are never returned)."""
-    return {n: (True if not p["key_env"] else bool(os.getenv(p["key_env"]))) for n, p in PROVIDERS.items()}
+    out = {n: (True if not p["key_env"] else bool(os.getenv(p["key_env"]))) for n, p in PROVIDERS.items()}
+    from . import cli_ai
+    for n, p in PROVIDERS.items():
+        if p["kind"] == "cli":
+            st = cli_ai.status(p["tool"]); out[n] = bool(st["installed"] and st["logged_in"])
+    return out

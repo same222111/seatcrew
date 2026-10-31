@@ -86,7 +86,8 @@ def auto_order(pref="auto", video_model=""):
 
 def ref_for(shot, refs=None, base=None):
     """Reference image for consistent characters: the shot's ref_image, else the first speaker that has one in refs."""
-    r = shot.get("ref_image") or next((refs[l["speaker"]] for l in shot.get("lines", []) if refs and l.get("speaker") in refs), None)
+    r = shot.get("ref_image") or next((refs[l["speaker"]] for l in shot.get("lines", []) if refs and l.get("speaker") in refs), None) \
+        or next((refs[c] for c in shot.get("characters") or [] if refs and c in refs), None)
     if not r: return None
     p = Path(r) if Path(r).is_absolute() or not base else Path(base) / r
     return p if p.is_file() else None

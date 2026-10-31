@@ -28,4 +28,4 @@ exe = EXE(pyz, a.scripts, [], exclude_binaries=True, name="SeatCrew", console=Fa
 coll = COLLECT(exe, a.binaries, a.datas, name="SeatCrew")
 if sys.platform == "darwin":
     app = BUNDLE(coll, name="SeatCrew.app", icon=str(ROOT / "packaging" / "icon.icns"), bundle_identifier="io.github.seatcrew",
-                 info_plist={"CFBundleShortVersionString": "0.8.0", "NSHighResolutionCapable": True})
+                 info_plist={"CFBundleShortVersionString": "0.9.0", "NSHighResolutionCapable": True})

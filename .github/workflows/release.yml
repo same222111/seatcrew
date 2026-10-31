@@ -1,10 +1,12 @@
-# Build desktop apps on a version tag (git tag v0.4.0 && git push --tags) and attach them to a GitHub Release.
+# Build (and smoke-test) desktop apps on every PR to main; on a version tag (git tag v0.4.0 && git push --tags) and attach them to a GitHub Release.
 # Windows: SeatCrew-<v>-windows-setup.exe (Inno Setup, desktop shortcut) + portable .zip
 # macOS:   SeatCrew-<v>-macos.dmg (unsigned)      Linux: SeatCrew-<v>-x86_64.AppImage
 name: release
 on:
   push:
     tags: ["v*"]
+  pull_request:
+    branches: [main]      # build + smoke every installer before a merge (nothing is published)
   workflow_dispatch:
 permissions:
   contents: write
@@ -23,7 +25,8 @@ jobs:
         shell: bash
         run: |
           python -m pip install --upgrade pip
-          pip install ".[desktop,dev]" pyinstaller
+          pip install ".[desktop,dev]" pyinstaller playwright
+          python -m playwright install chromium
           if [ "$RUNNER_OS" = Linux ]; then pip install qtpy "PyQt6==6.11.*" "PyQt6-Qt6==6.11.*" "PyQt6-WebEngine==6.11.*" "PyQt6-WebEngine-Qt6==6.11.*"; fi
       - name: Tests
         shell: bash
@@ -37,10 +40,17 @@ jobs:
         run: |
           sudo apt-get update && sudo apt-get install -y libfuse2 file xvfb libegl1 libgl1 libxkbcommon0 libxkbcommon-x11-0 libxcb-cursor0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-shape0 libxcb-xinerama0 libxcb-xkb1 libnss3 libxcomposite1 libxdamage1 libxrandr2 libxtst6 libdbus-1-3
           bash packaging/build_appimage.sh
-          APPIMAGE_EXTRACT_AND_RUN=1 xvfb-run -a dist/SeatCrew-*.AppImage --smoke 8 || echo "::warning::AppImage smoke launch failed on the runner (artifact still uploaded)"
+          # headless launch of the real AppImage; fails the build if the app does not serve every workflow
+          APPIMAGE_EXTRACT_AND_RUN=1 SMOKE_SHOTS=dist/shots python scripts/smoke_app.py dist/SeatCrew-*.AppImage
+          APPIMAGE_EXTRACT_AND_RUN=1 xvfb-run -a dist/SeatCrew-*.AppImage --smoke 8 || echo "::warning::AppImage window smoke (xvfb) failed on the runner"
       - name: macOS dmg
         if: runner.os == 'macOS'
-        run: bash packaging/build_macos.sh
+        run: |
+          bash packaging/build_macos.sh
+          # smoke the app from the built dmg (headless): fails the build if it does not start and serve every workflow
+          hdiutil attach dist/SeatCrew-*-macos.dmg -mountpoint /tmp/scdmg -nobrowse
+          SMOKE_SHOTS=dist/shots python scripts/smoke_app.py /tmp/scdmg/SeatCrew.app/Contents/MacOS/SeatCrew
+          hdiutil detach /tmp/scdmg
       - name: Windows installer + portable zip
         if: runner.os == 'Windows'
         shell: pwsh
@@ -50,6 +60,12 @@ jobs:
           & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" "/DMyVersion=${{ steps.v.outputs.v }}" packaging\seatcrew.iss
           Set-Content -Path dist\SeatCrew\portable.txt -Encoding utf8 -Value "Portable mode: SeatCrew keeps its data in the data folder next to SeatCrew.exe. Delete this file to use %APPDATA%\SeatCrew instead."
           Compress-Archive -Path dist\SeatCrew\* -DestinationPath "dist\SeatCrew-${{ steps.v.outputs.v }}-windows-portable.zip"
+          # install the setup.exe silently and smoke the INSTALLED app (headless); fails the build on error
+          $setup = Get-ChildItem dist\*-setup.exe | Select-Object -First 1
+          Start-Process -Wait -FilePath $setup.FullName -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART","/CURRENTUSER","/DIR=$env:RUNNER_TEMP\SeatCrewInstalled"
+          $env:SMOKE_SHOTS = "dist\shots"
+          python scripts\smoke_app.py "$env:RUNNER_TEMP\SeatCrewInstalled\SeatCrew.exe"
+          if ($LASTEXITCODE -ne 0) { exit 1 }
       - uses: actions/upload-artifact@v4
         with:
           name: seatcrew-${{ matrix.os }}
@@ -58,13 +74,18 @@ jobs:
             dist/*.dmg
             dist/*-setup.exe
             dist/*-portable.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: screenshots-${{ matrix.os }}
+          path: dist/shots/*.png
+          if-no-files-found: warn
   release:
     needs: build
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
-        with: { path: out, merge-multiple: true }
+        with: { path: out, merge-multiple: true, pattern: "seatcrew-*" }
       - uses: softprops/action-gh-release@v2
         with:
           files: out/*

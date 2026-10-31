@@ -144,3 +144,62 @@ Only the returned voice id is saved in the profile (`minimax_voice`, `doubao_voi
 
 ### What was tested live vs. mock only
 All adapters have mocked-HTTP tests (`tests/test_providers.py`: request shape, polling, retries on 429/5xx, timeouts, failure messages, clone flows). **Only edge-tts and the offline draft path were run live.** Kling, Runway, Luma, Gemini Omni, MiniMax (video, speech, clone), Doubao (speech, clone), Azure, ElevenLabs clone and the Sora-compatible path are **mock-only**: they follow each provider's public docs as of 2026-10-30 but have not been run against the real service. The Doubao clone upload flow is the least certain. Please report issues.
+
+## Character Studio (`/characters`)
+Make reusable characters, group them into a cast (剧组) of up to 5, and shoot a dialogue scene where every line, face and voice comes from that cast.
+
+**1. Characters** - from 1-6 photos, a text description, or both. Files live in `characters/<name>/` (next to your config, never in the repo):
+`character.yaml`, `refs/` (your photos), `sheet/` (front, side, full body, expressions), `angles/` (stills from the 3D viewer), `model.glb`.
+
+| Step | Backends (env var) | Without a key |
+|---|---|---|
+| Character sheet | OpenAI `gpt-image-1` edits, up to 10 refs (`OPENAI_API_KEY`) · Gemini image, up to 4 refs (`GEMINI_API_KEY`) · MiniMax `image-01` subject reference (`MINIMAX_API_KEY`) · Replicate `flux-kontext-pro` (`REPLICATE_API_TOKEN`) | labeled DRAFT cards made from your photo |
+| Image to 3D (optional) | Meshy (`MESHY_API_KEY`) · Tripo v3 (`TRIPO_API_KEY`) · Replicate TRELLIS / any slug in `SEATCREW_3D_MODEL` | a flat textured "standee" GLB, so you can try the viewer. Not a real model |
+| 360° viewer | bundled `model-viewer` 4.4.0 (Apache-2.0, `seatcrew/web/vendor/`), no CDN. "Save angle stills" stores 0/45/.../315° PNGs as extra refs | - |
+| Voice | bind any Voice Library voice or preset · clone from a 10 s+ sample (MiniMax, Doubao, ElevenLabs) · audition | edge-tts preset |
+
+The sheet is generated front first; side, full body and expressions are conditioned on your photos plus the generated front, to keep the same face.
+**Lock** a character to freeze its refs (front, side and full body by default). Locked refs go to every shot the character appears in (VISUALS sends them to providers that take references).
+
+**2. Cast (剧组)** - 1-5 characters with a role (lead, supporting, comic, antagonist, narrator, cameo) and notes, plus an optional plot and **set sheet** (one picture of the location, props and wardrobe). Save, load, delete, **export / import** as JSON. Exports include the images by default, never keys, voice clone secrets or absolute paths. Key-looking strings are removed on save.
+
+**3. Shoot with this cast** - picks the `dialogue_scene` template:
+- WRITER only gives lines to cast members. With a plot written as `Name: line` it uses those lines verbatim; otherwise the AI writer gets the cast brief. SCRIPT CHECK rejects any speaker or on-screen character outside the cast.
+- Every shot is tagged with its speaker(s) and `characters` in frame, plus a `shot_type`. Coverage: wide establishing → over-the-shoulder → close-up on the speaker, then shot / reverse-shot.
+- Dialogue template: 16:9, hard cuts, **no music**, a room-tone bed (-42 dB pink noise) with light reverb.
+- VISUALS uses each character's locked refs plus the set sheet. VOICE uses each member's bound voice.
+- **LIP-SYNC** seat (`lipsync_backend`: `none` | `kling` | `replicate`) re-times mouths on close-up and OTS video clips. Wide shots and still keyframes are skipped. Kling needs a public clip URL (`SEATCREW_PUBLIC_MEDIA_URL`). On failure, the original clip is kept and the reason is noted. **Mock-tested only.**
+- QUALITY CHECK adds **continuity** checks and sends failing shots back to VISUALS. You approve at the end.
+
+### Continuity QC
+Available after a run, or on any video: `python -m seatcrew video check final.mp4 --storyboard sb.yaml --cast "My cast" [--set-sheet set.jpg] [--json report.json]`
+
+| Check | What it does | Severity |
+|---|---|---|
+| `shot_drift` | first vs last sampled frame of a static shot (a person or scene morphs or vanishes) | fail |
+| `local_change` | one region of a static shot changes a lot (a prop, hand or accessory appears or vanishes) | warn |
+| `glitch_jump` | per-frame difference spikes inside a shot (flash frames, jump cuts, glitches), ignoring ±0.3 s around planned cuts | fail |
+| `character_consistency` | each tagged character vs their locked refs (CLIP when `open_clip` + torch are installed, otherwise a colour/structure fallback) | fail with CLIP, **warn with the fallback** |
+| `set_continuity` | each shot vs the cast's set sheet (palette and layout) | fail |
+| `lighting_continuity` | palette and brightness jumps across cuts | warn |
+| `stray_text` | OCR (tesseract) for text that is not a subtitle: signs, garbled letters, watermarks | fail. **Skipped with a warning if tesseract is not installed** |
+
+**Limits (honest):** the fallback cannot verify identity. It compares whole frames with portrait sheets, so expect warnings on correct shots. It also cannot count objects, check which wrist a bracelet is on, or judge whether an expression fits the line. Natural gestures trigger `local_change` warnings. Those still need a human eye, which is why approval stays at the end.
+
+### What was tested
+Image, 3D and lip-sync adapters were tested with **mocked HTTP only** (`tests/test_characters.py`); none has been run against the real services. Store, cast rules, export/import, continuity checks on synthetic clips, the dialogue template, the cast workflow, server routes, CHIEF intents and the CLI were tested offline with ffmpeg.
+
+## Local voice engines (v0.9.1)
+| backend | licence | how | notes |
+|---|---|---|---|
+| `edge` | free service | default, nothing to install | Microsoft neural voices |
+| `cosyvoice` | Apache-2.0 | wizard → Free voices → Install (into `<data>/voice_engines/cosyvoice`) | `voice="英文男"` etc. (built-in speakers of CosyVoice-300M-SFT) or `voice="clone:<id>"` (CosyVoice2-0.5B zero-shot) |
+| `gpt_sovits` | MIT | clone + its own installer, then `python api_v2.py -a 127.0.0.1 -p 9880` | `voice="clone:<id>"`; `SEATCREW_GPTSOVITS_URL` to change the address |
+| F5-TTS, Fish Speech | **non-commercial weights** | not installed | listed for information only |
+
+Clone voices are created with a recording + its exact transcript + a **required consent checkbox**
+(`POST /api/voice-clone`, stored under `<data>/voice_engines/clones/` with the consent statement and date).
+A clone without recorded consent is refused at synthesis time. Never clone anyone's voice without permission.
+
+Measured on the CI-less dev box (8 CPU cores, no GPU): CosyVoice-300M-SFT took ~200 s to load + speak a 4.3 s English line;
+use a NVIDIA GPU for real work. The engine runs in its own venv as a subprocess, so SeatCrew itself does not depend on torch.

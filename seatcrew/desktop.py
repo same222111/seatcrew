@@ -13,6 +13,8 @@ from . import __version__, loader
 from .config import LANGUAGES, load_env
 from .llm import PROVIDERS, key_status, test_connection
 from .assistant import KEY_LINKS
+from . import cli_ai, setup_detect as SD
+from .video import localvoice as LV
 
 APP = "SeatCrew"
 HERE = Path(__file__).parent
@@ -172,12 +174,12 @@ class App:
             self.change_data(b["data_dir"], True)
         prov, key = b.get("provider"), (b.get("api_key") or "").strip()
         mode = b.get("mode") or ("key" if key else "rules")
-        if mode not in ("key", "ollama", "demo", "rules"): raise ValueError("mode must be key, ollama, demo or rules")
+        if mode not in ("key", "ollama", "demo", "rules", "cli"): raise ValueError("mode must be key, cli, ollama, demo or rules")
         if key:
             env = PROVIDERS.get(prov, {}).get("key_env")
             if not env: raise ValueError("pick a provider for the key")
             save_key(self.home / ".env", env, key)
-        chosen = "ollama" if mode == "ollama" else (prov if mode == "key" and prov in PROVIDERS and (key or key_status().get(prov)) else None)
+        chosen = "ollama" if mode == "ollama" else (prov if prov in ("codex_cli", "claude_cli") and key_status().get(prov) else None) if mode == "cli" else (prov if mode == "key" and prov in PROVIDERS and (key or key_status().get(prov)) else None)
         self.save_prefs(language=lang, setup_done=True, default_provider=chosen, ai_mode=mode if chosen or mode in ("demo", "rules") else "rules")
         self.apply_ai_env()
         return dict(ok=True, keys=key_status(), ai_mode=self.prefs["ai_mode"])
@@ -220,6 +222,19 @@ class App:
             url = f"http://127.0.0.1:{srv.server_port}/?home={self.url}"
             self.open[name] = (wf, srv, url); self.save_prefs(last=name); return url
 
+    def detect(self):
+        det = SD.detect(self.home); det["recommended"] = SD.recommend(det); return det
+
+    def apply_recommended(self, b):
+        """One click: use the recommended (or chosen) chat backend; falls back to demo so the app is usable with zero keys."""
+        det = SD.detect(self.home); rec = SD.recommend(det); prov = b.get("provider") or rec["chat_provider"]
+        if prov and prov not in PROVIDERS: raise ValueError("unknown provider")
+        if prov and not key_status().get(prov): raise ValueError(f"{prov} is not ready - log in or install it first")
+        mode = "cli" if prov in ("codex_cli", "claude_cli") else "ollama" if prov == "ollama" else "key" if prov else "demo"
+        self.save_prefs(language=b.get("language") or self.prefs.get("language", "en"), setup_done=True, default_provider=prov, ai_mode=mode,
+                        voice_backend=rec["voice"])
+        self.apply_ai_env(); return dict(ok=True, ai_mode=mode, provider=prov, recommended=rec)
+
     def handler(app):
         page = (HERE / "web" / "launcher.html").read_bytes()
         from . import assistant as AS
@@ -232,8 +247,15 @@ class App:
                 p = self.path.split("?")[0]
                 if p in ("/", "/index.html"): return self.send(page, ctype="text/html; charset=utf-8")
                 if p == "/neon.css": return self.send(NEON.read_bytes(), ctype="text/css; charset=utf-8")
+                if p == "/setup.js": return self.send((HERE / "web" / "setup.js").read_bytes(), ctype="text/javascript; charset=utf-8")
                 if p == "/icon.png": return self.send(ICON.read_bytes(), ctype="image/png")
                 if p == "/api/home": return self.send(app.info())
+                try:
+                    if p == "/api/detect": return self.send(app.detect())
+                    if p.startswith("/api/cli-login/"): return self.send(cli_ai.login_job(p.rsplit("/", 1)[1]))
+                    if p.startswith("/api/voice-engine/job/"): return self.send(LV.job(p.rsplit("/", 1)[1]))
+                    if p == "/api/voice-engines": return self.send(dict(engines=LV.status_all(app.home), clones=LV.list_clones(app.home), consent=LV.CONSENT_TEXT))
+                except (cli_ai.CLIError, LV.VoiceEngineError) as e: return self.send(dict(ok=False, error=str(e)), 400)
                 st = AS.static(p)
                 if st: return self.send(st[0], ctype=st[1])
                 r = AS.route(app.chat, "GET", p)
@@ -244,15 +266,41 @@ class App:
                     b = json.loads(self.rfile.read(int(self.headers.get("Content-Length") or 0)) or b"{}")
                     if self.path == "/api/setup": return self.send(app.setup(b))
                     if self.path == "/api/test-connection": return self.send(app.test_key(b))
+                    if self.path == "/api/recommend-apply": return self.send(app.apply_recommended(b))
+                    if self.path == "/api/models/key":       # paste a video/voice key: saved to the data folder's .env, never echoed back
+                        from .video import providers as PV
+                        i = str(b.get("id", "")); val = str(b.get("value", "")).strip()
+                        if not any(e["id"] == i for e in PV.CATALOG): raise ValueError("unknown model")
+                        var = PV.key_var(i)
+                        if not var: raise ValueError("this model needs no key")
+                        if not val or len(val) < 8 or any(c.isspace() for c in val): raise ValueError("that does not look like a key")
+                        save_key(app.home / ".env", var, val); return self.send(dict(ok=True, var=var, configured=True))
+                    if self.path == "/api/cli-login":
+                        if b.get("tool") not in cli_ai.TOOLS: raise ValueError("tool must be codex or claude")
+                        return self.send(cli_ai.login(b["tool"], bool(b.get("device"))))
+                    if self.path == "/api/cli-login/code": return self.send(cli_ai.login_send(b["id"], b.get("code", "")))
+                    if self.path == "/api/voice-engine/install":
+                        if b.get("engine") not in LV.ENGINES: raise ValueError("unknown engine")
+                        return self.send(LV.install(b["engine"], app.home, "cuda" if (SD.gpu() or {}).get("cuda") else "cpu"))
+                    if self.path == "/api/voice-engine/plan": return self.send(dict(steps=[" ".join(c)[:300] for c in LV.plan(b["engine"], app.home)]))
+                    if self.path == "/api/voice-clone":
+                        return self.send(LV.add_clone(app.home, b.get("name", "voice"), b.get("wav_path", ""), b.get("transcript", ""), b.get("consent") is True))
                     r = AS.route(app.chat, "POST", self.path, b)
                     if r: return self.send(*r)
                     if self.path == "/api/prefs":
-                        if not isinstance(b.get("animations"), bool): raise ValueError("animations must be true or false")
-                        app.save_prefs(animations=b["animations"]); return self.send(dict(ok=True, animations=b["animations"]))
+                        kw = {}
+                        if "animations" in b:
+                            if not isinstance(b["animations"], bool): raise ValueError("animations must be true or false")
+                            kw["animations"] = b["animations"]
+                        if "language" in b:
+                            if b["language"] not in LANGUAGES: raise ValueError("unknown language")
+                            kw["language"] = b["language"]
+                        if not kw: raise ValueError("nothing to save (animations or language)")
+                        app.save_prefs(**kw); return self.send(dict(ok=True, **kw))
                     if self.path == "/api/datadir": return self.send(app.change_data(b.get("path", ""), bool(b.get("move"))))
                     if self.path == "/api/open": return self.send(dict(ok=True, url=app.open_workflow(b["workflow"])))
                     self.send({"error": "not found"}, 404)
-                except (ValueError, KeyError, FileNotFoundError) as e: self.send(dict(ok=False, error=str(e)), 400)
+                except (ValueError, KeyError, FileNotFoundError, cli_ai.CLIError, LV.VoiceEngineError) as e: self.send(dict(ok=False, error=str(e)), 400)
                 except Exception as e: self.send(dict(ok=False, error=f"{type(e).__name__}: {e}"), 500)
         return H
 
@@ -278,6 +326,8 @@ def main(argv=None):
     app = App(a.home).start()
     url = app.open_workflow(a.open) if a.open else app.url
     print(f"{APP} {__version__}  data: {app.home}  url: {url}", flush=True)
+    if os.environ.get("SEATCREW_URL_FILE"):                   # windowed builds have no console: smoke tests read the url here
+        Path(os.environ["SEATCREW_URL_FILE"]).write_text(url, encoding="utf-8")
     webview = None
     if not a.no_window:
         try: import webview

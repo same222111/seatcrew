@@ -16,7 +16,7 @@ from .subs import build_ass
 FONTS = Path(__file__).parent / "fonts"
 XF = {"crossfade": "fade", "fade_black": "fadeblack", "cut": "fade"}
 LEAD, TAIL = 0.15, 0.35
-DEFAULTS = dict(fps=30, crf=18, preset="slow", supersample=2, motion=0.10, transition_sec=0.5, bgm_gain_db=-18.0, lufs=-14.0, true_peak=-1.5, inter_crf=10)
+DEFAULTS = dict(fps=30, crf=18, preset="slow", supersample=2, motion=0.10, transition_sec=0.5, bgm_gain_db=-18.0, lufs=-14.0, true_peak=-1.5, inter_crf=10, room_tone_db=None, reverb=0.0)
 
 def timeline(shots, fps=30, transition_sec=0.5, voice=None):
     """Final duration D_i and start S_i of each shot, plus global word times. Narration never gets cut: a shot is
@@ -47,7 +47,8 @@ def _kb(cam, n, m):
     return {"push_in": (f"1+{m}*{e}", cx, cy), "pull_out": (f"{1 + m}-{m}*{e}", cx, cy),
             "pan_left": (f"{1 + m}", f"(iw-iw/zoom)*(1-{e})", cy), "pan_right": (f"{1 + m}", f"(iw-iw/zoom)*{e}", cy),
             "pan_up": (f"{1 + m}", cx, f"(ih-ih/zoom)*(1-{e})"), "pan_down": (f"{1 + m}", cx, f"(ih-ih/zoom)*{e}"),
-            "static": ("1", cx, cy)}[cam]
+            # a still image can't be truly static (QC would flag a frozen frame): give it a barely visible drift
+            "static": (f"1+{round(m * 0.4, 4)}*{e}", cx, cy)}[cam]
 
 def render_segment(shot, length, out, w, h, o, cwd):
     """One shot -> near-lossless intermediate of exactly `length` seconds. Returns info for QC."""
@@ -120,6 +121,17 @@ def assemble(shots, out, work, aspect="9:16", size=None, voice=None, bgm=None, d
                 f"[b][sc]sidechaincompress=threshold=0.02:ratio=8:attack=15:release=350[bd];[v][bd]amix=inputs=2:normalize=0:duration=first[m]",
                 "-map", "[m]", "-t", total, "mix.wav"], cwd=str(work))
     else: ff.run(["-i", "voice.wav", "-af", "aformat=sample_rates=48000:channel_layouts=stereo", "mix.wav"], cwd=str(work))
+    if o.get("room_tone_db") is not None or o.get("reverb"):
+        # dialogue scenes: a quiet room bed (pink noise, low-passed) under the voices + a short small-room reflection
+        fx = []; ins = ["-i", "mix.wav"]; rv = float(o.get("reverb") or 0)
+        if rv > 0: fx.append(f"[0:a]aecho=0.8:{min(0.9, rv * 3):.2f}:23|41|67:{rv:.2f}|{rv * 0.7:.2f}|{rv * 0.45:.2f}[v]")
+        else: fx.append("[0:a]anull[v]")
+        if o.get("room_tone_db") is not None:
+            ins += ["-f", "lavfi", "-t", f"{total:.3f}", "-i", "anoisesrc=color=pink:amplitude=1:sample_rate=48000:seed=7"]
+            fx.append(f"[1:a]lowpass=f=900,highpass=f=60,volume={float(o['room_tone_db']):.1f}dB,aformat=sample_rates=48000:channel_layouts=stereo[rt];[v][rt]amix=inputs=2:duration=first:normalize=0[m]")
+        else: fx[-1] = fx[-1][:-3] + "[m]"
+        ff.run([*ins, "-filter_complex", ";".join(fx), "-map", "[m]", "-t", f"{total:.3f}", "mix_room.wav"], cwd=str(work))
+        (work / "mix_room.wav").replace(work / "mix.wav")
     ln = _loudnorm("mix.wav", "audio.wav", o, str(work))
     # 4) picture: transitions -> subtitles -> (draft banner) -> H.264
     n = len(shots); ins = sum((["-i", f"seg{i:02d}.mp4"] for i in range(n)), []); fl = []; last = "0:v"

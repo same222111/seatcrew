@@ -5,6 +5,9 @@ or scaffold a folder from a template.
   seatcrew video assemble my_video [-o out.mp4] [--tts auto|elevenlabs|openai|edge] [--voice voice.wav --words words.json]
                                    [--bgm music.mp3] [--aspect 16:9] [--preset slow] [--crf 18] [--allow-draft]
   seatcrew video qc my_video/work/manifest.json
+  seatcrew video character create Mia --description "..." --photo me.jpg ; character sheet Mia ; character lock Mia ; character 3d Mia
+  seatcrew video cast save Family --member Mia:lead --member Leo:comic ; cast export Family -o family.json ; cast import family.json
+  seatcrew video check any.mp4 --storyboard sb.yaml --cast Family [--set-sheet set.jpg]   (QC + continuity on any finished video)
 """
 import argparse, json, sys
 from pathlib import Path
@@ -124,6 +127,55 @@ def estimate(a):
     e = PV.estimate(sb["shots"], a.backend)
     print(f"{a.backend}: {e['shots']} shots, {e['seconds']}s of video, ~${e['usd'] if e['usd'] is not None else '?'} , ~{e['minutes'] or '?'} min ({e['note']}: {e['pricing']})"); return 0
 
+def character(a):
+    from . import characters as CH
+    st = CH.Store(a.root, a.casts, a.lib); op = a.op
+    if op == "list":
+        for c in st.list(): print(f"  {c['name']:<16} {'LOCKED ' if c.get('locked') else '       '}refs {len(c.get('refs') or [])} sheet {'yes' if c.get('sheet') else 'no '} 3d {c.get('model3d_backend') or '-':<9} voice {c.get('voice') or '-'}")
+        return 0
+    if not a.name: raise ValueError("give the character name")
+    if op == "create": c = st.create(a.name, a.description or "", a.gender or "", a.age or "", a.personality or "", a.photo or [])
+    elif op == "show": c = st.get(a.name)
+    elif op == "delete": st.delete(a.name); print("deleted"); return 0
+    elif op == "sheet": c, info = st.make_sheet(a.name, a.backend or "auto", a.model, allow_draft=a.allow_draft or True); print("backends:", ", ".join(sorted({i['backend'] for i in info})))
+    elif op == "3d": c, info = st.make_3d(a.name, a.backend or "auto"); print("3d:", info["backend"], info.get("note", ""))
+    elif op == "lock": c = st.lock(a.name, unlock=a.unlock)
+    elif op == "voice": c, prof = st.bind_voice(a.name, voice=a.voice, preset=a.preset); print("voice:", prof.get("preset") or prof.get("backend"))
+    elif op == "clone":
+        if not (a.backend and a.sample): raise ValueError("clone needs --backend elevenlabs|minimax|doubao and --sample")
+        c, prof = st.clone_voice(a.name, a.backend, a.sample, a.voice_id)
+    print(json.dumps({k: v for k, v in c.items() if k != "slug"}, ensure_ascii=False, indent=1)); return 0
+
+def cast(a):
+    from . import characters as CH
+    st = CH.Store(a.root, a.casts, a.lib)
+    if a.op == "list":
+        for c in st.casts(): print(f"  {c['name']:<16} " + ", ".join(f"{m['character']} ({m['role']})" for m in c["members"]))
+        return 0
+    if a.op == "import": c = st.import_cast(Path(a.name).read_text(encoding="utf-8"), overwrite=a.overwrite); print(f"imported {c['name']}"); return 0
+    if a.op == "save":
+        mem = [dict(zip(("character", "role", "notes"), (m.split(":", 2) + ["", ""])[:3])) for m in a.member or []]
+        c = st.save_cast(a.name, mem, a.plot or "", a.set_sheet or "")
+    elif a.op == "show": c = st.cast(a.name)
+    elif a.op == "delete": st.delete_cast(a.name); print("deleted"); return 0
+    elif a.op == "export":
+        doc = st.export_cast(a.name, images=not a.no_images); out = Path(a.output or f"{CH.slug(a.name)}.cast.json")
+        out.write_text(json.dumps(doc, ensure_ascii=False), encoding="utf-8"); print(f"exported -> {out} (no keys; images {'included' if doc['images_included'] else 'not included'})"); return 0
+    print(json.dumps(c, ensure_ascii=False, indent=1)); return 0
+
+def check(a):
+    """QC any finished video (not made by EDITOR): format, loudness, black/frozen, sharpness + continuity."""
+    from . import characters as CH
+    from .storyboard import load_storyboard
+    sb = load_storyboard(a.storyboard) if a.storyboard else None; refs = None; ss = a.set_sheet
+    if a.cast:
+        st = CH.Store(a.root, a.casts, a.lib); c = st.cast(a.cast); refs = st.cast_refs(c); ss = ss or c.get("set_sheet") or None
+    for r in a.ref or []:
+        n, _, p = r.partition("="); refs = refs or {}; refs.setdefault(n, []).append(p)
+    rep = QC.check_external(a.video, sb, refs, ss); _print(rep)
+    if a.json: Path(a.json).write_text(json.dumps(rep, ensure_ascii=False, indent=1, default=str), encoding="utf-8")
+    return 0 if rep["passed"] else 1
+
 def main(argv):
     ap = argparse.ArgumentParser(prog="seatcrew video", description="Short-video tools: init a storyboard folder, assemble a finished video, quality-check it.")
     sp = ap.add_subparsers(dest="c", required=True)
@@ -148,8 +200,26 @@ def main(argv):
     m = sp.add_parser("models", help="recommended video + voice models (links, env vars); --test ID checks a key"); m.add_argument("--test")
     e = sp.add_parser("estimate", help="rough cost/time of generating a folder's shots with a video API"); e.add_argument("folder")
     e.add_argument("--backend", required=True, choices=["kling", "runway", "gemini", "minimax", "luma", "replicate"])
+    for n, ops in (("character", ["list", "create", "show", "delete", "sheet", "3d", "lock", "voice", "clone"]), ("cast", ["list", "save", "show", "delete", "export", "import"])):
+        c = sp.add_parser(n, help="Character Studio: " + ("characters (photos/description -> sheet, 3D, lock, voice)" if n == "character" else "casts of up to 5 characters"))
+        c.add_argument("op", choices=ops); c.add_argument("name", nargs="?"); c.add_argument("--root", help="characters folder (default characters/)")
+        c.add_argument("--casts", help="casts folder (default casts/)"); c.add_argument("--lib", help="voice library file")
+        if n == "character":
+            c.add_argument("--description"); c.add_argument("--personality"); c.add_argument("--gender"); c.add_argument("--age"); c.add_argument("--photo", action="append")
+            c.add_argument("--backend"); c.add_argument("--model"); c.add_argument("--allow-draft", action="store_true"); c.add_argument("--unlock", action="store_true")
+            c.add_argument("--voice"); c.add_argument("--preset"); c.add_argument("--sample"); c.add_argument("--voice-id")
+        else:
+            c.add_argument("--member", action="append", help="Name:role[:notes] (up to 5)"); c.add_argument("--plot"); c.add_argument("--set-sheet")
+            c.add_argument("-o", "--output"); c.add_argument("--no-images", action="store_true"); c.add_argument("--overwrite", action="store_true")
+    k = sp.add_parser("check", help="QC + continuity on any finished video"); k.add_argument("video"); k.add_argument("--storyboard"); k.add_argument("--cast")
+    k.add_argument("--set-sheet"); k.add_argument("--ref", action="append", help="Name=image (extra character refs)"); k.add_argument("--json", help="write the report here")
+    k.add_argument("--root"); k.add_argument("--casts"); k.add_argument("--lib")
     a = ap.parse_args(argv)
-    try: return {"init": init, "assemble": assemble, "qc": qc, "voices": voices, "models": models, "estimate": estimate}[a.c](a)
+    try: return {"character": character, "cast": cast, "check": check, "init": init, "assemble": assemble, "qc": qc, "voices": voices, "models": models, "estimate": estimate}[a.c](a)
     except (ValueError, FFError) as e: print(f"error: {e}"); return 1
+    except Exception as e:
+        from .providers import ProviderError
+        if isinstance(e, ProviderError): print(f"error: {e}"); return 1
+        raise
 
 if __name__ == "__main__": sys.exit(main(sys.argv[1:]))

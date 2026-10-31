@@ -156,5 +156,6 @@
  "help_chief": "the commander: starts cycles and assigns work.",
  "help_check": "a check: passes or BLOCKS the item (rules + optional AI).",
  "help_human": "a human gate: the item waits for your Approve / Reject.",
- "help_producer": "a producer: writes something (e.g. a draft), then the next seats check it."
+ "help_producer": "a producer: writes something (e.g. a draft), then the next seats check it.",
+ "p_simple": "Simple mode"
 }

@@ -8,10 +8,24 @@
 
 *v0.6 "Night Shift" UI: seat cards with status badges, an animated check chain, live log. Animations follow `prefers-reduced-motion` and can be switched off (Settings → display → animations, or the **motion** button). [Watch the MP4](docs/demo.mp4).*
 
+## New in 0.9.0
+- **Character Studio + casts**: consistent characters, voices and dialogue scenes, which also work without keys as labeled DRAFTs.
+- **Zero-key sample**: one click makes a real short video with a free voice.
+- **Model cards** in 5 languages, plus local AI through **Ollama**.
+- Every installer is smoke-tested in CI on Windows, macOS and Linux.
+
+Full list: [CHANGELOG.md](CHANGELOG.md).
+
+> **Honest notes.** Paid providers (video, image, 3D, cloud TTS and paid LLMs) are tested with mocked HTTP only, **not with real keys yet**. The things tested for real are the no-key path (edge-tts plus DRAFT visuals) and local Ollama. **Clone a voice only with the speaker's explicit permission.**
+
+<img src="docs/img/character_studio_draft.png" width="420" alt="Character Studio with no keys: two cat characters with DRAFT sheets and free voices">
+
 ## Get started in 3 minutes
 
 1. **Install** (any option below) and open SeatCrew. A 3-step wizard appears.
-2. **Pick your language, then connect one AI**: paste a key for any of 7 providers and press **Test connection**, or choose free local **Ollama**, or pick **Demo mode** (no AI, nothing to set up).
+2. **SeatCrew checks this PC** (OS, NVIDIA GPU/VRAM, RAM, disk, installed `codex` / `claude` / `ollama`, keys already in the environment) and offers **Use recommended setup** - one click, works immediately with zero keys.
+   - **Log in with ChatGPT / Codex** or **Log in with Claude**: use your own subscription through the vendors' official CLIs (`codex login`, `claude auth login`). Seats and CHIEF then call `codex exec` / `claude -p`. SeatCrew only shows the sign-in link / one-time code; it never reads or stores your tokens. Not installed? The wizard shows the install command (`npm install -g @openai/codex`, `npm install -g @anthropic-ai/claude-code`).
+   - Or paste a key for any of 7 providers, or use free local **Ollama**, or **Demo mode**.
 3. **Pick a starter workflow** (support triage, content review, paper trading). It opens right away.
 
 You never need your own model to start. Every seat works with plain rules, and AI is optional and seat-by-seat. **Simple mode** (on by default) hides advanced parameters. Every seat and check has a **?** tooltip, and each dashboard shows a **Who decides?** card: CHIEF assigns the work, the seats judge, the checks gate, and a human approves.
@@ -110,6 +124,13 @@ tradecrew start                        # the full trading terminal (http://127.0
 ```
 Each workflow keeps its settings in `config.<name>.yaml` and its state in `state/<name>/`. Use `--lang zh-CN` (or ja, es, zh-TW) for translated CLI output.
 
+## Free voices and voice cloning (consent required)
+- **edge-tts** (free Microsoft neural voices) is the default - nothing to install.
+- Optional local engines, one click from the wizard, installed into **your data folder** (`<data>/voice_engines`, so choosing `D:\SeatCrewData` keeps the models off C:):
+  **CosyVoice** (Apache-2.0, built-in speakers + zero-shot cloning) and **GPT-SoVITS** (MIT, via its own `api_v2.py` server). An NVIDIA GPU with 6 GB+ is recommended; without one they run on CPU and are slow (the wizard warns you).
+- **F5-TTS** and **Fish Speech** weights are **non-commercial** (CC-BY-NC / CC-BY-NC-SA). They are labelled as such and never installed by default.
+- **Never clone a voice without the speaker's permission.** Only clone your own voice or a recording whose speaker explicitly agreed. SeatCrew requires a consent checkbox per cloned voice and stores the consent statement and date next to it. Do not use cloned voices to impersonate or deceive anyone.
+
 ## Make it yours with your own AI
 This repo is a **template**. Hand it to Codex, Claude, ChatGPT or Cursor together with a prompt from [CUSTOMIZE.md](CUSTOMIZE.md). [AGENTS.md](AGENTS.md) gives your AI the architecture map, the extension points and the rules it must keep. [ARCHITECTURE.md](ARCHITECTURE.md) explains how the engine works.
 
@@ -159,9 +180,24 @@ MIT licensed. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## 中文说明
 
+### 0.9.0 新功能
+- **角色工作室 + 剧组**：角色形象和音色保持一致，可以拍对话场景。没有密钥也能用，生成的内容会标注 DRAFT。
+- **零密钥示例**：一键生成一条真实的短视频，配音免费。
+- **模型卡片**：支持 5 种语言，并支持通过 **Ollama** 使用本地 AI。
+- CI 会在 Windows、macOS、Linux 上逐个启动安装包做冒烟测试。
+
+完整列表见 [CHANGELOG.md](CHANGELOG.md)。
+
+> **如实说明**：付费服务商（视频、图像、3D、云端配音、付费大模型）目前只做了模拟 HTTP 测试，**还没有用真实密钥测过**。真实跑通的是无密钥路径（edge-tts + DRAFT 画面）和本地 Ollama。**克隆声音必须事先得到说话人的明确同意。**
+
+
 ### 3 分钟上手
 1. 安装并打开 SeatCrew，首次启动出现 3 步向导。
-2. 选语言，再接入一个 AI：在 7 家服务商里任选一家粘贴密钥，点「测试连接」；或选择免费本地 **Ollama**；或选 **演示模式**（无需 AI，零配置）。
+2. SeatCrew 自动检测本机（系统、NVIDIA 显卡/显存、内存、磁盘、已安装的 `codex` / `claude` / `ollama`、已有密钥），给出推荐方案，点 **一键使用推荐设置** 即可，零密钥也能马上用。
+   - **用 ChatGPT / Codex 登录** 或 **用 Claude 登录**：通过官方 CLI（`codex login`、`claude auth login`）使用你自己的订阅，席位和 CHIEF 调用 `codex exec` / `claude -p`。SeatCrew 只显示登录链接/验证码，绝不读取或保存你的令牌。
+   - 也可以粘贴 7 家服务商之一的密钥，或用免费本地 **Ollama**，或 **演示模式**。
+
+**免费配音**：默认 edge-tts（免费）。可在向导里一键安装本地引擎 **CosyVoice**（Apache-2.0）或 **GPT-SoVITS**（MIT），装到你选的数据目录（例如 D 盘）。没有 NVIDIA 显卡会用 CPU，速度慢。F5-TTS、Fish Speech 权重仅限非商业，默认不安装。**未经本人许可禁止克隆任何人的声音**：只能克隆你自己或已明确同意者的录音，每个克隆声音都必须勾选同意并记录日期，不得用于冒充或欺骗。
 3. 选择一个入门工作流（客服分流 / 内容审核 / 模拟交易），立即打开。
 
 不需要自备模型：每个席位都能只用规则运行，AI 可按席位选择开启。「简洁模式」默认开启，隐藏高级参数；每个席位和检查都有 **?** 提示；每个面板都有「谁来决定?」卡片：CHIEF 分派 → 席位判断 → 检查把关 → 人工批准。
@@ -233,6 +269,9 @@ Also in the setup wizard, the Video studio, and CHIEF chat. Adapters other than 
 | Best value | Voice / TTS | OpenAI TTS | `gpt-4o-mini-tts` | tone via instructions; whisper word timing (deprecated, shuts down 2027-01-06) | `OPENAI_API_KEY` | [Docs](https://developers.openai.com/api/docs/guides/text-to-speech) | [Get key](https://platform.openai.com/api-keys) | [Pricing](https://developers.openai.com/api/docs/pricing) |
 | Free / draft | Voice / TTS | Microsoft Edge neural voices (edge-tts) | `zh-CN-XiaoxiaoNeural etc.` | free, no key, good neural voices; styles only approximated | no key | [Docs](https://github.com/rany2/edge-tts) | - | - |
 
+### Character Studio
+Open `/characters` from the Video studio. You can make characters from photos or a description and generate a consistent sheet (front, side, full body, expressions) with OpenAI, Gemini, MiniMax or Replicate FLUX. An optional image-to-3D step (Meshy, Tripo or Replicate) feeds a bundled 360° viewer. You can lock a character's refs, bind or clone a voice, and build a cast (剧组) of up to 5 with roles. **Shoot with this cast** runs a dialogue scene: lines only for cast members, wide → OTS → close-up coverage, hard cuts, no music, room tone, optional lip-sync, and continuity QC. Without keys you get labeled DRAFT sheets and a flat "standee" model. All cloud adapters are mock-tested only. Guide and limits: [docs/VIDEO.md](docs/VIDEO.md#character-studio-characters).
+
 ### 推荐模型（2026-10-30 核对，价格请以官网为准）
 视频工作流：从主题或脚本生成竖屏/横屏短视频，角色在所有视频中保持同一音色和参考图，付费生成前先显示费用和时间估算。除 edge-tts 外，各适配器仅做了模拟 HTTP 测试。
 
@@ -250,3 +289,6 @@ Also in the setup wizard, the Video studio, and CHIEF chat. Adapters other than 
 | 性价比 | 配音 / TTS | Azure AI Speech | `Neural / HD voices (zh-CN-XiaoxiaoNeural ...)` | 真实 SSML 说话风格（悲伤、温柔、开心……），支持 zh-CN/en/ja | `AZURE_SPEECH_KEY`, `AZURE_SPEECH_REGION` | [文档](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/speech-synthesis-markup-voice) | [获取密钥](https://portal.azure.com/#create/Microsoft.CognitiveServicesSpeechServices) | [价格](https://azure.microsoft.com/en-us/pricing/details/speech/) |
 | 性价比 | 配音 / TTS | OpenAI TTS | `gpt-4o-mini-tts` | 用 instructions 控制语气（已弃用，2027-01-06 关停） | `OPENAI_API_KEY` | [文档](https://developers.openai.com/api/docs/guides/text-to-speech) | [获取密钥](https://platform.openai.com/api-keys) | [价格](https://developers.openai.com/api/docs/pricing) |
 | 免费 / 草稿 | 配音 / TTS | Microsoft Edge neural voices (edge-tts) | `zh-CN-XiaoxiaoNeural etc.` | 免费无需密钥，神经音色；风格仅近似 | 无需密钥 | [文档](https://github.com/rany2/edge-tts) | - | - |
+### 角色工作室（Character Studio）
+在视频工作室中打开 `/characters`。可以用照片或文字描述创建角色，并用 OpenAI、Gemini、MiniMax 或 Replicate FLUX 生成一致的设定图（正面、侧面、全身、表情）。可选的图生 3D（Meshy、Tripo、Replicate）会在内置的 360° 查看器中展示。可以锁定角色参考图、绑定或克隆音色，并组建最多 5 人的剧组并分配角色。点击「用这个剧组拍摄」会生成对话场景：台词只分给剧组成员，镜头按全景 → 过肩 → 特写安排，硬切、无背景音乐、带房间底噪，可选对口型，并进行连贯性质检。没有密钥时生成带 DRAFT 标记的设定图和平面"立牌"模型。所有云端适配器仅做了模拟测试。说明与局限见 [docs/VIDEO.md](docs/VIDEO.md#character-studio-characters)。
+

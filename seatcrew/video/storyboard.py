@@ -51,6 +51,12 @@ def _lines(sid, s):
 
 def speakers(sb): return sorted({l["speaker"] for s in sb["shots"] for l in s.get("lines", [])})
 
+SHOT_TYPES = ("wide", "two_shot", "ots", "closeup", "reaction", "insert")
+def _chars(sid, v):
+    if isinstance(v, str): v = [x.strip() for x in re.split(r"[,，、]", v) if x.strip()]
+    if not isinstance(v, list) or len(v) > 5: raise ValueError(f"shot {sid}: characters must be a list of up to 5 names")
+    return [str(x).strip()[:40] for x in v]
+
 def validate_storyboard(d):
     """Normalize + validate. Raises ValueError with a readable message."""
     if not isinstance(d, dict): raise ValueError("storyboard must be a mapping with a 'shots' list")
@@ -78,7 +84,9 @@ def validate_storyboard(d):
         out["shots"].append(dict(id=sid, narration=narr, lines=lines, duration=dur, caption=str(s.get("caption") or "").strip()[:80],
                                  visual=str(s.get("visual") or "").strip(), camera=cam, transition=tr,
                                  **({"clip": str(s["clip"])} if s.get("clip") else {}),
-                                 **({"ref_image": str(s["ref_image"])[:200]} if s.get("ref_image") else {})))
+                                 **({"ref_image": str(s["ref_image"])[:200]} if s.get("ref_image") else {}),
+                                 **({"characters": _chars(sid, s["characters"])} if s.get("characters") else {}),
+                                 **({"shot_type": str(s["shot_type"])} if s.get("shot_type") in SHOT_TYPES else {})))
     return out
 
 def find_clip(folder, sid):

@@ -144,7 +144,7 @@ def test_definition_and_profiles(tmp_path):
 
 def test_locales_complete():
     base = Path(loader.__file__).parent.parent / "examples" / "short_video" / "locales"
-    en = json.loads((base / "en.json").read_text())
+    en = json.loads((base / "en.json").read_text(encoding="utf-8"))
     for l in ("zh-CN", "zh-TW", "ja", "es"): assert set(json.loads((base / f"{l}.json").read_text(encoding="utf-8"))) == set(en)
 
 @FF

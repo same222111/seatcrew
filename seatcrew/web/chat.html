@@ -1,7 +1,10 @@
 <!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>CHIEF chat - SeatCrew</title>
-<link rel="stylesheet" href="/neon.css"><style>body{margin:0}.top{display:flex;align-items:center;gap:14px;padding:14px 20px;max-width:980px;margin:0 auto}
+<style>body{margin:0}.top{display:flex;align-items:center;gap:14px;padding:14px 20px;max-width:980px;margin:0 auto}
 .top a.back{background:var(--acc);color:#04140a;font:800 15px var(--sans);padding:12px 20px;border-radius:10px;text-decoration:none;box-shadow:0 0 18px #3dffa055}.top h1{font:800 22px var(--sans);margin:0}</style>
-<script>window.CHAT_FULL=true</script></head><body><div class="top"><a class="back" id="back" href="/">← Back</a><h1>◆ CHIEF chat</h1></div><div id="chatHost" style="padding:0 20px"></div>
+<script>window.CHAT_FULL=true</script><link rel="stylesheet" href="/neon.css">
+</head><body><div class="top"><a class="back" id="back" href="/">← Back</a><h1>◆ CHIEF chat</h1></div><div id="chatHost" style="padding:0 20px"></div>
 <script>const q=new URLSearchParams(location.search);document.getElementById("back").href="/"+(q.get("home")?"?home="+encodeURIComponent(q.get("home")):"");
 document.addEventListener("keydown",e=>{if(e.key=="Escape"||(e.altKey&&e.key=="ArrowLeft"))location.href=document.getElementById("back").href});</script>
+<script>fetch("/api/chat").then(r=>r.json()).then(s=>{const l=s.lang||"en",B={en:"← Back","zh-CN":"← 返回","zh-TW":"← 返回",ja:"← 戻る",es:"← Volver"},H={en:"◆ CHIEF chat","zh-CN":"◆ 总指挥对话","zh-TW":"◆ 總指揮對話",ja:"◆ CHIEF チャット",es:"◆ Chat con CHIEF"};
+document.documentElement.lang=l;document.getElementById("back").textContent=B[l]||B.en;document.querySelector(".top h1").textContent=H[l]||H.en}).catch(()=>{});</script>
 <script src="/chat.js"></script></body></html>

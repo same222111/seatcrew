@@ -1,0 +1,199 @@
+{
+ "_note": "Translations of the 'good_at' text in seatcrew/video/providers.py CATALOG (English lives there). Keep keys in sync; tests check every id has all languages.",
+ "units": {
+  "zh-CN": {
+   "per second": "每秒",
+   "per 1K chars": "每千字符",
+   "per 1K chars (approx)": "每千字符(约)",
+   "per 1K chars (approx, CNY billed)": "每千字符(约,按人民币计费)",
+   "varies": "因模型而异",
+   "free": "免费",
+   "see pricing page": "见定价页",
+   "-": "-"
+  },
+  "zh-TW": {
+   "per second": "每秒",
+   "per 1K chars": "每千字元",
+   "per 1K chars (approx)": "每千字元(約)",
+   "per 1K chars (approx, CNY billed)": "每千字元(約,以人民幣計費)",
+   "varies": "依模型而異",
+   "free": "免費",
+   "see pricing page": "見定價頁",
+   "-": "-"
+  },
+  "ja": {
+   "per second": "/秒",
+   "per 1K chars": "/1000文字",
+   "per 1K chars (approx)": "/1000文字(目安)",
+   "per 1K chars (approx, CNY billed)": "/1000文字(目安・人民元課金)",
+   "varies": "モデルにより異なる",
+   "free": "無料",
+   "see pricing page": "料金ページ参照",
+   "-": "-"
+  },
+  "es": {
+   "per second": "por segundo",
+   "per 1K chars": "por 1K caracteres",
+   "per 1K chars (approx)": "por 1K caracteres (aprox.)",
+   "per 1K chars (approx, CNY billed)": "por 1K caracteres (aprox., en CNY)",
+   "varies": "varía",
+   "free": "gratis",
+   "see pricing page": "ver precios",
+   "-": "-"
+  }
+ },
+ "good_at": {
+  "kling": {
+   "zh-CN": "电影感运动,人物与面部表现好;3–15 秒,1080p/4K,支持首尾帧",
+   "zh-TW": "電影感運動,人物與臉部表現佳;3–15 秒,1080p/4K,支援首尾影格",
+   "ja": "映画的な動き、人物と顔に強い。3〜15 秒、1080p/4K、最初/最後のフレーム指定",
+   "es": "movimiento cinematográfico, personas y caras; 3–15 s, 1080p/4K, primer/último fotograma"
+  },
+  "runway": {
+   "zh-CN": "精致的电影镜头,提示词遵循度高;2–10 秒;一个密钥还能调用合作模型",
+   "zh-TW": "精緻的電影鏡頭,提示詞遵循度高;2–10 秒;一組金鑰還能呼叫合作模型",
+   "ja": "洗練されたシネマ風ショット、プロンプトに忠実。2〜10 秒。1 つのキーで提携モデルも利用可",
+   "es": "planos cinematográficos pulidos, sigue bien el prompt; 2–10 s; una clave también da acceso a modelos asociados"
+  },
+  "gemini": {
+   "zh-CN": "快速文/图生视频,自带原生音频,角色一致性好;3–10 秒(Veo 3.1 预览版已于 2026-10-22 下线)",
+   "zh-TW": "快速文/圖生影片,內建原生音訊,角色一致性佳;3–10 秒(Veo 3.1 預覽版已於 2026-10-22 下線)",
+   "ja": "高速なテキスト/画像→動画、ネイティブ音声付き、キャラクターの一貫性。3〜10 秒(Veo 3.1 プレビューは 2026-10-22 に終了)",
+   "es": "texto/imagen a vídeo rápido con audio nativo y personajes consistentes; 3–10 s (Veo 3.1 Preview cerró el 2026-10-22)"
+  },
+  "luma": {
+   "zh-CN": "梦幻运镜,HDR,关键帧;5/10 秒",
+   "zh-TW": "夢幻運鏡,HDR,關鍵影格;5/10 秒",
+   "ja": "夢のようなカメラワーク、HDR、キーフレーム。5/10 秒",
+   "es": "movimientos de cámara oníricos, HDR, fotogramas clave; 5/10 s"
+  },
+  "minimax": {
+   "zh-CN": "性价比高,物理效果好,参考图生视频保持角色一致;4–15 秒",
+   "zh-TW": "性價比高,物理效果好,參考圖生影片保持角色一致;4–15 秒",
+   "ja": "コスパ良好、物理表現、参照画像で一貫したキャラクター。4〜15 秒",
+   "es": "gran relación calidad-precio, física, vídeo desde referencia para personajes consistentes; 4–15 s"
+  },
+  "replicate": {
+   "zh-CN": "一个密钥调用众多托管模型;价格取决于所选模型",
+   "zh-TW": "一組金鑰呼叫眾多託管模型;價格取決於所選模型",
+   "ja": "1 つのキーで多数のホスト型モデル。料金はモデル次第",
+   "es": "una clave para muchos modelos alojados; el precio depende del modelo"
+  },
+  "sora": {
+   "zh-CN": "已停用:OpenAI 已于 2026-09-24 移除 Sora 视频 API",
+   "zh-TW": "已停用:OpenAI 已於 2026-09-24 移除 Sora 影片 API",
+   "ja": "提供終了: OpenAI は 2026-09-24 に Sora 動画 API を廃止",
+   "es": "RETIRADO: OpenAI eliminó la API de vídeo Sora el 2026-09-24"
+  },
+  "elevenlabs": {
+   "zh-CN": "表现力最强的声音,即时声音克隆,精确到字的时间戳",
+   "zh-TW": "表現力最強的聲音,即時聲音複製,精確到字的時間戳",
+   "ja": "最も表現力豊かな音声、即時ボイスクローン、単語単位の正確なタイムスタンプ",
+   "es": "las voces más expresivas, clonación instantánea, marcas de tiempo exactas por palabra"
+  },
+  "minimax_tts": {
+   "zh-CN": "中文非常自然,支持情绪参数,10 秒以上录音即可克隆",
+   "zh-TW": "中文非常自然,支援情緒參數,10 秒以上錄音即可複製",
+   "ja": "非常に自然な中国語、感情パラメータ、10 秒以上の音声でクローン",
+   "es": "chino muy natural, parámetro de emoción, clonación con 10 s+ de audio"
+  },
+  "doubao": {
+   "zh-CN": "自然的普通话音色,带情绪,支持声音复刻(seed-icl-2.0)",
+   "zh-TW": "自然的普通話音色,帶情緒,支援聲音複刻(seed-icl-2.0)",
+   "ja": "感情表現のある自然な中国語音声、ボイスクローン(seed-icl-2.0)",
+   "es": "voces zh-CN naturales con emociones, clonación de voz (seed-icl-2.0)"
+  },
+  "azure": {
+   "zh-CN": "真正的 SSML 说话风格(悲伤、温柔、开心……),支持中/英/日音色",
+   "zh-TW": "真正的 SSML 說話風格(悲傷、溫柔、開心……),支援中/英/日音色",
+   "ja": "本物の SSML 話し方スタイル(悲しい・優しい・明るい…)、中/英/日の音声",
+   "es": "estilos de habla SSML reales (triste, suave, alegre…) para voces zh-CN/en/ja"
+  },
+  "openai_tts": {
+   "zh-CN": "可用指令控制语气;whisper 提供逐词时间(已弃用,2027-01-06 关闭)",
+   "zh-TW": "可用指令控制語氣;whisper 提供逐詞時間(已棄用,2027-01-06 關閉)",
+   "ja": "指示でトーンを調整、whisper で単語タイミング(非推奨、2027-01-06 終了)",
+   "es": "tono mediante instrucciones; tiempos por palabra con whisper (obsoleto, cierra el 2027-01-06)"
+  },
+  "edge": {
+   "zh-CN": "免费、无需密钥,神经网络音色不错;情绪风格只能近似",
+   "zh-TW": "免費、免金鑰,神經網路音色不錯;情緒風格只能近似",
+   "ja": "無料・キー不要、良質なニューラル音声。スタイルは近似のみ",
+   "es": "gratis, sin clave, buenas voces neuronales; los estilos solo se aproximan"
+  },
+  "openai_image": {
+   "zh-CN": "最多 10 张参考照片编辑,角色设定图的身份保持很强",
+   "zh-TW": "最多 10 張參考照片編輯,角色設定圖的身分保持很強",
+   "ja": "最大 10 枚の参照写真で編集。キャラクターシートの同一性保持に強い",
+   "es": "edición con hasta 10 fotos de referencia: mantiene muy bien la identidad en hojas de personaje"
+  },
+  "gemini_image": {
+   "zh-CN": "多参考图角色一致(最多 4 张),速度快",
+   "zh-TW": "多參考圖角色一致(最多 4 張),速度快",
+   "ja": "複数参照でキャラクターの一貫性(最大 4 枚)、高速",
+   "es": "consistencia de personaje con varias referencias (hasta 4), rápido"
+  },
+  "minimax_image": {
+   "zh-CN": "subject_reference 保持同一张脸,便宜",
+   "zh-TW": "subject_reference 保持同一張臉,便宜",
+   "ja": "subject_reference で同じ顔を保持、安価",
+   "es": "subject_reference mantiene la misma cara, barato"
+  },
+  "replicate_image": {
+   "zh-CN": "基于单张参考图编辑:同一个人,换姿势/表情",
+   "zh-TW": "基於單張參考圖編輯:同一個人,換姿勢/表情",
+   "ja": "1 枚の参照から編集: 同じ人物で新しいポーズ/表情",
+   "es": "edición desde una referencia: misma persona, nueva pose/expresión"
+  },
+  "meshy": {
+   "zh-CN": "单张图生成带贴图的 GLB,适合角色",
+   "zh-TW": "單張圖產生帶貼圖的 GLB,適合角色",
+   "ja": "1 枚の画像からテクスチャ付き GLB。キャラクター向き",
+   "es": "GLB texturizado desde una imagen, bueno para personajes"
+  },
+  "tripo": {
+   "zh-CN": "快速生成带贴图的 GLB",
+   "zh-TW": "快速產生帶貼圖的 GLB",
+   "ja": "高速なテクスチャ付き GLB",
+   "es": "GLB texturizado rápido"
+  },
+  "replicate_3d": {
+   "zh-CN": "开源模型,按次付费",
+   "zh-TW": "開源模型,按次付費",
+   "ja": "オープンモデル、実行ごとの課金",
+   "es": "modelos abiertos, pago por ejecución"
+  },
+  "kling_lipsync": {
+   "zh-CN": "按 2–60 秒台词重新对齐口型;需要公开可访问的视频链接",
+   "zh-TW": "依 2–60 秒台詞重新對齊口型;需要公開可存取的影片連結",
+   "ja": "2〜60 秒のセリフに口の動きを合わせ直す。公開クリップ URL が必要",
+   "es": "resincroniza bocas con una frase de 2–60 s; requiere URL pública del clip"
+  },
+  "replicate_lipsync": {
+   "zh-CN": "视频 + 音频 -> 口型同步视频",
+   "zh-TW": "影片 + 音訊 -> 口型同步影片",
+   "ja": "動画 + 音声 -> リップシンク動画",
+   "es": "vídeo + audio -> vídeo con labios sincronizados"
+  },
+  "draft": {
+   "zh-CN": "免费、离线,标注 DRAFT,只用于检查节奏",
+   "zh-TW": "免費、離線,標示 DRAFT,只用來檢查節奏",
+   "ja": "無料・オフライン、DRAFT 表示。タイミング確認専用",
+   "es": "gratis, sin conexión, marcado DRAFT: solo para revisar el ritmo"
+  }
+ },
+ "names": {
+  "draft": {
+   "zh-CN": "离线草稿卡",
+   "zh-TW": "離線草稿卡",
+   "ja": "オフライン下書きカード",
+   "es": "Tarjetas borrador sin conexión"
+  },
+  "edge": {
+   "zh-CN": "微软 Edge 神经语音(edge-tts)",
+   "zh-TW": "微軟 Edge 神經語音(edge-tts)",
+   "ja": "Microsoft Edge ニューラル音声(edge-tts)",
+   "es": "Voces neuronales de Microsoft Edge (edge-tts)"
+  }
+ }
+}
