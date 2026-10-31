@@ -16,7 +16,7 @@ from .subs import build_ass
 FONTS = Path(__file__).parent / "fonts"
 XF = {"crossfade": "fade", "fade_black": "fadeblack", "cut": "fade"}
 LEAD, TAIL = 0.15, 0.35
-DEFAULTS = dict(fps=30, crf=18, preset="slow", supersample=2, motion=0.10, transition_sec=0.5, bgm_gain_db=-18.0, lufs=-14.0, true_peak=-1.5, inter_crf=10, room_tone_db=None, reverb=0.0)
+DEFAULTS = dict(fps=30, crf=18, preset="slow", supersample=2, motion=0.10, transition_sec=0.5, bgm_gain_db=-18.0, lufs=-14.0, true_peak=-1.5, inter_crf=10, room_tone_db=None, reverb=0.0, workers=1)
 
 def timeline(shots, fps=30, transition_sec=0.5, voice=None):
     """Final duration D_i and start S_i of each shot, plus global word times. Narration never gets cut: a shot is
@@ -88,9 +88,13 @@ def assemble(shots, out, work, aspect="9:16", size=None, voice=None, bgm=None, d
         if s.get("audio"): s["audio_dur"] = ff.duration(s["audio"])
     if voice: voice = dict(voice, dur=ff.duration(voice["path"]))
     tl = timeline(shots, o["fps"], o["transition_sec"], voice); D, S, T = tl["D"], tl["S"], tl["T"]
-    seg_info = []
-    for i, s in enumerate(shots):                                  # 1) shots -> segments
-        seg_info.append(render_segment(s, D[i] + T[i], f"seg{i:02d}.mp4", w, h, o, str(work)))
+    # 1) shots -> segments: independent ffmpeg runs, done in parallel; seg_info / seg file names keep shot order
+    nw = max(1, min(int(o.get("workers") or 1), len(shots)))
+    job = lambda i: render_segment(shots[i], D[i] + T[i], f"seg{i:02d}.mp4", w, h, o, str(work))
+    if nw > 1:
+        from concurrent.futures import ThreadPoolExecutor
+        with ThreadPoolExecutor(nw, thread_name_prefix="seg") as ex: seg_info = list(ex.map(job, range(len(shots))))
+    else: seg_info = [job(i) for i in range(len(shots))]
     # 2) subtitles
     caps = [(S[i] + 0.1, S[i] + D[i] - 0.15, s.get("caption", "")) for i, s in enumerate(shots)] if captions else []
     from .typography import text_font
