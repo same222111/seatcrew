@@ -250,9 +250,10 @@ class Workflow:
         cfg = self.cfg.data
         seats = {k: dict(v, active=(self.active == k) or (time.time() - v["t"] < 4),
                          ai=cfg["seats"][k]["provider"] + (f"/{cfg['seats'][k]['model']}" if cfg["seats"][k].get("model") else "")) for k, v in self.seats.items()}
-        return dict(workflow=self.name, title=self.title, time=now().isoformat(timespec="seconds"), cycle=self.cycle_no, last_cycle=self.last_cycle,
+        from .logi18n import localize_snapshot
+        return localize_snapshot(dict(workflow=self.name, title=self.title, time=now().isoformat(timespec="seconds"), cycle=self.cycle_no, last_cycle=self.last_cycle,
                     seats=seats, items=[self.item_view(i) for i in self._retained_items(40)], events=self.events[-120:], panels=self.panels(),
-                    language=cfg["language"], runner=dict(interval=cfg[self.interval_key], running=not self.stop.is_set()))
+                    language=cfg["language"], runner=dict(interval=cfg[self.interval_key], running=not self.stop.is_set())), cfg["language"])
 
 class Runner:
     """Runs workflow.run_cycle() every <interval_key> seconds; workflow.wake.set() runs it now. auto_run=False = manual only."""
