@@ -93,12 +93,15 @@ def assemble(shots, out, work, aspect="9:16", size=None, voice=None, bgm=None, d
         seg_info.append(render_segment(s, D[i] + T[i], f"seg{i:02d}.mp4", w, h, o, str(work)))
     # 2) subtitles
     caps = [(S[i] + 0.1, S[i] + D[i] - 0.15, s.get("caption", "")) for i, s in enumerate(shots)] if captions else []
-    ass, cues = build_ass(tl["words"], caps, w, h, tl["total"], speaker_colors=o.get("speaker_colors"))
+    from .typography import text_font
+    selected_font, family = text_font(" ".join([x["w"] for x in tl["words"]] + [c[2] or "" for c in caps]), [o.get("fonts_dir")])
+    ass, cues = build_ass(tl["words"], caps, w, h, tl["total"], font=family, speaker_colors=o.get("speaker_colors"))
     (work / "subs.ass").write_text(ass, encoding="utf-8")
     fd = work / "fonts"; fd.mkdir(exist_ok=True)
     extra = [Path(x) for x in (o.get("fonts_dir"), os.environ.get("SEATCREW_FONTS_DIR")) if x and Path(x).is_dir()]
     for d in [FONTS, *extra]:
-        for f in [*d.glob("*.ttf"), *d.glob("*.otf")]: shutil.copy(f, fd / f.name)
+        for f in [*d.glob("*.ttf"), *d.glob("*.otf"), *d.glob("*.ttc")]: shutil.copy(f, fd / f.name)
+    shutil.copy(selected_font, fd / selected_font.name)
     # 3) audio: voice stem -> (+ducked music) -> loudness
     total = tl["total"]
     if voice:

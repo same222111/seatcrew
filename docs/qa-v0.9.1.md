@@ -22,6 +22,8 @@ Scope: audit the v0.9.0 release, reproduce defects before fixing them, exercise 
 - The desktop trading entry opened the generic dashboard, hiding Strategy Lab. It now opens the full paper terminal.
 - Cast selection required drag-and-drop. Character buttons now also support click, keyboard activation and touch, with translated guidance.
 
+- Visual review caught Chinese title cards rendered as missing-glyph boxes. Titles and subtitles now use installed CJK fonts on macOS/Windows/Linux, including TTC collections; absent fonts produce an actionable error. A rendered-glyph regression distinguishes two same-length Chinese strings.
+
 ## Verification matrix
 
 | Area | Verification |

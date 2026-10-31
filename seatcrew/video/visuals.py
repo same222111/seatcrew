@@ -66,7 +66,12 @@ def draft_card(shot, out_dir, aspect, model=None, style="", size=None):
     per = max(8, int(w * 0.84 / (h * 0.035 * 0.7)))
     txt = "\n".join(textwrap.wrap(txt, per)[:4]) if " " in txt else "\n".join(txt[i:i + per // 2] for i in range(0, len(txt), per // 2))[:200]
     tf = Path(out_dir) / f"{shot['id']}.card.txt"; tf.write_text(txt, encoding="utf-8")
-    font = Path(os.path.relpath(FONT, out_dir)).as_posix()
+    from .typography import text_font
+    selected, _ = text_font(txt)
+    import shutil
+    local_font = Path(out_dir) / ("draft-font" + selected.suffix)
+    shutil.copyfile(selected, local_font)
+    font = local_font.name
     ff.run(["-f", "lavfi", "-i", f"gradients=s={w}x{h}:c0=0x101820:c1=0x1d3b4a:x0=0:y0=0:x1={w}:y1={h}:nb_colors=2,hue=h={hue},format=rgb24",
             "-vf", f"drawtext=fontfile='{font}':textfile='{tf.name}':fontsize={int(h*0.035)}:fontcolor=white:line_spacing=18:x=(w-tw)/2:y=(h-th)/2:box=1:boxcolor=black@0.35:boxborderw=24",
             "-frames:v", "1", p.name], cwd=str(out_dir))

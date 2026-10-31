@@ -298,3 +298,5 @@ Open `/characters` from the Video studio. You can make characters from photos or
 ### 角色工作室（Character Studio）
 在视频工作室中打开 `/characters`。可以用照片或文字描述创建角色，并用 OpenAI、Gemini、MiniMax 或 Replicate FLUX 生成一致的设定图（正面、侧面、全身、表情）。可选的图生 3D（Meshy、Tripo、Replicate）会在内置的 360° 查看器中展示。可以锁定角色参考图、绑定或克隆音色，并组建最多 5 人的剧组并分配角色。点击「用这个剧组拍摄」会生成对话场景：台词只分给剧组成员，镜头按全景 → 过肩 → 特写安排，硬切、无背景音乐、带房间底噪，可选对口型，并进行连贯性质检。没有密钥时生成带 DRAFT 标记的设定图和平面"立牌"模型。所有云端适配器仅做了模拟测试。说明与局限见 [docs/VIDEO.md](docs/VIDEO.md#character-studio-characters)。
 
+
+Chinese/Japanese video text uses installed CJK fonts (macOS Heiti, Windows Microsoft YaHei, or Linux Noto Sans CJK). You can also place NotoSansSC TTF/OTF fonts in `SEATCREW_FONTS_DIR`. Missing fonts produce a clear error instead of unreadable boxes.

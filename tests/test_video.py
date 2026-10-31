@@ -173,3 +173,16 @@ def test_media_route_range(tmp_path):
             with pytest.raises(urllib.error.HTTPError): urllib.request.urlopen(f"http://127.0.0.1:{port}{bad}")
         assert b"studio" in urllib.request.urlopen(f"http://127.0.0.1:{port}/studio.js").read()
     finally: srv.shutdown()
+
+
+@FF
+def test_chinese_draft_titles_render_distinct_glyphs(tmp_path):
+    # Same layout/background and character count: missing-glyph boxes would match.
+    a = tmp_path / "a"; b = tmp_path / "b"; a.mkdir(); b.mkdir()
+    first = VIS.draft_card({"id": "s01", "caption": "天空"}, a, "9:16", size=(270,480))
+    second = VIS.draft_card({"id": "s01", "caption": "蓝色"}, b, "9:16", size=(270,480))
+    import subprocess, numpy as np
+    def glyph_mask(path):
+        raw = subprocess.check_output(["ffmpeg", "-v", "error", "-i", str(path), "-f", "rawvideo", "-pix_fmt", "rgb24", "-"])
+        return (np.frombuffer(raw, dtype=np.uint8).reshape(-1,3) > 220).all(axis=1)
+    assert not np.array_equal(glyph_mask(first), glyph_mask(second)), "Chinese title rendered identical missing-glyph boxes"

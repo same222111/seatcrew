@@ -6,6 +6,7 @@
 - Reject malformed approvals and automatic-approval settings, bind browser approvals to their displayed gate, prevent duplicate concurrent actions, and retain all pending approvals.
 - HTTP clients must send the current integer `pending` gate with `/api/decide` (read it from `/api/state`).
 - Validate configuration types and timer values; recover cleanly from failed saves.
+- Render Chinese/Japanese titles and subtitles with installed CJK fonts instead of missing-glyph boxes; support TTC font collections.
 - Fix false character-consistency warnings caused by video/image colour conversion; reuse shot decoding.
 - Include model-card translations and free Edge TTS in desktop builds; resolve bundled workflows correctly.
 - Start local servers without slow reverse DNS lookups; open the full trading terminal from the launcher. Demo trading also disables news feeds, and workflows keep absolute data paths.
