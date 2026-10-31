@@ -73,7 +73,8 @@ def test_subs_speaker_colors_and_breaks():
     ass, cues = build_ass(ws, [], 1080, 1920, 2.0, speaker_colors={"B": "#FFB3C7"})
     assert "\\1c&H00C7B3FF" in ass and cues[1]["speaker"] == "B" and ass.count("\\1c") == 1
     cj = [dict(w=c, start=i * .2, end=i * .2 + .15, shot=0) for i, c in enumerate(list("桌上的手机忽然亮了一下。"))]
-    assert len(chunk(cj, dict(max_chars=16, max_cjk=10))) == 1           # no orphan "下。"
+    g = chunk(cj, dict(max_chars=16, max_cjk=10)); t = ["".join(x["w"] for x in l) for l in g]
+    assert len(g) == 2 and min(map(len, t)) >= 5 and t[-1].endswith("下。")   # 12 chars > 10/line: two even lines, no orphan "下。"
 
 @FF
 def test_workflow_uses_character_voices_and_qc_checks_consistency(tmp_path, monkeypatch):
