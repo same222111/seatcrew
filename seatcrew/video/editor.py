@@ -6,7 +6,7 @@
 * word-timed karaoke subtitles (ASS, bundled Montserrat ExtraBold, outline + shadow, safe margins) + optional headline captions
 * background music ducked under the voice (sidechain compression), faded in/out
 * two-pass EBU R128 loudness normalization to -14 LUFS integrated, -1.5 dBTP; AAC 192k 48 kHz
-* draft inputs -> a "DRAFT PREVIEW - NOT FINAL QUALITY" banner is burned in and the file name ends in _DRAFT"""
+* draft inputs -> a "DRAFT PREVIEW - NOT FINAL QUALITY" banner (in the video language, see DRAFT_BANNER) is burned in and the file name ends in _DRAFT"""
 import json, os, re, shutil
 from pathlib import Path
 from . import ff
@@ -17,6 +17,21 @@ FONTS = Path(__file__).parent / "fonts"
 XF = {"crossfade": "fade", "fade_black": "fadeblack", "cut": "fade"}
 LEAD, TAIL = 0.15, 0.35
 DEFAULTS = dict(fps=30, crf=18, preset="slow", supersample=2, motion=0.10, transition_sec=0.5, bgm_gain_db=-18.0, lufs=-14.0, true_peak=-1.5, inter_crf=10, room_tone_db=None, reverb=0.0, workers=1)
+
+DRAFT_BANNER = {"en": "DRAFT PREVIEW - NOT FINAL QUALITY", "zh-CN": "草稿预览 · 非成品画质", "zh-TW": "草稿預覽 · 非成品畫質",
+                "ja": "下書きプレビュー · 最終画質ではありません", "es": "BORRADOR - CALIDAD NO FINAL", "ko": "초안 미리보기 · 최종 화질 아님",
+                "fr": "BROUILLON - QUALITÉ NON FINALE", "de": "ENTWURF - KEINE ENDQUALITÄT", "pt": "RASCUNHO - QUALIDADE NÃO FINAL"}
+def video_lang(lang=None, text=""):
+    """The video's language: the configured one, unless the spoken text clearly says otherwise (kana -> ja, Han -> zh)."""
+    import re
+    l = (lang or "").replace("_", "-"); low = l.lower()
+    if re.search(r"[\u3040-\u30ff]", text or ""): return "ja"
+    if re.search(r"[\u4e00-\u9fff]", text or "") and not low.startswith(("zh", "ja")):
+        return "zh-CN"
+    if low.startswith("zh"): return "zh-TW" if low.endswith(("tw", "hk", "hant", "mo")) else "zh-CN"
+    return low.split("-")[0] or "en"
+def banner_text(lang=None, text=""):
+    return DRAFT_BANNER.get(video_lang(lang, text), DRAFT_BANNER["en"])
 
 def timeline(shots, fps=30, transition_sec=0.5, voice=None):
     """Final duration D_i and start S_i of each shot, plus global word times. Narration never gets cut: a shot is
@@ -147,7 +162,11 @@ def assemble(shots, out, work, aspect="9:16", size=None, voice=None, bgm=None, d
     chain = f"[{last}]ass=subs.ass:fontsdir=fonts"
     if draft:
         from .visuals import FONT
-        chain += (f",drawtext=fontfile=fonts/{FONT.name}:text='DRAFT PREVIEW - NOT FINAL QUALITY':fontsize={round(min(w, h) * 0.034)}:fontcolor=white:"
+        spoken = " ".join(x["w"] for x in tl["words"]) + " ".join(c[2] or "" for c in caps)
+        btxt = banner_text(o.get("lang"), spoken); (work / "banner.txt").write_text(btxt, encoding="utf-8")
+        bfont = FONT.name if btxt.isascii() or video_lang(o.get("lang"), spoken) in ("es", "fr", "de", "pt") else text_font(btxt, [o.get("fonts_dir")])[0].name
+        if not (fd / bfont).exists(): shutil.copy(text_font(btxt, [o.get("fonts_dir")])[0], fd / bfont)
+        chain += (f",drawtext=fontfile=fonts/{bfont}:textfile=banner.txt:fontsize={round(min(w, h) * 0.034)}:fontcolor=white:"
                   f"box=1:boxcolor=0xff2d55@0.85:boxborderw={round(min(w, h) * 0.018)}:x=(w-tw)/2:y={round(h * 0.035)}")
     fl.append(chain + ",format=yuv420p[vout]")
     final = out if not draft or out.stem.endswith("_DRAFT") else out.with_name(out.stem + "_DRAFT" + out.suffix)

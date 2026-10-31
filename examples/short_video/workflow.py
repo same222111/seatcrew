@@ -320,7 +320,7 @@ class Editor(Seat):
         room = dict(room_tone_db=tp["room_tone_db"], reverb=tp.get("reverb", 0)) if tp.get("room_tone_db") is not None else {}
         for f in od.glob("final*.mp4"): f.unlink()
         try:
-            man = ED.assemble(shots, od / "final.mp4", od / "work", aspect=d["aspect"], size=self.wf.size_override, bgm=bgm, draft=draft,
+            man = ED.assemble(shots, od / "final.mp4", od / "work", aspect=d["aspect"], size=self.wf.size_override, bgm=bgm, draft=draft, lang=self.cfg["language"],
                               transition_sec=tp["transition_sec"], speaker_colors=cols, bgm_gain_db=s["bgm_gain_db"] if s["bgm_gain_db"] != -18.0 else tp["bgm_gain_db"],
                               **dict(dict(crf=s["crf"], preset=(s.get("draft_preset") or s["preset"]) if draft else s["preset"], workers=int(s.get("parallel_segments") or 1), **room), **self.wf.editor_opts))
         except (FFError, ValueError) as e: return False, str(e)[-400:]

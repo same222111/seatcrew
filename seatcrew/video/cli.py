@@ -93,7 +93,7 @@ def assemble(a):
             sh["audio"], sh["words"] = str(p), words; draft |= bool(info.get("draft")); silent |= info.get("voice") == "silent"; sync = sync if info["sync"] == "exact" else "estimated"
             print(f"  voice {s['id']}: {info['backend']} ({info['sync']} timing)")
     out = Path(a.output or folder / "final.mp4")
-    man = ED.assemble(shots, out, work, aspect=aspect, voice=voice, bgm=a.bgm, draft=draft, crf=a.crf, preset=a.preset or ("veryfast" if draft else "slow"), workers=4, bgm_gain_db=a.bgm_gain_db, fonts_dir=a.fonts_dir,
+    man = ED.assemble(shots, out, work, aspect=aspect, voice=voice, bgm=a.bgm, draft=draft, lang=sb.get("language"), crf=a.crf, preset=a.preset or ("veryfast" if draft else "slow"), workers=4, bgm_gain_db=a.bgm_gain_db, fonts_dir=a.fonts_dir,
                       speaker_colors={n: p["color"] for n, p in lib.all().items() if p.get("color") and n != "narrator"} if a.speaker_colors and not a.voice else None)
     tot = sum(s["duration"] for s in sb["shots"])
     rep = QC.check(man, dict(total_sec=(min(3, tot), max(600, tot * 2)), sync=sync, silent_draft=silent))
