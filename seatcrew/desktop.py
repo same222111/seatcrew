@@ -217,8 +217,9 @@ class App:
                     except Exception: pass
                 try: wf.cfg.update(patch)
                 except Exception: wf.cfg.update({"language": patch["language"]})
-            from tradecrew.seats import Crew
-            if isinstance(wf, Crew):
+            try: from tradecrew.seats import Crew          # only the trading example ships tradecrew; a source checkout may not have it on the path
+            except ImportError: Crew = None
+            if Crew is not None and isinstance(wf, Crew):
                 from tradecrew.server import serve as serve_trading
                 srv = serve_trading(wf.cfg, wf, "127.0.0.1", free_port())
             else:
