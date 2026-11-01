@@ -1,0 +1,22 @@
+{
+ "wf_title": "客服回覆分流",
+ "seat_chief": "總指揮",
+ "seat_intake": "讀取並分類",
+ "seat_privacy": "工單裡不留敏感資訊",
+ "seat_draft": "起草回覆",
+ "seat_tone": "語氣和承諾",
+ "seat_approve": "客服簽核",
+ "seat_review": "最終複查",
+ "sn_chief": "總指揮",
+ "sn_intake": "接單",
+ "sn_privacy": "隱私",
+ "sn_draft": "起草",
+ "sn_tone": "語氣",
+ "sn_approve": "批准",
+ "sn_review": "複查",
+ "field_customer": "客戶",
+ "field_message": "留言",
+ "r:card number in message - move to the secure channel": "留言裡有銀行卡號，請轉到安全管道處理",
+ "r:customer pasted a password - reset it, don't reply in thread": "客戶貼出了密碼，請幫他重置，不要在對話裡回覆",
+ "r:reply makes a promise or admission legal must review": "回覆裡有承諾或認錯，需要法務審核"
+}

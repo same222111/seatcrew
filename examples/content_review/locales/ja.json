@@ -8,5 +8,13 @@
  "seat_review": "公開後チェック",
  "field_topic": "トピック",
  "field_notes": "メモ / 事実",
- "field_sources": "出典"
+ "field_sources": "出典",
+ "wf_title": "コンテンツ審査",
+ "sn_chief": "総指揮",
+ "sn_draft": "下書き",
+ "sn_factcheck": "事実確認",
+ "sn_policy": "規約",
+ "sn_approve": "承認",
+ "sn_publish": "公開",
+ "sn_review": "再確認"
 }

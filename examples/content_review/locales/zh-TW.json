@@ -8,5 +8,21 @@
  "seat_review": "發布後複核",
  "field_topic": "主題",
  "field_notes": "要點 / 事實",
- "field_sources": "來源"
+ "field_sources": "來源",
+ "wf_title": "內容審核",
+ "sn_chief": "總指揮",
+ "sn_draft": "草稿",
+ "sn_factcheck": "核查",
+ "sn_policy": "合规",
+ "sn_approve": "批准",
+ "sn_publish": "發佈",
+ "sn_review": "複核",
+ "re:^no topic$": "沒有主题",
+ "re:^(\\d+) number\\(s\\) \\((.*)\\) but no source given$": "有 $1 個數字（$2）但沒有來源",
+ "re:^banned phrase: (.*)$": "包含禁用詞：$1",
+ "re:^too short \\((\\d+) < (\\d+) words\\)$": "太短（$1 < $2 詞）",
+ "re:^too long \\((\\d+) > (\\d+) words\\)$": "太長（$1 > $2 詞）",
+ "re:^contains an email address or phone number$": "包含郵箱或電話號碼",
+ "re:^published file missing$": "找不到已發佈的文件",
+ "re:^published text differs from the approved draft$": "發佈的內容和批准的草稿不一致"
 }

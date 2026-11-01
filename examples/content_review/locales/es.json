@@ -8,5 +8,13 @@
  "seat_review": "control tras publicar",
  "field_topic": "Tema",
  "field_notes": "Notas / datos",
- "field_sources": "Fuentes"
+ "field_sources": "Fuentes",
+ "wf_title": "Revisión de contenido",
+ "sn_chief": "JEFE",
+ "sn_draft": "BORRADOR",
+ "sn_factcheck": "VERIFICACIÓN",
+ "sn_policy": "POLÍTICA",
+ "sn_approve": "APROBAR",
+ "sn_publish": "PUBLICAR",
+ "sn_review": "REVISIÓN"
 }

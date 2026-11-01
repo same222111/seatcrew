@@ -1,0 +1,10 @@
+{
+ "seat_intake": "reads & classifies",
+ "seat_privacy": "no secrets in tickets",
+ "seat_draft": "drafts the reply",
+ "seat_tone": "tone & promises",
+ "seat_approve": "agent sign-off",
+ "seat_review": "final replay",
+ "field_customer": "Customer",
+ "field_message": "Message"
+}

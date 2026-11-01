@@ -43,4 +43,4 @@ tests/                    framework tests (engine, YAML, examples, CLI, HTTP, lo
 - `seatcrew/desktop.py` must stay importable without pywebview (falls back to the browser); tests run it with `--no-window --smoke`.
 - Change install steps in **both** `install.sh` and `install.ps1`, keep `--dry-run` printing every step and the final `RESULT` line (tests and INSTALL_WITH_AI.md rely on it).
 - Bump the version in `pyproject.toml`, `seatcrew/__init__.py`, `packaging/seatcrew.spec` and `packaging/seatcrew.iss` together (a test checks this).
-- Regenerate the README GIF with `python scripts/make_demo_gif.py`.
+- README screenshots live in `docs/img/` (PNG, taken from the current UI, one English and one zh-CN where it matters). Replace them rather than adding old ones back.

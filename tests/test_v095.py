@@ -122,3 +122,13 @@ def test_caption_style_from_storyboard_and_cli_override(tmp_path):
     with pytest.raises(ValueError): SB.validate_storyboard({"caption_style": "top", "shots": [{"id": "s01"}]})
     class A: caption_position = "lower"; caption_scale = None
     assert VCLI._caption_style(sb, A) == {"position": "lower", "scale": 1.3}
+
+
+def test_dashboard_snapshot_localizes_seat_activity_and_item_status():
+    from seatcrew import logi18n
+    snap = {"seats": {"chief": {"last": "- settings saved: language", "status": "idle"}},
+            "items": [{"id": 1, "status": "waiting at APPROVE", "chain": []}, {"id": 2, "status": "blocked at POLICY", "chain": []}], "events": []}
+    out = logi18n.localize_snapshot(snap, "zh-CN")
+    assert out["seats"]["chief"]["last_l"].startswith("-") and "设置已保存" in out["seats"]["chief"]["last_l"]
+    st = [i["status_l"] for i in out["items"]]
+    assert st[0].startswith("等待") and st[1].startswith("被") and not any(c.isascii() and c.isalpha() and c.islower() for s in st for c in s)

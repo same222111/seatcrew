@@ -32,6 +32,9 @@ _ZH = [
  (r"^CHIEF holds new items this cycle$", "导演本轮暂停接收新事项"),
  (r"^CHIEF holds (\d+) late item\(s\)", r"导演暂缓 \1 个后到的事项"),
  (r"^settings saved: (.+)$", r"设置已保存：\1"),
+ (r"^waiting at ([A-Z_]+)$", lambda m, L: f"等待{seat(m.group(1), L)}"),
+ (r"^blocked at ([A-Z_]+)$", lambda m, L: f"被{seat(m.group(1), L)}拦下"),
+ (r"^language$", "语言"),
  (r"\blanguage\b", "语言"),
  (r"waiting for a human to approve", "等待你批准"),
  (r"auto-approved \(setting\)", "已自动批准（设置）"),
@@ -112,9 +115,16 @@ def localize_snapshot(snap, lang):
     """Add *_l display fields to events, check chains and QC reports (copies only; stored state is untouched)."""
     if lang in (None, "", "en"): return snap
     snap["events"] = [dict(e, kind_l=kind(e.get("kind"), lang), agent_l=seat(e.get("agent", ""), lang), msg_l=text(e.get("msg"), lang)) for e in snap.get("events", [])]
+    seats = {}
+    for k, v in (snap.get("seats") or {}).items():
+        v = dict(v); last = v.get("last") or ""
+        sym, _, rest = last.partition(" ")
+        v["last_l"] = (f"{sym} {text(rest, lang)}" if rest and len(sym) <= 2 else text(last, lang)) if last else ""
+        seats[k] = v
+    if seats: snap["seats"] = seats
     items = []
     for it in snap.get("items", []):
-        it = dict(it); it["chain"] = [dict(c, reason_l=text(c.get("reason"), lang)) for c in it.get("chain") or []]
+        it = dict(it); it["status_l"] = text(it.get("status"), lang); it["chain"] = [dict(c, reason_l=text(c.get("reason"), lang)) for c in it.get("chain") or []]
         d = it.get("data")
         if isinstance(d, dict) and isinstance(d.get("qc"), dict):
             d = dict(d); q = dict(d["qc"]); q["summary_l"] = text(q.get("summary"), lang)

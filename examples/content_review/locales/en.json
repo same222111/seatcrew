@@ -8,5 +8,13 @@
  "seat_review": "post-publish check",
  "field_topic": "Topic",
  "field_notes": "Notes / facts",
- "field_sources": "Sources"
+ "field_sources": "Sources",
+ "wf_title": "Content review",
+ "sn_chief": "CHIEF",
+ "sn_draft": "DRAFT",
+ "sn_factcheck": "FACTCHECK",
+ "sn_policy": "POLICY",
+ "sn_approve": "APPROVE",
+ "sn_publish": "PUBLISH",
+ "sn_review": "REVIEW"
 }
