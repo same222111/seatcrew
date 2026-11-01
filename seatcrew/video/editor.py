@@ -132,8 +132,11 @@ def assemble(shots, out, work, aspect="9:16", size=None, voice=None, bgm=None, d
                 ins += ["-i", Path(s["audio"]).resolve()]; ms = int(round((S[i] + LEAD) * 1000))
                 fl.append(f"[{len(fl)}:a]aformat=sample_rates=48000:channel_layouts=mono,adelay={ms}:all=1[a{len(fl)}]")
         if fl:
-            mix = "".join(f"[a{i}]" for i in range(len(fl)))
-            ff.run([*ins, "-filter_complex", ";".join(fl) + f";{mix}amix=inputs={len(fl)}:normalize=0:dropout_transition=0,apad=whole_dur={total},atrim=0:{total}[v]", "-map", "[v]", "-t", f"{total:.3f}", "-ar", "48000", "voice.wav"], cwd=str(work))
+            # an exact-length silent bed is the first amix input (duration=first): the stem is always `total` long.
+            # (apad=whole_dur after amix was racy: under load amix sometimes ended at the last voice line and the stem came out short.)
+            ins += ["-f", "lavfi", "-t", f"{total:.3f}", "-i", "anullsrc=r=48000:cl=mono"]
+            mix = f"[{len(fl)}:a]" + "".join(f"[a{i}]" for i in range(len(fl)))
+            ff.run([*ins, "-filter_complex", ";".join(fl) + f";{mix}amix=inputs={len(fl) + 1}:duration=first:normalize=0:dropout_transition=0,atrim=0:{total}[v]", "-map", "[v]", "-t", f"{total:.3f}", "-ar", "48000", "voice.wav"], cwd=str(work))
         else: ff.run(["-f", "lavfi", "-i", "anullsrc=r=48000:cl=mono", "-t", total, "voice.wav"], cwd=str(work))
     if bgm:
         g = o["bgm_gain_db"]; fo = max(0.0, total - 1.5)
