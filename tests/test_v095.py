@@ -138,6 +138,8 @@ def test_draft_cards_render_in_parallel_without_sharing_a_font_file(tmp_path):
     """v0.9.4 copied the font to one shared draft-font file; parallel shots raced on it (flaky CI on ubuntu-22.04)."""
     from concurrent.futures import ThreadPoolExecutor
     from seatcrew.video import visuals
+    from seatcrew.video import ff
+    if not ff.have_ffmpeg(): import pytest; pytest.skip("needs ffmpeg")
     shots = [dict(id=f"s{i:02d}", caption=f"Shot {i} 天空") for i in range(8)]
     with ThreadPoolExecutor(8) as ex: outs = list(ex.map(lambda s: visuals.draft_card(s, tmp_path, "9:16", size=(360, 640)), shots))
     assert all(p.is_file() and p.stat().st_size > 0 for p in outs)
