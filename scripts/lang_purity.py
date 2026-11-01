@@ -94,8 +94,8 @@ def targets(root=ROOT):
 
 def scan(root=ROOT):
     md, loc = targets(root); problems = []
-    for p, l in md: problems += [(str(p.relative_to(root)), *x) for x in scan_md(p, l)]
-    for p, l in loc: problems += [(str(p.relative_to(root)), *x) for x in scan_locale(p, l)]
+    for p, l in md: problems += [(p.relative_to(root).as_posix(), *x) for x in scan_md(p, l)]
+    for p, l in loc: problems += [(p.relative_to(root).as_posix(), *x) for x in scan_locale(p, l)]
     return problems
 
 if __name__ == "__main__":
