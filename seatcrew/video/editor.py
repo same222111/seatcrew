@@ -44,7 +44,7 @@ def timeline(shots, fps=30, transition_sec=0.5, voice=None):
         extra = voice["dur"] + 0.4 - sum(D)
         if extra > 0: D[-1] = round(D[-1] + extra, 3)
     for d in D: S.append(round(t, 3)); t += d
-    T = [0.0 if i == len(shots) - 1 else (frame if s["transition"] == "cut" else min(transition_sec, D[i] / 3, D[i + 1] / 3)) for i, s in enumerate(shots)]
+    T = [0.0 if i == len(shots) - 1 else (0.0 if s["transition"] == "cut" else min(transition_sec, D[i] / 3, D[i + 1] / 3)) for i, s in enumerate(shots)]
     words = []
     if voice:
         words = [dict(w, start=w["start"], end=w["end"], shot=_shot_at(S, w["start"])) for w in voice.get("words", [])]
@@ -114,7 +114,7 @@ def assemble(shots, out, work, aspect="9:16", size=None, voice=None, bgm=None, d
     caps = [(S[i] + 0.1, S[i] + D[i] - 0.15, s.get("caption", "")) for i, s in enumerate(shots)] if captions else []
     from .typography import text_font
     selected_font, family = text_font(" ".join([x["w"] for x in tl["words"]] + [c[2] or "" for c in caps]), [o.get("fonts_dir")])
-    ass, cues = build_ass(tl["words"], caps, w, h, tl["total"], font=family, speaker_colors=o.get("speaker_colors"))
+    ass, cues = build_ass(tl["words"], caps, w, h, tl["total"], font=family, speaker_colors=o.get("speaker_colors"), caption=o.get("caption_style"))
     (work / "subs.ass").write_text(ass, encoding="utf-8")
     fd = work / "fonts"; fd.mkdir(exist_ok=True)
     extra = [Path(x) for x in (o.get("fonts_dir"), os.environ.get("SEATCREW_FONTS_DIR")) if x and Path(x).is_dir()]
@@ -156,9 +156,16 @@ def assemble(shots, out, work, aspect="9:16", size=None, voice=None, bgm=None, d
         (work / "mix_room.wav").replace(work / "mix.wav")
     ln = _loudnorm("mix.wav", "audio.wav", o, str(work))
     # 4) picture: transitions -> subtitles -> (draft banner) -> H.264
-    n = len(shots); ins = sum((["-i", f"seg{i:02d}.mp4"] for i in range(n)), []); fl = []; last = "0:v"
+    n = len(shots); ins = sum((["-i", f"seg{i:02d}.mp4"] for i in range(n)), [])
+    # one common time base for every input, so cuts (concat) and transitions (xfade) can be chained in any order
+    fl = [f"[{i}:v]settb=AVTB,setpts=PTS-STARTPTS,fps={o['fps']}[v{i}]" for i in range(n)]; last = "v0"
     for i in range(1, n):
-        fl.append(f"[{last}][{i}:v]xfade=transition={XF[shots[i - 1]['transition']]}:duration={T[i - 1]:.3f}:offset={S[i]:.3f}[x{i}]"); last = f"x{i}"
+        if shots[i - 1]["transition"] == "cut" or T[i - 1] <= 0:
+            # a hard cut is a real concat: trim what we have to exactly S[i] and append the next segment
+            fl.append(f"[{last}]trim=end={S[i]:.3f},setpts=PTS-STARTPTS[t{i}];[t{i}][v{i}]concat=n=2:v=1:a=0,settb=AVTB,fps={o['fps']}[x{i}]")
+        else:
+            fl.append(f"[{last}][v{i}]xfade=transition={XF[shots[i - 1]['transition']]}:duration={T[i - 1]:.3f}:offset={S[i]:.3f}[x{i}]")
+        last = f"x{i}"
     chain = f"[{last}]ass=subs.ass:fontsdir=fonts"
     if draft:
         from .visuals import FONT

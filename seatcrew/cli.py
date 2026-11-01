@@ -8,6 +8,38 @@ from . import loader
 
 def _lang(a, wf=None): return a.lang or (wf.cfg.data.get("language") if wf else None) or "en"
 
+VIDEO_LANG_CMDS = ("init",)
+
+def split_global(argv):
+    """Pull the global options (--lang X / --lang=X / --env X) out of argv wherever they are, so
+    `seatcrew --lang zh-CN video init x` and `seatcrew video init x --lang zh-CN` both work.
+    Only the video subcommands that take their own --lang keep a trailing --lang (it is re-added there)."""
+    glob, rest, i = {}, [], 0
+    in_video = False
+    while i < len(argv):
+        x = argv[i]
+        if not rest and x == "video": in_video = True
+        key = next((k for k in ("lang", "env") if x == f"--{k}" or x.startswith(f"--{k}=")), None)
+        # inside `video`, --lang belongs to the subcommand once it is named (e.g. voices --lang); only lift it before that
+        if key and not (in_video and len(rest) >= 2):
+            if "=" in x: val = x.split("=", 1)[1]; i += 1
+            elif i + 1 < len(argv): val = argv[i + 1]; i += 2
+            else: rest.append(x); i += 1; continue
+            if key == "lang":
+                val = _norm_lang(val, LANGUAGES)
+                if val is None: raise SystemExit(f"seatcrew: error: --lang: unknown language {argv[i - 1]!r} (choose from {', '.join(LANGUAGES)})")
+            glob[key] = val; continue
+        rest.append(x); i += 1
+    return glob, rest
+
+def _norm_lang(v, langs):
+    v = (v or "").replace("_", "-")
+    for l in langs:
+        if l.lower() == v.lower(): return l
+    if v.lower() in ("zh", "zh-cn", "zh-hans", "cn"): return next((l for l in langs if l == "zh-CN"), None)
+    if v.lower() in ("zh-tw", "zh-hk", "zh-hant"): return next((l for l in langs if l.startswith("zh-T")), None)
+    base = v.split("-")[0].lower(); return next((l for l in langs if l.lower() == base), None)
+
 def main(argv=None):
     from .textio import utf8_stdio; utf8_stdio()
     ap = argparse.ArgumentParser(prog="seatcrew", description="Multi-AI seat workflows: every job gets a seat, every item walks a check chain.")
@@ -24,11 +56,19 @@ def main(argv=None):
         else: x.add_argument("--host", default="127.0.0.1"); x.add_argument("--port", type=int, default=8800); x.add_argument("--open", action="store_true")
     ta = sp.add_parser("test-ai", help="real minimal call to a provider"); ta.add_argument("provider", nargs="?"); ta.add_argument("--model")
     argv = sys.argv[1:] if argv is None else argv
-    if argv[:1] == ["video"]:
-        load_env(".env"); from .video.cli import main as vid; return vid(argv[1:])
-    if argv[:1] == ["app"]:
+    glob, rest = split_global(argv)
+    if rest[:1] == ["video"]:
+        load_env(glob.get("env", ".env")); from .video.cli import main as vid
+        sub = rest[1:]
+        if glob.get("lang") and len(sub) >= 1 and "--lang" not in sub and not any(x.startswith("--lang=") for x in sub) and sub[0] in VIDEO_LANG_CMDS:
+            sub = [*sub, "--lang", glob["lang"]]          # global --lang flows into the video subcommand (init -> Chinese placeholders)
+        return vid(sub)
+    if rest[:1] == ["app"]:
+        argv = rest
         from .desktop import main as desk; return desk(argv[1:])
-    a = ap.parse_args(argv); load_env(a.env)
+    a = ap.parse_args(rest)
+    for k, v in glob.items(): setattr(a, k, v)
+    load_env(a.env)
 
     if a.cmd == "list":
         for e in loader.list_examples(): print(e)

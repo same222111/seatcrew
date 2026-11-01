@@ -9,7 +9,7 @@ import re, subprocess
 import numpy as np
 from . import ff
 
-DEFAULTS = dict(min_sharpness=12.0, min_source_scale=0.66, max_black_sec=0.4, max_freeze_sec=1.5, lufs=-14.0, lufs_tol=1.0,
+DEFAULTS = dict(min_sharpness=12.0, min_source_scale=0.66, max_black_sec=0.4, max_freeze_sec=1.5, max_av_gap=0.3, lufs=-14.0, lufs_tol=1.0,
                 max_true_peak=-1.0, max_gap_sec=1.6, min_sync=0.9, min_sec=8.0, max_sec=180.0)
 
 def _chk(name, ok, seat, detail, value=None, severity="fail"):
@@ -31,6 +31,18 @@ def _intervals(err, start_key, end_key):
     s = [float(x) for x in re.findall(start_key + r":\s*([\d.]+)", err)]; e = [float(x) for x in re.findall(end_key + r":\s*([\d.]+)", err)]
     return list(zip(s, e + [None] * (len(s) - len(e))))
 
+def _stream_dur(st):
+    """Duration of one stream in seconds (stream field, else the DURATION tag mkv/webm use), or None."""
+    if not st: return None
+    for x in (st.get("duration"), (st.get("tags") or {}).get("DURATION")):
+        if not x: continue
+        try:
+            if ":" in str(x):
+                hh, mm, ss = str(x).split(":"); return int(hh) * 3600 + int(mm) * 60 + float(ss)
+            return float(x)
+        except ValueError: continue
+    return None
+
 def check(manifest, plan=None, **opts):
     """manifest: from editor.assemble(). plan: dict(total_sec=(lo, hi), sync=exact|estimated). Returns the report."""
     o = dict(DEFAULTS, **{k: v for k, v in opts.items() if v is not None}); path = manifest["output"]; w, h = manifest["size"]
@@ -44,6 +56,13 @@ def check(manifest, plan=None, **opts):
     dur = float(d["format"]["duration"]); lo, hi = (plan or {}).get("total_sec") or (o["min_sec"], o["max_sec"])
     R.append(_chk("duration", abs(dur - manifest["total"]) < 0.25 and lo <= dur <= hi, "writer" if not lo <= dur <= hi else "editor",
                   f"{dur:.1f}s (planned {manifest['total']:.1f}s, allowed {lo:g}-{hi:g}s)", round(dur, 2)))
+    # picture and sound must run the whole length: a video stream that ends early leaves a frozen/blank picture under the audio
+    vd = _stream_dur(v); ad = _stream_dur(a) if a else None
+    if vd is not None and ad is not None:
+        gap = abs(vd - ad)
+        R.append(_chk("av_stream_sync", gap <= o["max_av_gap"], "editor", f"video stream {vd:.2f}s vs audio stream {ad:.2f}s (max gap {o['max_av_gap']:g}s)", round(gap, 3)))
+    elif a is not None:
+        R.append(_chk("av_stream_sync", False, "editor", "could not read video/audio stream durations"))
     # source resolution (no blurry upscales)
     small = [f"{s['id']} {s['src_w']}x{s['src_h']}" for s in shots if s.get("src_w") and min(s["src_w"] / w, s["src_h"] / h) < o["min_source_scale"]]
     R.append(_chk("source_resolution", not small, "visuals", ("upscaled too much: " + ", ".join(small)) if small else "all sources >= " + f"{int(o['min_source_scale'] * 100)}% of output"))

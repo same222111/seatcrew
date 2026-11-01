@@ -18,10 +18,10 @@ SEATS = {
  "es": dict(chief="director", writer="guion", scriptcheck="revisión", production="producción", voice="voz", visuals="imágenes", lipsync="sincronía", editqc="edición+QC", editor="edición", qc="QC", approve="aprobación"),
 }
 QC_NAMES = {
- "zh-CN": dict(format="格式", duration="时长", source_resolution="素材分辨率", clip_length="素材长度", sharpness="清晰度", black_frames="黑帧", frozen_frames="冻帧",
+ "zh-CN": dict(format="格式", duration="时长", source_resolution="素材分辨率", clip_length="素材长度", sharpness="清晰度", black_frames="黑帧", frozen_frames="冻帧", av_stream_sync="音画时长一致",
                loudness="响度", clipping="削波", voice_present="有人声", silence_gaps="静音间隔", subtitle_sync="字幕同步", voice_consistency="角色声音一致", final_quality="成品质量"),
 }
-QC_NAMES["zh-TW"] = dict(QC_NAMES["zh-CN"], source_resolution="素材解析度", clip_length="素材長度", sharpness="清晰度", black_frames="黑幀", frozen_frames="凍幀",
+QC_NAMES["zh-TW"] = dict(QC_NAMES["zh-CN"], source_resolution="素材解析度", clip_length="素材長度", sharpness="清晰度", black_frames="黑幀", frozen_frames="凍幀", av_stream_sync="音畫時長一致",
                          loudness="響度", voice_present="有人聲", silence_gaps="靜音間隔", subtitle_sync="字幕同步", voice_consistency="角色聲音一致", final_quality="成品品質", duration="時長")
 
 # (pattern, replacement) applied in order; each lang lists only what it translates. {seat} placeholders are resolved via SEATS.
@@ -54,6 +54,8 @@ _ZH = [
  (r"audio=yes", "有音频"), (r"audio=MISSING", "缺少音频"),
  (r"([\d.]+)s \(planned ([\d.]+)s, allowed (\d+)-(\d+)s\)", r"\1 秒（计划 \2 秒，允许 \3–\4 秒）"),
  (r"all sources >= (\d+)% of output", r"所有素材 ≥ 输出的 \1%"), (r"upscaled too much: ", "放大过度："),
+ (r"video stream ([\d.]+)s vs audio stream ([\d.]+)s \(max gap ([\d.]+)s\)", r"画面 \1 秒 / 声音 \2 秒（最多相差 \3 秒）"),
+ (r"could not read video/audio stream durations", "读不到画面/声音的时长"),
  (r"every clip covers its shot", "每段素材都覆盖了镜头"), (r"clips shorter than their shot \(frozen tail\): ", "素材比镜头短（结尾会定格）："),
  (r"^min ([\d.]+)$", r"最低 \1"), (r"^blurry: ", "模糊："), (r"^black at ", "黑帧位于 "), (r"^frozen at ", "冻帧位于 "),
  (r"^none$", "无"),
