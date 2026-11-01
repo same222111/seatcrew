@@ -132,3 +132,13 @@ def test_dashboard_snapshot_localizes_seat_activity_and_item_status():
     assert out["seats"]["chief"]["last_l"].startswith("-") and "设置已保存" in out["seats"]["chief"]["last_l"]
     st = [i["status_l"] for i in out["items"]]
     assert st[0].startswith("等待") and st[1].startswith("被") and not any(c.isascii() and c.isalpha() and c.islower() for s in st for c in s)
+
+
+def test_draft_cards_render_in_parallel_without_sharing_a_font_file(tmp_path):
+    """v0.9.4 copied the font to one shared draft-font file; parallel shots raced on it (flaky CI on ubuntu-22.04)."""
+    from concurrent.futures import ThreadPoolExecutor
+    from seatcrew.video import visuals
+    shots = [dict(id=f"s{i:02d}", caption=f"Shot {i} 天空") for i in range(8)]
+    with ThreadPoolExecutor(8) as ex: outs = list(ex.map(lambda s: visuals.draft_card(s, tmp_path, "9:16", size=(360, 640)), shots))
+    assert all(p.is_file() and p.stat().st_size > 0 for p in outs)
+    assert len(list(tmp_path.glob("*.draft-font*"))) == 8
