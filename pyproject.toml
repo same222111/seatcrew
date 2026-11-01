@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "seatcrew"
-version = "0.9.4"
+version = "0.9.5"
 description = "A framework for multi-AI seat workflows: every job gets a seat, every item walks a check chain, any LLM (or plain rules) per seat. Flagship example: TradeCrew paper-trading terminal."
 readme = "README.md"
 license = {text = "MIT"}

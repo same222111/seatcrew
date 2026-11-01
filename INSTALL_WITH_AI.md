@@ -9,11 +9,7 @@ launcher shortcut on my desktop, open it once to confirm the window appears, the
 Do not ask me for API keys - SeatCrew works without them.
 ```
 
-中文:
-```text
-请从 https://github.com/same222111/seatcrew 帮我安装 SeatCrew,严格按照仓库里的 INSTALL_WITH_AI.md 操作,
-在我的桌面放一个 SeatCrew 快捷方式,打开一次确认窗口出现,然后告诉我你做了什么。不要向我要 API 密钥。
-```
+A Chinese version of this prompt is in [README.zh-CN.md](README.zh-CN.md).
 
 ---
 

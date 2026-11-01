@@ -120,7 +120,7 @@
  "tile_events": "事件",
  "tile_events_s": "实时日志里",
  "tile_equity": "权益",
- "tile_net": "净通过",
+ "tile_net": "通过减拦截",
  "checks_run": "已执行 {n} 次检查",
  "checked_n": "已检查 {n}",
  "detail_title": "事项详情",
@@ -161,5 +161,8 @@
  "pmk_login": "请在首页登录",
  "noai_tool": "工具步骤，不用 AI。后端在「设置」里选（配音 / 画面 / 口型服务）。",
  "noai_human": "这里由你决定，不用 AI。",
- "default_model": "默认"
+ "default_model": "默认",
+ "sn_chief": "总指挥",
+ "set_approve_auto_approve": "人工批准席自动通过",
+ "set_load_samples": "启动时载入示例事项"
 }

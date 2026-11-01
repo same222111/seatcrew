@@ -78,7 +78,7 @@ def draft_card(shot, out_dir, aspect, model=None, style="", size=None):
     from .typography import text_font
     selected, _ = text_font(txt)
     import shutil
-    local_font = Path(out_dir) / ("draft-font" + selected.suffix)
+    local_font = Path(out_dir) / f"{shot['id']}.draft-font{selected.suffix}"   # one per shot: shots render in parallel, a shared copy raced
     shutil.copyfile(selected, local_font)
     font = local_font.name
     ff.run(["-f", "lavfi", "-i", f"gradients=s={w}x{h}:c0=0x101820:c1=0x1d3b4a:x0=0:y0=0:x1={w}:y1={h}:nb_colors=2,hue=h={hue},format=rgb24",

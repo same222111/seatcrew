@@ -34,7 +34,7 @@ def test_six_seats_and_ai_honesty(tmp_path):
 def test_director_checks_brief_and_production_logs_sub_steps(tmp_path):
     wf = wf_(tmp_path); it = run(wf)
     assert "pending" in it, [c["reason"] for c in it["chain"]]
-    assert [c["seat"] for c in it["chain"]] == ["chief", "writer", "scriptcheck", "production", "editqc"]
+    assert [c["seat"] for c in it["chain"]] == ["chief", "writer", "scriptcheck", "production", "editqc"], [(c["seat"], c["reason"]) for c in it["chain"]]
     assert set(it["data"]["steps"]) == {"voice", "visuals", "lipsync", "editor", "qc"} and all(v["ok"] for v in it["data"]["steps"].values())
     bad = run(wf, topic="  "); assert bad["chain"][-1]["seat"] == "chief" and "no topic" in bad["chain"][-1]["reason"]
 
@@ -97,7 +97,9 @@ def test_item_submitted_during_a_cycle_starts_immediately(tmp_path, monkeypatch)
     real = wf.steps["editor"].rules
     def slow(it):
         started.append((it["data"]["topic"], time.time()))
-        if it["data"]["topic"] == "A": wf.submit(data=dict(topic="B", notes=LONG)); time.sleep(1.0)
+        if it["data"]["topic"] == "A":
+            wf.submit(data=dict(topic="B", notes=LONG)); end = time.time() + 30   # wait for B (A still running); no fixed sleep, so slow CI can't flake
+            while len(started) < 2 and time.time() < end: time.sleep(0.05)
         return real(it)
     monkeypatch.setattr(wf.steps["editor"], "rules", slow)
     wf.submit(data=dict(topic="A", notes=LONG)); wf.run_cycle()

@@ -8,5 +8,17 @@
  "seat_review": "post-publish check",
  "field_topic": "Topic",
  "field_notes": "Notes / facts",
- "field_sources": "Sources"
+ "field_sources": "Sources",
+ "wf_title": "Content review",
+ "sn_chief": "CHIEF",
+ "sn_draft": "DRAFT",
+ "sn_factcheck": "FACTCHECK",
+ "sn_policy": "POLICY",
+ "sn_approve": "APPROVE",
+ "sn_publish": "PUBLISH",
+ "sn_review": "REVIEW",
+ "subj_post": "post",
+ "set_banned_phrases": "Banned phrases",
+ "set_min_words": "Minimum words",
+ "set_max_words": "Maximum words"
 }

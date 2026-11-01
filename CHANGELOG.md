@@ -1,12 +1,34 @@
 # Changelog
 
+## 0.9.5 - 2026-11-01 — Stability
+
+### Fixed
+- `transition: cut` no longer freezes the picture after the first shots: cuts are real concatenations, so every shot is in the video and the video track is as long as the audio.
+- `--lang` works before or after the subcommand (`seatcrew --lang zh-CN video init x` and `seatcrew video init x --lang zh`), and `video init` inherits the global language.
+- Dashboard in Chinese: seat activity, item status, rule reasons, the log seat names, the workflow title and the display toggles are translated; the support-triage example ships its own locales.
+- A timing-sensitive test no longer depends on a fixed sleep.
+- Per-shot voice tracks are mixed onto an exact-length silent bed: under load the voice stem could end at the last line, leaving the audio shorter than the video (seen as a flaky QC `av_stream_sync` failure).
+- Draft title cards render in parallel without sharing one font file (flaky on Linux CI).
+- The dashboard's net tile no longer goes negative for items that were blocked once and passed on a retry: "blocked" counts items blocked now, and the tile is labelled "Passed − blocked".
+- Every UI language: option values (backends, presets, templates, aspect ratios), the content-review sample subject, settings labels, statuses with the seat's own name, support-triage check notes (no raw `category=…` / `reply written`), the CHIEF seat name and the Japanese/Spanish log lines are translated.
+
+### Added
+- QC check `av_stream_sync`: fails when the video and audio streams differ by more than 0.3 s (or a duration can't be read); the frozen-frame check stays on.
+- Title cards are larger and sit in the top safe area by default; `caption_style` in the storyboard (`position`: top / upper / lower, `scale`: 0.6-2.0) or `--caption-position` / `--caption-scale` on `video assemble` change them.
+- `scripts/lang_purity.py` (run in CI and by `tests/test_lang_purity.py`) flags Chinese text in English docs/locales and stray English in Chinese ones, and fails when an option value, sample subject or setting has no label in one of the five UI languages.
+- Japanese and Spanish locales for the support-triage example.
+- `README.zh-CN.md`, `docs/VIDEO.zh-CN.md`, `examples/trading/README.zh-CN.md` and a release-notes template (`docs/RELEASE_TEMPLATE.md`).
+
+### Removed
+- Outdated media: the v0.6 demo GIF/MP4, all pre-v0.9.4 screenshots in `docs/`, the low-resolution v0.8 video stills and the old Character Studio thumbnail. README screenshots are new v0.9.4 captures in `docs/img/`.
+
 ## 0.9.4 - 2026-10-31 — Video studio redesign
 
 ### Changed
 - Short video now uses 6 visible seats (director, writer, script check, production, edit/QC, approve) instead of 10; voice and visuals run in parallel, shots render in parallel, and up to `parallel_items` videos run at once.
 - Two-column video studio: approve bar under the video, models/voices tabs, AI picker only on AI seats, 390 px header; chat relabels when the language changes.
 - Beginner first run: Chinese default, automatic draft, no placeholders; the shot hint comes from the real shot count; one line = one shot.
-- The log panel and QC report are shown in the UI language (the log file stays English); the workflow is labelled by name (短视频 / 短影音 / …) instead of `short_video`; larger flow-node labels.
+- The log panel and QC report are shown in the UI language (the log file stays English); the workflow is labelled by name (for example the Chinese name of the short-video studio) instead of `short_video`; larger flow-node labels.
 - The draft banner is in the video's language.
 - edge-tts is part of the default install.
 
@@ -45,7 +67,7 @@ See [QA evidence and limitations](docs/qa-v0.9.1.md).
 ## 0.9.0 - 2026-10-31
 
 ### Added
-- **Character Studio** (`/characters` in the Video studio): characters from photos or a description, consistent sheets (front / side / full body / expressions), optional image-to-3D with a bundled 360° viewer, locked refs, voice binding and cloning, casts (剧组) of up to 5 with roles, and **Shoot with this cast** (dialogue scene with coverage, hard cuts, room tone, optional lip-sync, continuity QC). Cast export/import as a `.cast.json` file.
+- **Character Studio** (`/characters` in the Video studio): characters from photos or a description, consistent sheets (front / side / full body / expressions), optional image-to-3D with a bundled 360° viewer, locked refs, voice binding and cloning, casts of up to 5 with roles, and **Shoot with this cast** (dialogue scene with coverage, hard cuts, room tone, optional lip-sync, continuity QC). Cast export/import as a `.cast.json` file.
 - Model cards in the setup wizard, Video studio and CHIEF chat, translated in 5 languages, with key paste (validated, never echoed back).
 - Zero-key sample: the **Fill in a sample** button and `/api/sample` give a ready short video in the UI language (free edge-tts voice + labeled DRAFT visuals).
 - CHIEF chat drawer and a shared design system (`neon.css`).

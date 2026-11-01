@@ -67,6 +67,10 @@ def validate_storyboard(d):
     if aspect not in SIZES: raise ValueError(f"aspect must be one of {list(SIZES)}")
     out = dict(title=str(d.get("title") or "Untitled")[:120], aspect=aspect, language=str(d.get("language") or "en"),
                template=str(d.get("template") or ""), shots=[])
+    if d.get("caption_style") is not None:
+        from .subs import caption_style
+        if not isinstance(d["caption_style"], dict): raise ValueError("caption_style must be a mapping like {position: top, scale: 1.2}")
+        out["caption_style"] = caption_style(d["caption_style"])
     seen = set()
     for i, s in enumerate(shots, 1):
         if not isinstance(s, dict): raise ValueError(f"shot {i} must be a mapping")

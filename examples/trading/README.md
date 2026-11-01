@@ -1,16 +1,18 @@
 # TradeCrew 🧑‍✈️📈
 
+[English](README.md) · [简体中文](README.zh-CN.md)
+
 > This is the **flagship example** of the [SeatCrew](../../README.md) framework: the complete trading app, built on the generic seat engine. Run it with `tradecrew start` (full terminal) or `seatcrew ui trading` (generic dashboard).
 
 **A multi-AI-team paper-trading terminal, built as a template you can reshape with your own AI.** Eight seats each own one job (CHIEF, QUANT, STOCKS, SCAN, JUDGE, RISK, SIZE, FILLS, plus a REVIEW replay seat), and a Runner drives them on a schedule. **Idea ≠ trigger:** every order walks a check chain (research → judge → risk → size → order → review), and a single failed check stops it. Give each seat its own AI: OpenAI, Anthropic, Google Gemini, xAI Grok, DeepSeek, **any OpenAI-compatible endpoint** (OpenRouter, Groq, Together, LM Studio, vLLM…) or **local Ollama**. You can also run every role on plain rules with no key at all. You pick the watchlist, the strategies and the data and news sources from a web Settings page. Then you watch the crew trade side-by-side paper portfolios in a terminal-style dashboard, with a written reason for every decision.
 
 > ⚠️ **Paper trading only.** TradeCrew never connects to a broker and never sends real orders. It is educational software, not financial advice. Backtests do not predict future returns.
 
-![seats](../../docs/seats.png)
+![TradeCrew terminal: eight seats, the live check chain with a BLOCKED stamp, and side-by-side paper portfolios](../../docs/img/tradecrew.png)
 
 > 🧩 **It's a template.** Hand the repo to Codex, Claude, ChatGPT or Cursor with a prompt from [CUSTOMIZE.md](../../CUSTOMIZE.md). [AGENTS.md](AGENTS.md) gives your AI the architecture map, the extension points and the rules it must keep.
 >
-> 🌐 **Languages:** English, 简体中文, 繁體中文, 日本語, Español. You can switch in the wizard, in Settings or in the header, or use `tradecrew --lang ja`.
+> 🌐 **Languages:** English, Simplified Chinese, Traditional Chinese, Japanese and Spanish. You can switch in the wizard, in Settings or in the header, or use `tradecrew --lang ja`.
 
 ## Features
 - **Pluggable AI providers.** API keys live in `.env` and never go into the config or the UI. Every provider has a **Test connection** button in the UI and a `tradecrew test-ai` command that make a real minimal call and report the model, latency or a clear error.
@@ -50,11 +52,6 @@ tradecrew config --set seats.risk.provider '"anthropic"' --set watchlist '["SPY"
 tradecrew init                    # terminal setup wizard
 ```
 
-## Screenshots
-| Check chain | Language | AI seats | Strategy Lab |
-|---|---|---|---|
-| ![](../../docs/checkchain.png) | ![](../../docs/language.png) | ![](../../docs/ai_team.png) | ![](../../docs/strategy_lab_backtest.png) |
-
 ## How a cycle works
 The `Runner` wakes every `scan_interval_sec`. `CHIEF` plans (and can hold new entries) → `STOCKS` loads the universe, prices and news → `QUANT` sets the risk dial → `SCAN` turns each strategy portfolio's target weights into ideas. Each idea then walks the chain:
 
@@ -79,20 +76,3 @@ See [docs/RESEARCH.md](../../docs/RESEARCH.md). In short, over 2023 to 2026 out-
 ## Contributing
 See [CONTRIBUTING.md](../../CONTRIBUTING.md). MIT licensed.
 
----
-
-## 中文说明
-
-**TradeCrew：多 AI 团队模拟交易终端。** **八席，各管一摊**：CHIEF 总指挥、QUANT 风险档位、STOCKS 股票池与信息、SCAN 研究、JUDGE 判断、RISK 风控、SIZE 仓位、FILLS 下单，再加 REVIEW 复盘，由 Runner 按计划驱动。每个席位都可以分别指定 AI，支持 OpenAI、Anthropic、Gemini、Grok、DeepSeek、任意 OpenAI 兼容接口和本地 Ollama。没有 API Key 时，所有岗位都用纯规则运行。
-
-- **想法 ≠ 扳机**：每笔订单都要依次经过 研究 → 判断 → 风控 → 仓位 → 下单 → 复盘，每一步都记录 CHECK OK 或 CHECK BLOCKED 和原因，单点出错就会被拦截。看板上每笔订单都有一条竖向时间线。
-- **多语言**：English、简体中文、繁體中文、日本語、Español。在向导、设置页或页头都能切换，也可以用 `--lang`。新增语言：复制 `examples/trading/tradecrew/locales/en.json` 并翻译，然后在 `config.LANGUAGES` 里登记。
-- **这是一个模板**：想按自己的喜好修改，就把整个仓库交给你自己的 AI（Codex / Claude / ChatGPT / Cursor），并贴上 [CUSTOMIZE.md](../../CUSTOMIZE.md) 里现成的提示词。[AGENTS.md](AGENTS.md) 告诉 AI 架构、扩展点和不能违反的规则。
-- **只做模拟盘**：不连接券商，不下真单。本软件不构成投资建议。
-- **设置全部在网页里完成**：选 AI、改提示词、改自选股、开关策略和参数、选数据源和新闻 RSS 源，保存后写入 `config.yaml`，下一轮扫描就生效。
-- **测试连接**：每个 AI 都有"Test connection"按钮，也可以用命令 `tradecrew test-ai`，会真的调用一次接口，报告成功或具体错误。
-- **多组合对比**：每个策略各自跑一个模拟组合，看板上并排显示，每笔交易都写明原因。
-- **策略实验室**：回测时扣除交易成本，留出样本外数据检验，并和直接持有 QQQ 对比；还有"提出 → 验证"研究循环。
-- **24 小时时段识别**：区分盘前、盘中、盘后、夜盘和休市，不同时段用不同的滑点和下单限制。
-
-快速开始：`pip install .`，然后复制 `.env.example` 为 `.env` 并按需填写 Key，最后运行 `tradecrew start`，打开 http://127.0.0.1:8787 。

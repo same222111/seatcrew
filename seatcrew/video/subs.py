@@ -163,11 +163,35 @@ def ass_color(hexrgb):
     """#RRGGBB -> ASS &H00BBGGRR."""
     h = hexrgb.lstrip("#"); return f"&H00{h[4:6]}{h[2:4]}{h[0:2]}".upper()
 
-def build_ass(words, captions, w, h, total, font=None, speaker_colors=None):
+CAPTION_POSITIONS = ("top", "upper", "lower")
+CAPTION_DEFAULT = dict(position="top", scale=1.0)
+
+def caption_style(cs=None):
+    """Normalize a title-card style {position: top|upper|lower, scale: 0.6-2.0}. Unknown values raise ValueError."""
+    cs = dict(CAPTION_DEFAULT, **{k: v for k, v in (cs or {}).items() if v is not None})
+    pos = str(cs["position"]).lower()
+    if pos not in CAPTION_POSITIONS: raise ValueError(f"caption position must be one of {CAPTION_POSITIONS}")
+    try: sc = float(cs["scale"])
+    except (TypeError, ValueError): raise ValueError("caption scale must be a number")
+    if not 0.6 <= sc <= 2.0: raise ValueError("caption scale must be between 0.6 and 2.0")
+    return dict(position=pos, scale=sc)
+
+def caption_layout(w, h, cs=None):
+    """Title-card font size and placement. Default: big (about 5% of the height in 9:16) at the top safe area, i.e. just
+    below the phone status bar / app header (~5%) and above where faces and hands usually are. `upper` sits a bit lower
+    (for footage with sky/ceiling at the top), `lower` sits just above the subtitles."""
+    cs = caption_style(cs); L = layout(w, h); portrait = h > w
+    size = round((h * 0.05 if portrait else h * 0.068) * cs["scale"])
+    if cs["position"] == "top": align, mv = 8, round(h * (0.055 if portrait else 0.05))
+    elif cs["position"] == "upper": align, mv = 8, round(h * (0.16 if portrait else 0.12))
+    else: align, mv = 2, L["margin_v"] + round(L["size"] * 2.6)        # above two subtitle lines
+    return dict(size=size, align=align, margin_v=mv, outline=max(L["outline"], round(size * 0.09)), position=cs["position"], scale=cs["scale"])
+
+def build_ass(words, captions, w, h, total, font=None, speaker_colors=None, caption=None):
     """words: global [{w,start,end,shot,speaker?}], captions: [(start, end, text)]. speaker_colors: {speaker: "#RRGGBB"} colors the
     spoken (highlighted) words of that speaker's lines. Returns (ass_text, cues) where cues are the subtitle events (for QC)."""
     if font is None: font = FONT_CJK if any(CJK.search(x["w"]) for x in words) or any(CJK.search(c[2] or "") for c in captions) else FONT_NAME
-    L = layout(w, h)
+    L = layout(w, h); C = caption_layout(w, h, caption)
     head = f"""[Script Info]
 ScriptType: v4.00+
 PlayResX: {w}
@@ -179,7 +203,7 @@ YCbCr Matrix: TV.709
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
 Style: Karaoke,{font},{L['size']},{ACCENT},{WHITE},{BLACK},{SHADOW},0,0,0,0,100,100,0,0,1,{L['outline']},{max(1, L['outline'] // 2)},2,{L['margin_lr']},{L['margin_lr']},{L['margin_v']},1
-Style: Title,{font},{L['title']},{WHITE},{WHITE},{BLACK},{SHADOW},0,0,0,0,100,100,1,0,1,{L['outline']},{max(1, L['outline'] // 2)},8,{L['margin_lr']},{L['margin_lr']},{L['title_v']},1
+Style: Title,{font},{C['size']},{WHITE},{WHITE},{BLACK},{SHADOW},-1,0,0,0,100,100,1,0,1,{C['outline']},{max(1, C['outline'] // 2)},{C['align']},{L['margin_lr']},{L['margin_lr']},{C['margin_v']},1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
@@ -206,7 +230,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
     L_ = L
     for s, e, text in captions:
         if text:
-            per = max(6, int((w - 2 * L_['margin_lr']) / (L_['title'] * 1.05))); q = "\\q2" if CJK.search(text) else ""
+            per = max(4, int((w - 2 * L_['margin_lr']) / (C['size'] * 1.05))); q = "\\q2" if CJK.search(text) else ""
             body = "\\N".join(esc(x) for x in wrap_title(text, per).split("\n"))
             lines.append(f"Dialogue: 1,{ts(s)},{ts(e)},Title,,0,0,0,,{{\\fad(200,200){q}}}{body}")
     return head + "\n".join(lines) + "\n", cues

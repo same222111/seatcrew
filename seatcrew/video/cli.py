@@ -55,6 +55,14 @@ def init(a):
     f.write_text("\n".join(lines) + "\n", encoding="utf-8")
     print(f"created {f} and {d / 'clips'}/\nnext: seatcrew video assemble {d}   (makes a labeled DRAFT right away; add clips/ for the real one)"); return 0
 
+def _caption_style(sb, a):
+    """storyboard caption_style, overridden by --caption-position / --caption-scale."""
+    from .subs import caption_style
+    cs = dict(sb.get("caption_style") or {})
+    if getattr(a, "caption_position", None): cs["position"] = a.caption_position
+    if getattr(a, "caption_scale", None) is not None: cs["scale"] = a.caption_scale
+    return caption_style(cs)
+
 def assemble(a):
     if not have_ffmpeg(): print("ffmpeg not found"); return 2
     folder = Path(a.folder); sb = load_storyboard(_sb_path(folder, a.storyboard)); aspect = a.aspect or sb["aspect"]
@@ -94,6 +102,7 @@ def assemble(a):
             print(f"  voice {s['id']}: {info['backend']} ({info['sync']} timing)")
     out = Path(a.output or folder / "final.mp4")
     man = ED.assemble(shots, out, work, aspect=aspect, voice=voice, bgm=a.bgm, draft=draft, lang=sb.get("language"), crf=a.crf, preset=a.preset or ("veryfast" if draft else "slow"), workers=4, bgm_gain_db=a.bgm_gain_db, fonts_dir=a.fonts_dir,
+                      caption_style=_caption_style(sb, a),
                       speaker_colors={n: p["color"] for n, p in lib.all().items() if p.get("color") and n != "narrator"} if a.speaker_colors and not a.voice else None)
     tot = sum(s["duration"] for s in sb["shots"])
     rep = QC.check(man, dict(total_sec=(min(3, tot), max(600, tot * 2)), sync=sync, silent_draft=silent))
@@ -209,11 +218,13 @@ def main(argv):
     sp = ap.add_subparsers(dest="c", required=True)
     i = sp.add_parser("init", help="create a folder with storyboard.yaml + clips/"); i.add_argument("folder")
     i.add_argument("--template", choices=list(TEMPLATES), default="knowledge_explainer"); i.add_argument("--aspect", choices=["9:16", "16:9"], default="9:16")
-    i.add_argument("--lang", choices=["en", "zh-CN"], help="sample script language (default: your system language)")
+    i.add_argument("--lang", help="sample script language: en or zh-CN (zh, zh-TW... map to Chinese; default: your system language)")
     s = sp.add_parser("assemble", help="folder (storyboard.yaml + clips/) -> final.mp4 + quality_report.json"); s.add_argument("folder")
     s.add_argument("--storyboard"); s.add_argument("-o", "--output"); s.add_argument("--aspect", choices=["9:16", "16:9"])
     s.add_argument("--tts", default="auto", choices=["auto", "elevenlabs", "minimax", "doubao", "azure", "openai", "edge", "draft"]); s.add_argument("--tts-voice"); s.add_argument("--tts-rate", help="edge-tts speaking rate, e.g. -8%%"); s.add_argument("--tts-pitch", help="edge-tts pitch, e.g. -2Hz"); s.add_argument("--fonts-dir", help="extra fonts (e.g. Noto Sans SC for Chinese subtitles)")
     s.add_argument("--voices-lib", help="character voice library (default voices/characters.yaml in the data folder)"); s.add_argument("--speaker-colors", action="store_true", help="color subtitles per speaker")
+    s.add_argument("--caption-position", choices=["top", "upper", "lower"], help="where shot titles (caption:) go; default top safe area, above faces")
+    s.add_argument("--caption-scale", type=float, help="title size multiplier 0.6-2.0 (default 1.0)")
     s.add_argument("--voice", help="your own narration file (instead of TTS)"); s.add_argument("--words", help="word timings JSON [{w,start,end}] for --voice")
     s.add_argument("--bgm", help="background music (ducked under the voice)"); s.add_argument("--bgm-gain-db", type=float)
     s.add_argument("--crf", type=int, default=18); s.add_argument("--preset", help="x264 preset (default: slow, or veryfast for a DRAFT)"); s.add_argument("--allow-draft", action="store_true", help=f"(default now) fill gaps offline; output is labeled {DRAFT_LABEL}")

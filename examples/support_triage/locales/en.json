@@ -1,0 +1,17 @@
+{
+ "seat_intake": "reads & classifies",
+ "seat_privacy": "no secrets in tickets",
+ "seat_draft": "drafts the reply",
+ "seat_tone": "tone & promises",
+ "seat_approve": "agent sign-off",
+ "seat_review": "final replay",
+ "field_customer": "Customer",
+ "field_message": "Message",
+ "re:^category=billing$": "Classified as billing",
+ "re:^category=bug$": "Classified as bug report",
+ "re:^category=account$": "Classified as account",
+ "re:^category=general$": "Classified as general",
+ "re:^category=(.*)$": "Classified as $1",
+ "re:^reply written \\((\\d+) chars\\)$": "Reply drafted ($1 characters)",
+ "re:^rules passed$": "Rules passed"
+}

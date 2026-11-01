@@ -175,15 +175,21 @@ body[data-density=comfy] main{padding:20px}body[data-density=comfy] .pn{padding:
 const $=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const get=u=>fetch(u).then(r=>r.json()),post=(u,b)=>fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)}).then(r=>r.json());
 let LOC={},META=null,DEF=null;
-function T(k,v){let s=LOC[k]??k;for(const x in v||{})s=s.replace('{'+x+'}',v[x]);return s}
+function T(k,v){let s=LOC[k]??k;for(const x in v||{})s=s.replace('{'+x+'}',v[x]);return typeof s=='string'?s.replace(/\{chief\}/g,LOC.sn_chief||'CHIEF'):s}   // {chief} = the workflow's own name for its CHIEF seat
 const job=s=>LOC['seat_'+s.name]||s.job;
+// a workflow locale may translate its own rule reasons: "r:<exact English reason>" or "re:<regex>" with $1..$9
+const SJ=x=>x?(LOC['subj_'+x]||x):x;
+const RS=c=>{const r=c.reason||'';if(LOC['r:'+r])return LOC['r:'+r];for(const k in LOC)if(k.startsWith('re:')){let m=null;try{m=r.match(new RegExp(k.slice(3)))}catch(e){}if(m)return LOC[k].replace(/\$(\d)/g,(_,i)=>m[i]??'')}return c.reason_l||r};
+const AG=e=>LOC['sn_'+String(e.agent||'').toLowerCase()]||e.agent_l||e.agent;   // log seat name: workflow locale first
+const STL=o=>{const m=/^(blocked|waiting) at ([A-Z_]+)$/.exec(o.status||'');if(m){const t=T(m[1]+'_at');return t+(/[A-Za-zÀ-ÿ]$/.test(t)?' ':'')+SN(m[2].toLowerCase())}return (o.status_l||o.status)};   // status with the seat's display name
 const SN=k=>LOC['sn_'+k]||String(k).toUpperCase();   // seat display name (workflow locales may translate it)
 function toast(m){$('toast').textContent=m;$('toast').style.display='block';setTimeout(()=>$('toast').style.display='none',2200)}
 async function setLang(l,save){LOC=await get('/api/locale/'+l);document.documentElement.lang=l;document.querySelectorAll('[data-i18n]').forEach(e=>e.textContent=T(e.dataset.i18n));document.querySelectorAll('[data-i18n-ph]').forEach(e=>e.placeholder=T(e.dataset.i18nPh));if(typeof HOME!='undefined'&&HOME)$('crumbHome').innerHTML=`<a href="${HOME}">${esc(T('home'))}</a>`;
- ['langSel','setLang'].forEach(i=>$(i).value=l);if(save)await post('/api/config',{language:l});if(DEF)$('wfname').textContent=LOC.wf_label||DEF.name;renderCfg();try{SIG={}}catch(e){}tick();window.dispatchEvent(new CustomEvent('seatcrew:lang',{detail:l}))}
+ ['langSel','setLang'].forEach(i=>$(i).value=l);if(save)await post('/api/config',{language:l});if(DEF)$('wfname').textContent=LOC.wf_label||DEF.name;applyTitle();if(META&&META.display)applyDisplay(META.display);renderCfg();try{SIG={}}catch(e){}tick();window.dispatchEvent(new CustomEvent('seatcrew:lang',{detail:l}))}
 function bindNav(){document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{document.querySelectorAll('nav button,.tab').forEach(x=>x.classList.remove('act'));b.classList.add('act');$(b.dataset.t).classList.add('act');window.dispatchEvent(new CustomEvent('seatcrew:tab',{detail:b.dataset.t}))})}bindNav();
 ['langSel','setLang'].forEach(i=>$(i).onchange=e=>setLang(e.target.value,true));
-async function load(){META=await get('/api/config');DEF=META.definition;document.title=DEF.title+' · SeatCrew';$('title').textContent='▌'+DEF.title;$('heroTitle').textContent=DEF.title;$('heroVer').textContent='v'+META.version;$('crumbWf').textContent=DEF.title;$('wfname').textContent=LOC.wf_label||DEF.name;
+function applyTitle(){if(!DEF)return;const t=LOC.wf_title||DEF.title;document.title=t+' · SeatCrew';$('title').textContent='▌'+t;$('heroTitle').textContent=t;if($('crumbWf'))$('crumbWf').textContent=t}
+async function load(){META=await get('/api/config');DEF=META.definition;applyTitle();$('heroVer').textContent='v'+META.version;$('wfname').textContent=LOC.wf_label||DEF.name;
  const lo=Object.entries(META.languages).map(([k,v])=>`<option value="${k}">${v}</option>`).join('');['langSel','setLang'].forEach(i=>$(i).innerHTML=lo);
  $('submitPn').style.display=DEF.submit.length?'':'none';
  $('form').innerHTML=DEF.submit.map(f=>`<div class="row" style="display:block"><label>${esc(LOC['field_'+f.name]||f.label||f.name)}</label>${f.type=='textarea'?`<textarea data-f="${f.name}"></textarea>`:f.type=='select'?`<select data-f="${f.name}" style="width:100%">${(f.options||[]).map(o=>`<option value="${esc(o)}" ${o==((META.settings||{})[f.name]??f.default)?'selected':''}>${esc(LOC['opt_'+o]||o)}</option>`).join('')}</select>`:`<input data-f="${f.name}" style="width:100%">`}</div>`).join('');
@@ -222,10 +228,10 @@ async function decide(id,ok,pending){const r=await post('/api/decide',{id,approv
 function itemCard(o){const ch=o.chain||[],bl=ch.find(c=>!c.ok),wait=o.pending!=null,ws=wait?DEF.chain[o.pending]:null;
  const st=bl?`<div class="stat bad">${T('blocked_at')} ${esc(SN(bl.seat))}</div>`:wait?`<div class="stat wait">${T('waiting_at')} ${esc(SN(ws))}</div>`:/^(done|filled)$/.test(o.status)?`<div class="stat good">✓ ${T('status_done')}</div>`:`<div class="dim">${esc(o.status)}</div>`;
  const tl=DEF.chain.map(k=>{const c=ch.find(x=>x.seat==k),s=DEF.seats.find(x=>x.name==k);
-  if(c)return `<div class="st ${c.ok?'':'bad'}"><b>${esc(SN(k))}</b> <span class="${c.ok?'ok':'bad'}">${c.ok?T('check_ok'):'<b>'+T('check_blocked')+'</b>'}</span><div class="rs">${esc(c.reason)}</div></div>`;
+  if(c)return `<div class="st ${c.ok?'':'bad'}"><b>${esc(SN(k))}</b> <span class="${c.ok?'ok':'bad'}">${c.ok?T('check_ok'):'<b>'+T('check_blocked')+'</b>'}</span><div class="rs">${esc(RS(c))}</div></div>`;
   if(k==ws)return `<div class="st wait"><b>${esc(SN(k))}</b> <span class="wait"><b>${T('waiting')}</b></span><div class="row"><input data-note="${o.id}" placeholder="${T('note')}" style="width:120px"><button class="b sm" data-ap="${o.id}" data-pending="${o.pending}">${T('approve')}</button><button class="b sm no" data-rj="${o.id}" data-pending="${o.pending}">${T('reject')}</button></div></div>`;
   return `<div class="st pend"><b>${esc(SN(k))}</b> <span class="rs">${esc(job(s))}</span></div>`}).join('');
- return `<div class="it" data-item="${o.id}"><h4>#${o.id} ${esc(o.title)} <span class="dim">· ${esc(o.label||o.subject||'')}</span></h4>${st}<div class="tl">${tl}</div></div>`}
+ return `<div class="it" data-item="${o.id}"><h4>#${o.id} ${esc(o.title)} <span class="dim">· ${esc(o.label||SJ(o.subject)||'')}</span></h4>${st}<div class="tl">${tl}</div></div>`}
 let busy=false,FOCUS=null,LAST=null,SIG={},EQH=[];
 const PAL=['#3dffa0','#ffc94d','#ff4f6d','#b18cff','#5cc8ff','#ff9a3d','#7cf2e6','#f78bd8','#c2f26b'];
 const GLYPH=['◆','▲','●','■','✦','⬢','◉','⬟','✚','◐'];
@@ -245,7 +251,7 @@ function whoCard(s){const seats=DEF.seats.filter(d=>d.name!='chief'&&d.uses_ai!=
  const chips=seats.filter(d=>d.kind!='human').map(d=>`<span class="${ai(d)!='rules'?'on':''}" title="${esc(help(d))}">${esc(SN(d.name))}: ${esc(ai(d)=='rules'?T('ai_rules'):ai(d))}</span>`).join('');
  const st=(n,c,t,d,x)=>`<div class="st" style="--c:${c}"><span class="n">${n}</span><b>${esc(t)}</b><div class="d">${esc(d)}</div>${x||''}</div>`;
  return `<div class="nx-h"><span>${esc(T('who_title'))}</span><span class="qm" title="${esc(T('who_hint'))}">?</span><button class="b sm" style="margin-left:auto" onclick="window.ChiefChat&&ChiefChat.ask(T('who_title'))">◆ ${esc(T('ask_chief'))}</button></div>
- <div class="steps">${st(1,'var(--or)',T('who_1'),T('who_1d'),`<div class="ai"><span class="${ai({name:'chief'})!='rules'?'on':''}">CHIEF: ${esc(ai({name:'chief'})=='rules'?T('ai_rules'):ai({name:'chief'}))}</span></div>`)}
+ <div class="steps">${st(1,'var(--or)',T('who_1'),T('who_1d'),`<div class="ai"><span class="${ai({name:'chief'})!='rules'?'on':''}">${esc(SN('chief'))}: ${esc(ai({name:'chief'})=='rules'?T('ai_rules'):ai({name:'chief'}))}</span></div>`)}
  ${st(2,'var(--blue)',T('who_2'),T('who_2d'),`<div class="ai">${chips}</div>`)}${st(3,'var(--bad)',T('who_3'),T('who_3d'))}
  ${st(4,'var(--acc)',T('who_4'),hum.length?T('who_4d')+' ('+hum.map(h=>SN(h.name)).join(', ')+')':T('who_4n'))}</div>`}
 function flowSVG(o){const ch=DEF.chain,n=ch.length,W=1000,H=230,y=100,x0=70,dx=n>1?(W-2*x0)/(n-1):0,X=i=>n>1?x0+i*dx:W/2;
@@ -258,9 +264,9 @@ function flowSVG(o){const ch=DEF.chain,n=ch.length,W=1000,H=230,y=100,x0=70,dx=n
   nd+=`<g class="node ${s0}">${s0=='bad'||s0=='wait'?`<circle class="ring" cx="${X(i)}" cy="${y}" r="36"/><circle class="ring r2" cx="${X(i)}" cy="${y}" r="36"/>`:''}
    <circle class="core" cx="${X(i)}" cy="${y}" r="34"/><text class="glyph" x="${X(i)}" y="${y+7}">${s0=='bad'?'✕':s0=='ok'?'✓':s0=='wait'?'⏸':GLYPH[di%GLYPH.length]}</text>
    <text class="lbl" x="${X(i)}" y="${y+56}">${esc(SN(k))}</text><text class="sub" x="${X(i)}" y="${y+72}" style="fill:var(--dim)">${esc(sub)}</text>
-   <text class="lbl" x="${X(i)+30}" y="${y-30}" style="fill:var(--dim);cursor:help">?</text><title>${esc(SN(k)+' - '+help(DEF.seats[di]||{name:k})+(c&&!c.ok?'\n'+T('reason')+': '+c.reason:''))}</title></g>`});
+   <text class="lbl" x="${X(i)+30}" y="${y-30}" style="fill:var(--dim);cursor:help">?</text><title>${esc(SN(k)+' - '+help(DEF.seats[di]||{name:k})+(c&&!c.ok?'\n'+T('reason')+': '+RS(c):''))}</title></g>`});
  const bi=st.indexOf('bad');const stamp=bi>=0?`<div class="nx-stamp" style="left:calc(${X(bi)/10}% - 60px);top:18px">${esc(T('stamp_blocked'))}</div>`:'';
- const why=bi>=0?`<div class="dim" style="position:absolute;left:0;right:0;bottom:2px;text-align:center;font-size:12px"><span class="bad">${esc(SN(ch[bi]))}:</span> ${esc(((o.chain||[]).find(x=>x.seat==ch[bi])||{}).reason||'')}</div>`:'';
+ const why=bi>=0?`<div class="dim" style="position:absolute;left:0;right:0;bottom:2px;text-align:center;font-size:12px"><span class="bad">${esc(SN(ch[bi]))}:</span> ${esc(RS((o.chain||[]).find(x=>x.seat==ch[bi])||{}))}</div>`:'';
  return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">${w}${pk}${nd}</svg>${stamp}${why}`}
 function drawSpark(){const c=$('spark');if(!c)return;const w=c.clientWidth||200,h=34,r=devicePixelRatio||1;c.width=w*r;c.height=h*r;const g=c.getContext('2d');g.scale(r,r);g.clearRect(0,0,w,h);
  const d=EQH.slice(-60);if(d.length<2)return;const mn=Math.min(...d),mx=Math.max(...d),sp=mx-mn||1,X=i=>i*(w/(d.length-1)),Y=v=>h-4-(v-mn)/sp*(h-8);
@@ -270,16 +276,16 @@ function drawSpark(){const c=$('spark');if(!c)return;const w=c.clientWidth||200,
 function equityOf(s){const P=s.portfolios;if(!P)return null;const L=Array.isArray(P)?P:Object.values(P);let t=0,n=0;L.forEach(p=>{const v=p&&(p.equity??p.value);if(typeof v=='number'){t+=v;n++}});return n?t:null}
 function renderDetail(o){if(!o){$('detail').innerHTML=`<div class="nx-h" data-i18n="detail_title">${esc(T('detail_title'))}</div><span class="dim">${esc(T('chain_empty'))}</span>`;return}
  const bl=(o.chain||[]).find(c=>!c.ok),wait=o.pending!=null,stc=bl?'b-block':wait?'b-wait':/^(done|filled)$/.test(o.status)?'b-pass':'b-idle';
- const skip=new Set(['id','title','chain','status','pending','ts','why','label','subject']);
+ const skip=new Set(['id','title','chain','status','pending','ts','why','label','subject','status_l']);
  const kv=Object.entries(o).filter(([k,v])=>!skip.has(k)&&v!==null&&typeof v!='object').slice(0,8).map(([k,v])=>`<span>${esc(LOC['field_'+k]||k)}</span><span>${esc(typeof v=='number'?+v.toFixed(4):v)}</span>`).join('');
  $('detail').innerHTML=`<div class="nx-h">${esc(T('detail_title'))} · #${o.id}<span class="nx-badge ${stc}" style="margin-left:auto">${esc(bl?T('badge_block'):wait?T('badge_wait'):o.status)}</span></div>
-  <div class="dt"><b>${esc(o.title)}</b>${o.label?`<span class="nx-badge b-live">${esc(o.label)}</span>`:''}</div><div class="kv">${kv}<span>${esc(T('status'))}</span><span>${esc(o.status)}</span></div>
-  ${o.why?`<div class="why"><b>${esc(T('reason'))}:</b> ${esc(o.why)}</div>`:''}${bl?`<div class="why"><b class="bad">${esc(SN(bl.seat))} ✕</b> ${esc((bl.reason_l||bl.reason))}</div>`:''}`}
+  <div class="dt"><b>${esc(o.title)}</b>${o.label?`<span class="nx-badge b-live">${esc(o.label)}</span>`:''}</div><div class="kv">${kv}<span>${esc(T('status'))}</span><span>${esc(STL(o))}</span></div>
+  ${o.why?`<div class="why"><b>${esc(T('reason'))}:</b> ${esc(o.why)}</div>`:''}${bl?`<div class="why"><b class="bad">${esc(SN(bl.seat))} ✕</b> ${esc(RS(bl))}</div>`:''}`}
 async function tick(){if(!DEF||!LOC.app_sub||busy)return;if(document.activeElement&&document.activeElement.dataset&&document.activeElement.dataset.note)return;let s;try{s=await get('/api/state')}catch(e){return}LAST=s;
  const clk=s.time.replace('T',' ').slice(0,19);$('clk').textContent=clk;$('heroClk').textContent=clk.slice(11);$('runner').textContent=T('runner',{n:s.runner.interval});$('cyc').textContent=` ${T('cycle')} ${s.cycle} · ${T('last')} ${s.last_cycle?s.last_cycle.slice(11,19):'—'}`;
  const on=META.auto_run!==false;$('runDot').classList.toggle('off',!on);$('runTxt').textContent=on?T('running'):T('paused');
- const ev=s.events[s.events.length-1];$('heroChip').textContent=ev?`${ev.agent} · ${ev.kind} ${ev.sym||''} ${ev.msg}`.slice(0,90):'—';
- const its=s.items,nb=its.filter(o=>(o.chain||[]).some(c=>!c.ok)).length,nw=its.filter(o=>o.pending!=null).length,np=its.filter(o=>/^(done|filled)$/.test(o.status)).length;
+ const ev=s.events[s.events.length-1];$('heroChip').textContent=ev?`${AG(ev)} · ${ev.kind_l||ev.kind} ${ev.sym||''} ${ev.msg_l||ev.msg}`.slice(0,90):'—';
+ const its=s.items,nb=its.filter(o=>/^blocked/.test(o.status||'')).length/* items blocked now; a retried item that later passed used to count as both passed and blocked, so passed-blocked went negative */,nw=its.filter(o=>o.pending!=null).length,np=its.filter(o=>/^(done|filled)$/.test(o.status)).length;
  countUp($('stItems'),its.length);countUp($('stPass'),np);countUp($('stBlock'),nb);countUp($('stWait'),nw);countUp($('tBlock'),nb);
  const ck=its.reduce((a,o)=>a+(o.chain||[]).length,0);$('tBlockS').textContent=T('checks_run',{n:ck});
  countUp($('tRate'),its.length?Math.round(100*np/Math.max(1,its.length)):0,v=>Math.round(v)+'%');$('tRateS').textContent=`${np}/${its.length}`;countUp($('tEv'),s.events.length);
@@ -288,19 +294,19 @@ async function tick(){if(!DEF||!LOC.app_sub||busy)return;if(document.activeEleme
  $('flowPath').textContent=' · '+DEF.chain.map(SN).join(' → ');$('flowChk').textContent=T('checked_n',{n:ck});
  if(FOCUS!=null&&!its.find(o=>o.id==FOCUS))FOCUS=null;const fo=its.find(o=>o.id==FOCUS)||its[0];
  const chips=its.slice(0,4).map(o=>{const b=(o.chain||[]).find(c=>!c.ok),c=b?'bad':o.pending!=null?'wait':/^(done|filled)$/.test(o.status)?'ok':'';
-  return `<div class="chip ${c} ${fo&&o.id==fo.id?'sel':''}" data-focus="${o.id}"><b>${esc(o.subject||o.title)}</b><span class="s">${esc(b?SN(b.seat)+' ✕ '+(b.reason_l||b.reason):o.status)}</span></div>`}).join('');
+  return `<div class="chip ${c} ${fo&&o.id==fo.id?'sel':''}" data-focus="${o.id}"><b>${esc(SJ(o.subject)||o.title)}</b><span class="s">${esc(b?SN(b.seat)+' ✕ '+RS(b):(STL(o)))}</span></div>`}).join('');
  if(SIG.chips!==chips){$('chips').innerHTML=chips;SIG.chips=chips;document.querySelectorAll('[data-focus]').forEach(e=>e.onclick=()=>{FOCUS=+e.dataset.focus;SIG={};tick()})}
  const fsig=fo?fo.id+':'+JSON.stringify(fo.chain)+fo.pending+LOC.app_sub:'none'+LOC.app_sub;
  if(SIG.flow!==fsig){$('flow').innerHTML=fo?flowSVG(fo):`<div class="dim" style="padding:90px 0;text-align:center">${esc(T('chain_empty'))}</div>`;SIG.flow=fsig;renderDetail(fo)}
  let online=0;const seats=DEF.seats.map((d,i)=>{const a=s.seats[d.name]||{},[cls,bc,bt]=seatState(d.name,s);if(a.active)online++;
   return `<div class="scard ${cls}" data-seat="${d.name}" style="--c:${d.name=='chief'?'var(--or)':PAL[i%PAL.length]}"><div class="ic">${GLYPH[i%GLYPH.length]}</div><div class="nm">${esc(SN(d.name))}<span class="qm" title="${esc(help(d))}">?</span></div><span class="nx-badge ${bc}">${esc(bt)}</span>
-   <div class="jb">${esc(job(d))} · AI: ${esc(a.ai||'rules')}</div><div class="ln" title="${esc(a.last||'')}">${esc(a.last||a.status||'')}</div></div>`}).join('');
+   <div class="jb">${esc(job(d))} · AI: ${esc(!a.ai||a.ai=='rules'?T('ai_rules'):a.ai)}</div><div class="ln" title="${esc(a.last_l||a.last||'')}">${esc(a.last_l||a.last||(document.documentElement.lang.startsWith('en')?a.status:LOC['badge_'+a.status]||a.status)||'')}</div></div>`}).join('');
  if(SIG.seats!==seats){$('seats').innerHTML=seats;SIG.seats=seats}const wc=whoCard(s)+LOC.app_sub;if(SIG.who!==wc){$('whoCard').innerHTML=whoCard(s);SIG.who=wc}$('online').textContent=T('online',{n:DEF.seats.length});
  $('panels').innerHTML=(s.panels||[]).map(p=>`<div class="nx-card pn"><h3>${esc(p.title)}</h3><table><tr>${p.columns.map(c=>`<th>${esc(c)}</th>`).join('')}</tr>${p.rows.map(r=>`<tr>${r.map(c=>`<td>${esc(c)}</td>`).join('')}</tr>`).join('')}</table></div>`).join('');
  const items=s.items.length?s.items.slice(0,14).map(itemCard).join(''):`<span class="dim">${T('chain_empty')}</span>`;if(SIG.items!==items){$('items').innerHTML=items;SIG.items=items;
  document.querySelectorAll('[data-ap]').forEach(b=>b.onclick=()=>decide(+b.dataset.ap,true,+b.dataset.pending));document.querySelectorAll('[data-rj]').forEach(b=>b.onclick=()=>decide(+b.dataset.rj,false,+b.dataset.pending))}
- const lz=!/^en/.test(document.documentElement.lang);$('logCmd').textContent=lz?'▤':'$ tail -f';$('logName').textContent=lz?T('log_title')+' · '+(LOC.wf_label||DEF.name):DEF.name+'.log';$('logN').textContent=T('lines',{n:s.events.length});
- const seen=+($('log').dataset.n||0);$('log').innerHTML=s.events.slice().reverse().map((e,i)=>`<div class="k-${e.kind} ${i<s.events.length-seen?'nx-in':''}"><span class=dim>${e.ts.slice(11,19)}</span> ${esc((e.agent_l||e.agent).padEnd(9))} ${esc((e.kind_l||e.kind).padEnd(e.kind_l?6:13))} ${esc(e.sym)} ${esc(e.msg_l||e.msg)}</div>`).join('');$('log').dataset.n=s.events.length}
+ const lz=!/^en/.test(document.documentElement.lang);$('logCmd').textContent=lz?'▤':'$ tail -f';$('logName').textContent=lz?T('log_title')+' · '+(LOC.wf_label||LOC.wf_title||DEF.name):DEF.name+'.log';$('logN').textContent=T('lines',{n:s.events.length});
+ const seen=+($('log').dataset.n||0);$('log').innerHTML=s.events.slice().reverse().map((e,i)=>`<div class="k-${e.kind} ${i<s.events.length-seen?'nx-in':''}"><span class=dim>${e.ts.slice(11,19)}</span> ${esc(AG(e).padEnd(9))} ${esc((e.kind_l||e.kind).padEnd(e.kind_l?6:13))} ${esc(e.sym)} ${esc(e.msg_l||e.msg)}</div>`).join('');$('log').dataset.n=s.events.length}
 // ---------- navigation: big back button, breadcrumb, Esc / Alt+Left ----------
 const HOME=(()=>{const h=new URLSearchParams(location.search).get("home");return h&&/^http:\/\/127\.0\.0\.1:\d+\/$/.test(h)?h:null})();
 if(HOME){$('homeBtn').href=HOME;$('homeBtn').style.display='inline-flex';$('crumbHome').innerHTML=`<a href="${HOME}">${esc(T('home'))}</a>`}else{$('homeBtn').style.display='none';document.querySelector('[data-i18n=back_keys]').style.display='none'}

@@ -15,6 +15,7 @@ jobs:
       # the UI overflow test must run here (not skip): Playwright's own Chromium
       - run: python -m playwright install --with-deps chromium
       - run: python scripts/privacy_scan.py
+      - run: python scripts/lang_purity.py
       - run: pytest -q -rs
         env: {SEATCREW_REQUIRE_UI: "1"}
       - run: docker build -t seatcrew .

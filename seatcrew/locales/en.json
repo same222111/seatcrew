@@ -120,7 +120,7 @@
  "tile_events": "Events",
  "tile_events_s": "in the live log",
  "tile_equity": "Equity",
- "tile_net": "Net pass",
+ "tile_net": "Passed − blocked",
  "checks_run": "{n} checks run",
  "checked_n": "checked {n}",
  "detail_title": "Item detail",
@@ -161,5 +161,8 @@
  "pmk_login": "log in on Home",
  "noai_tool": "Tool step - no AI here. Pick its backends under Settings (voice / visuals / lip-sync backend).",
  "noai_human": "You decide here - no AI.",
- "default_model": "default"
+ "default_model": "default",
+ "sn_chief": "CHIEF",
+ "set_approve_auto_approve": "Auto-approve at the human seat",
+ "set_load_samples": "Load sample items on start"
 }

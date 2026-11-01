@@ -1,5 +1,7 @@
 # Short-video studio (`short_video` workflow)
 
+[English](VIDEO.md) · [简体中文](VIDEO.zh-CN.md)
+
 Every video walks a chain of seats. A seat that finds a problem sends the item back to the seat that can fix it:
 
 | Seat | Job | On failure |
@@ -93,35 +95,18 @@ Prices change often and the numbers SeatCrew shows are **rough estimates - check
 
 | Tier | Kind | Provider | Model | Good at | Env var | Docs | Get key | Pricing |
 |---|---|---|---|---|---|---|---|---|
-| Best quality | Video | Kling AI (可灵) | `kling-3.0` | cinematic motion, people & faces, 3-15 s, 1080p/4K, first/last frame | `KLING_API_KEY` | [Docs](https://kling.ai/document-api/guides/get-started/quick-start) | [Get key](https://kling.ai/dev/api-key) | [Pricing](https://kling.ai/dev/pricing) |
+| Best quality | Video | Kling AI | `kling-3.0` | cinematic motion, people & faces, 3-15 s, 1080p/4K, first/last frame | `KLING_API_KEY` | [Docs](https://kling.ai/document-api/guides/get-started/quick-start) | [Get key](https://kling.ai/dev/api-key) | [Pricing](https://kling.ai/dev/pricing) |
 | Best quality | Video | Runway | `gen4.5` | polished cinematic shots, strong prompt following, 2-10 s; one key also reaches partner models | `RUNWAYML_API_SECRET` | [Docs](https://docs.dev.runwayml.com/guides/using-the-api/) | [Get key](https://dev.runwayml.com/) | [Pricing](https://docs.dev.runwayml.com/guides/pricing/) |
 | Best quality | Video | Google Gemini API | `gemini-omni-1.1-flash` | fast text/image-to-video with native audio, character consistency, 3-10 s (Veo 3.1 Preview shut down 2026-10-22) | `GEMINI_API_KEY` | [Docs](https://ai.google.dev/gemini-api/docs/omni) | [Get key](https://aistudio.google.com/apikey) | [Pricing](https://ai.google.dev/gemini-api/docs/pricing) |
-| Best value | Video | MiniMax Hailuo (海螺) | `MiniMax-H3` | great value, physics, reference-to-video for consistent characters, 4-15 s | `MINIMAX_API_KEY` | [Docs](https://platform.minimax.io/docs/guides/video-generation) | [Get key](https://platform.minimax.io/console/keys) | [Pricing](https://platform.minimax.io/docs/pricing/overview) |
+| Best value | Video | MiniMax Hailuo | `MiniMax-H3` | great value, physics, reference-to-video for consistent characters, 4-15 s | `MINIMAX_API_KEY` | [Docs](https://platform.minimax.io/docs/guides/video-generation) | [Get key](https://platform.minimax.io/console/keys) | [Pricing](https://platform.minimax.io/docs/pricing/overview) |
 | Best value | Video | Luma AI | `ray-3.2` | dreamy camera moves, HDR, keyframes, 5/10 s | `LUMA_AGENTS_API_KEY` | [Docs](https://docs.agents.lumalabs.ai/guides/videos/generation/) | [Get key](https://platform.lumalabs.ai/) | [Pricing](https://docs.agents.lumalabs.ai/guides/pricing/) |
 | Free / draft | Video | Offline draft cards | `-` | free, offline, labeled DRAFT - for checking timing only | no key | - | - | - |
 | Best quality | Voice / TTS | ElevenLabs | `eleven_multilingual_v2 (default) / eleven_v3 / eleven_v4 via SEATCREW_ELEVEN_MODEL` | most expressive voices, instant voice cloning, exact word timestamps | `ELEVENLABS_API_KEY` | [Docs](https://elevenlabs.io/docs/overview/models) | [Get key](https://elevenlabs.io/app/developers/api-keys) | [Pricing](https://elevenlabs.io/pricing/api) |
 | Best quality | Voice / TTS | MiniMax Speech | `speech-2.8-hd` | very natural Chinese, emotion parameter, voice clone from 10 s+ | `MINIMAX_API_KEY` | [Docs](https://platform.minimax.io/docs/api-reference/speech-t2a-http) | [Get key](https://platform.minimax.io/console/keys) | [Pricing](https://platform.minimax.io/docs/pricing/overview) |
-| Best value | Voice / TTS | ByteDance Doubao / Volcano Engine (豆包语音) | `seed-tts-2.0` | natural zh-CN voices with emotions, voice clone (seed-icl-2.0) | `VOLC_TTS_API_KEY` | [Docs](https://docs.volcengine.com/docs/doubao-voice/http-chunked-sse-unidirectional-streaming-v3?lang=zh) | [Get key](https://console.volcengine.com/speech/app) | [Pricing](https://docs.volcengine.com/docs/doubao-voice/billing-instructions?lang=zh) |
+| Best value | Voice / TTS | ByteDance Doubao / Volcano Engine | `seed-tts-2.0` | natural zh-CN voices with emotions, voice clone (seed-icl-2.0) | `VOLC_TTS_API_KEY` | [Docs](https://docs.volcengine.com/docs/doubao-voice/http-chunked-sse-unidirectional-streaming-v3?lang=zh) | [Get key](https://console.volcengine.com/speech/app) | [Pricing](https://docs.volcengine.com/docs/doubao-voice/billing-instructions?lang=zh) |
 | Best value | Voice / TTS | Azure AI Speech | `Neural / HD voices (zh-CN-XiaoxiaoNeural ...)` | real SSML speaking styles (sad, gentle, cheerful ...) for zh-CN/en/ja voices | `AZURE_SPEECH_KEY`, `AZURE_SPEECH_REGION` | [Docs](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/speech-synthesis-markup-voice) | [Get key](https://portal.azure.com/#create/Microsoft.CognitiveServicesSpeechServices) | [Pricing](https://azure.microsoft.com/en-us/pricing/details/speech/) |
 | Best value | Voice / TTS | OpenAI TTS | `gpt-4o-mini-tts` | tone via instructions; whisper word timing (deprecated, shuts down 2027-01-06) | `OPENAI_API_KEY` | [Docs](https://developers.openai.com/api/docs/guides/text-to-speech) | [Get key](https://platform.openai.com/api-keys) | [Pricing](https://developers.openai.com/api/docs/pricing) |
 | Free / draft | Voice / TTS | Microsoft Edge neural voices (edge-tts) | `zh-CN-XiaoxiaoNeural etc.` | free, no key, good neural voices; styles only approximated | no key | [Docs](https://github.com/rany2/edge-tts) | - | - |
-
-### 中文
-
-| 档位 | 类型 | 服务商 | 模型 | 擅长 | 环境变量 | 文档 | 获取密钥 | 价格 |
-|---|---|---|---|---|---|---|---|---|
-| 最佳画质 | 视频 | Kling AI (可灵) | `kling-3.0` | 电影感运动、人物与面部，3-15 秒，1080p/4K，首尾帧 | `KLING_API_KEY` | [文档](https://kling.ai/document-api/guides/get-started/quick-start) | [获取密钥](https://kling.ai/dev/api-key) | [价格](https://kling.ai/dev/pricing) |
-| 最佳画质 | 视频 | Runway | `gen4.5` | 精致电影镜头、提示词遵循强，2-10 秒 | `RUNWAYML_API_SECRET` | [文档](https://docs.dev.runwayml.com/guides/using-the-api/) | [获取密钥](https://dev.runwayml.com/) | [价格](https://docs.dev.runwayml.com/guides/pricing/) |
-| 最佳画质 | 视频 | Google Gemini API | `gemini-omni-1.1-flash` | 快速文/图生视频，原生音频，角色一致（Veo 3.1 预览版已于 2026-10-22 关停） | `GEMINI_API_KEY` | [文档](https://ai.google.dev/gemini-api/docs/omni) | [获取密钥](https://aistudio.google.com/apikey) | [价格](https://ai.google.dev/gemini-api/docs/pricing) |
-| 性价比 | 视频 | MiniMax Hailuo (海螺) | `MiniMax-H3` | 性价比高、物理效果好、参考图保持角色一致，4-15 秒 | `MINIMAX_API_KEY` | [文档](https://platform.minimax.io/docs/guides/video-generation) | [获取密钥](https://platform.minimax.io/console/keys) | [价格](https://platform.minimax.io/docs/pricing/overview) |
-| 性价比 | 视频 | Luma AI | `ray-3.2` | 梦幻运镜、HDR、关键帧，5/10 秒 | `LUMA_AGENTS_API_KEY` | [文档](https://docs.agents.lumalabs.ai/guides/videos/generation/) | [获取密钥](https://platform.lumalabs.ai/) | [价格](https://docs.agents.lumalabs.ai/guides/pricing/) |
-| 免费 / 草稿 | 视频 | Offline draft cards | `-` | 免费离线，标注 DRAFT，仅用于检查节奏 | 无需密钥 | - | - | - |
-| 最佳画质 | 配音 / TTS | ElevenLabs | `eleven_multilingual_v2 (default) / eleven_v3 / eleven_v4 via SEATCREW_ELEVEN_MODEL` | 表现力最强，即时声音克隆，精确词级时间戳 | `ELEVENLABS_API_KEY` | [文档](https://elevenlabs.io/docs/overview/models) | [获取密钥](https://elevenlabs.io/app/developers/api-keys) | [价格](https://elevenlabs.io/pricing/api) |
-| 最佳画质 | 配音 / TTS | MiniMax Speech | `speech-2.8-hd` | 中文非常自然，情绪参数，10 秒以上样本即可克隆 | `MINIMAX_API_KEY` | [文档](https://platform.minimax.io/docs/api-reference/speech-t2a-http) | [获取密钥](https://platform.minimax.io/console/keys) | [价格](https://platform.minimax.io/docs/pricing/overview) |
-| 性价比 | 配音 / TTS | ByteDance Doubao / Volcano Engine (豆包语音) | `seed-tts-2.0` | 自然的中文音色与情绪，声音复刻（seed-icl-2.0） | `VOLC_TTS_API_KEY` | [文档](https://docs.volcengine.com/docs/doubao-voice/http-chunked-sse-unidirectional-streaming-v3?lang=zh) | [获取密钥](https://console.volcengine.com/speech/app) | [价格](https://docs.volcengine.com/docs/doubao-voice/billing-instructions?lang=zh) |
-| 性价比 | 配音 / TTS | Azure AI Speech | `Neural / HD voices (zh-CN-XiaoxiaoNeural ...)` | 真实 SSML 说话风格（悲伤、温柔、开心……），支持 zh-CN/en/ja | `AZURE_SPEECH_KEY`, `AZURE_SPEECH_REGION` | [文档](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/speech-synthesis-markup-voice) | [获取密钥](https://portal.azure.com/#create/Microsoft.CognitiveServicesSpeechServices) | [价格](https://azure.microsoft.com/en-us/pricing/details/speech/) |
-| 性价比 | 配音 / TTS | OpenAI TTS | `gpt-4o-mini-tts` | 用 instructions 控制语气（已弃用，2027-01-06 关停） | `OPENAI_API_KEY` | [文档](https://developers.openai.com/api/docs/guides/text-to-speech) | [获取密钥](https://platform.openai.com/api-keys) | [价格](https://developers.openai.com/api/docs/pricing) |
-| 免费 / 草稿 | 配音 / TTS | Microsoft Edge neural voices (edge-tts) | `zh-CN-XiaoxiaoNeural etc.` | 免费无需密钥，神经音色；风格仅近似 | 无需密钥 | [文档](https://github.com/rany2/edge-tts) | - | - |
 
 **Retired / not in the tiers:** OpenAI Sora (Videos API discontinued 2026-09-24; the adapter refuses unless you point `SEATCREW_SORA_BASE` at a compatible endpoint). Google Veo 3.1 Preview in the Gemini API shut down on 2026-10-22, so SeatCrew uses `gemini-omni-1.1-flash`; Vertex AI Veo is **not** wired. Replicate stays available for any model slug (`REPLICATE_API_TOKEN`).
 
@@ -146,7 +131,7 @@ Only the returned voice id is saved in the profile (`minimax_voice`, `doubao_voi
 All adapters have mocked-HTTP tests (`tests/test_providers.py`: request shape, polling, retries on 429/5xx, timeouts, failure messages, clone flows). **Only edge-tts and the offline draft path were run live.** Kling, Runway, Luma, Gemini Omni, MiniMax (video, speech, clone), Doubao (speech, clone), Azure, ElevenLabs clone and the Sora-compatible path are **mock-only**: they follow each provider's public docs as of 2026-10-30 but have not been run against the real service. The Doubao clone upload flow is the least certain. Please report issues.
 
 ## Character Studio (`/characters`)
-Make reusable characters, group them into a cast (剧组) of up to 5, and shoot a dialogue scene where every line, face and voice comes from that cast.
+Make reusable characters, group them into a cast of up to 5, and shoot a dialogue scene where every line, face and voice comes from that cast.
 
 **1. Characters** - from 1-6 photos, a text description, or both. Files live in `characters/<name>/` (next to your config, never in the repo):
 `character.yaml`, `refs/` (your photos), `sheet/` (front, side, full body, expressions), `angles/` (stills from the 3D viewer), `model.glb`.
@@ -161,7 +146,7 @@ Make reusable characters, group them into a cast (剧组) of up to 5, and shoot 
 The sheet is generated front first; side, full body and expressions are conditioned on your photos plus the generated front, to keep the same face.
 **Lock** a character to freeze its refs (front, side and full body by default). Locked refs go to every shot the character appears in (VISUALS sends them to providers that take references).
 
-**2. Cast (剧组)** - 1-5 characters with a role (lead, supporting, comic, antagonist, narrator, cameo) and notes, plus an optional plot and **set sheet** (one picture of the location, props and wardrobe). Save, load, delete, **export / import** as JSON. Exports include the images by default, never keys, voice clone secrets or absolute paths. Key-looking strings are removed on save.
+**2. Cast** - 1-5 characters with a role (lead, supporting, comic, antagonist, narrator, cameo) and notes, plus an optional plot and **set sheet** (one picture of the location, props and wardrobe). Save, load, delete, **export / import** as JSON. Exports include the images by default, never keys, voice clone secrets or absolute paths. Key-looking strings are removed on save.
 
 **3. Shoot with this cast** - picks the `dialogue_scene` template:
 - WRITER only gives lines to cast members. With a plot written as `Name: line` it uses those lines verbatim; otherwise the AI writer gets the cast brief. SCRIPT CHECK rejects any speaker or on-screen character outside the cast.

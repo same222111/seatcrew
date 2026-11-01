@@ -18,10 +18,10 @@ SEATS = {
  "es": dict(chief="director", writer="guion", scriptcheck="revisión", production="producción", voice="voz", visuals="imágenes", lipsync="sincronía", editqc="edición+QC", editor="edición", qc="QC", approve="aprobación"),
 }
 QC_NAMES = {
- "zh-CN": dict(format="格式", duration="时长", source_resolution="素材分辨率", clip_length="素材长度", sharpness="清晰度", black_frames="黑帧", frozen_frames="冻帧",
+ "zh-CN": dict(format="格式", duration="时长", source_resolution="素材分辨率", clip_length="素材长度", sharpness="清晰度", black_frames="黑帧", frozen_frames="冻帧", av_stream_sync="音画时长一致",
                loudness="响度", clipping="削波", voice_present="有人声", silence_gaps="静音间隔", subtitle_sync="字幕同步", voice_consistency="角色声音一致", final_quality="成品质量"),
 }
-QC_NAMES["zh-TW"] = dict(QC_NAMES["zh-CN"], source_resolution="素材解析度", clip_length="素材長度", sharpness="清晰度", black_frames="黑幀", frozen_frames="凍幀",
+QC_NAMES["zh-TW"] = dict(QC_NAMES["zh-CN"], source_resolution="素材解析度", clip_length="素材長度", sharpness="清晰度", black_frames="黑幀", frozen_frames="凍幀", av_stream_sync="音畫時長一致",
                          loudness="響度", voice_present="有人聲", silence_gaps="靜音間隔", subtitle_sync="字幕同步", voice_consistency="角色聲音一致", final_quality="成品品質", duration="時長")
 
 # (pattern, replacement) applied in order; each lang lists only what it translates. {seat} placeholders are resolved via SEATS.
@@ -32,6 +32,9 @@ _ZH = [
  (r"^CHIEF holds new items this cycle$", "导演本轮暂停接收新事项"),
  (r"^CHIEF holds (\d+) late item\(s\)", r"导演暂缓 \1 个后到的事项"),
  (r"^settings saved: (.+)$", r"设置已保存：\1"),
+ (r"^waiting at ([A-Z_]+)$", lambda m, L: f"等待{seat(m.group(1), L)}"),
+ (r"^blocked at ([A-Z_]+)$", lambda m, L: f"被{seat(m.group(1), L)}拦下"),
+ (r"^language$", "语言"),
  (r"\blanguage\b", "语言"),
  (r"waiting for a human to approve", "等待你批准"),
  (r"auto-approved \(setting\)", "已自动批准（设置）"),
@@ -54,6 +57,8 @@ _ZH = [
  (r"audio=yes", "有音频"), (r"audio=MISSING", "缺少音频"),
  (r"([\d.]+)s \(planned ([\d.]+)s, allowed (\d+)-(\d+)s\)", r"\1 秒（计划 \2 秒，允许 \3–\4 秒）"),
  (r"all sources >= (\d+)% of output", r"所有素材 ≥ 输出的 \1%"), (r"upscaled too much: ", "放大过度："),
+ (r"video stream ([\d.]+)s vs audio stream ([\d.]+)s \(max gap ([\d.]+)s\)", r"画面 \1 秒 / 声音 \2 秒（最多相差 \3 秒）"),
+ (r"could not read video/audio stream durations", "读不到画面/声音的时长"),
  (r"every clip covers its shot", "每段素材都覆盖了镜头"), (r"clips shorter than their shot \(frozen tail\): ", "素材比镜头短（结尾会定格）："),
  (r"^min ([\d.]+)$", r"最低 \1"), (r"^blurry: ", "模糊："), (r"^black at ", "黑帧位于 "), (r"^frozen at ", "冻帧位于 "),
  (r"^none$", "无"),
@@ -72,15 +77,22 @@ _ZH = [
  (r"shot too long to read: ", "镜头读不完："), (r"(\S+) needs ~([\d.]+)s > (\d+)s", r"\1 需要约 \2 秒 > \3 秒"),
  (r"total ~(\d+)s outside ([\d.]+)-(\d+)s", r"总时长约 \1 秒，不在 \2–\3 秒内"),
  (r"ffmpeg not found - install ffmpeg and retry", "找不到 ffmpeg：请安装后重试"),
+ (r"^rules passed$", "规则检查通过"), (r"^(\w+) written \((\d+) chars\)$", r"\1 已写好（\2 字）"), (r"^missing: ", "缺少："),
  (r"\b(\d+) words\b", r"\1 词"),
 ]
 _TW_CHARS = str.maketrans("轮开个项导暂设语请这认驳处对镜头时约讲词审剪辑质检计划许输盖结会帧删静间隔声轨听获实际选异较备码电话还写须读总内围该后过频没见长迟发运错决缓达终围节绝择维损钟与齐顿无预览画关闭确离线", "輪開個項導暫設語請這認駁處對鏡頭時約講詞審剪輯質檢計劃許輸蓋結會幀刪靜間隔聲軌聽獲實際選異較備碼電話還寫須讀總內圍該後過頻沒見長遲發運錯決緩達終圍節絕擇維損鐘與齊頓無預覽畫關閉確離線")
 _ES = [(r"^cycle (\d+) start$", r"inicio del ciclo \1"), (r"^cycle (\d+): (\d+) passed, (\d+) blocked, (\d+) waiting / (\d+)$", r"ciclo \1: \2 aprobados, \3 bloqueados, \4 en espera / \5"),
        (r"^(\d+) new item\(s\)$", r"\1 elemento(s) nuevo(s)"), (r"waiting for a human to approve", "esperando tu aprobación"), (r"^PASS\b", "APROBADO"), (r"(\d+)/(\d+) checks", r"\1/\2 controles"),
-       (r"narration audible", "narración audible"), (r"^none$", "ninguno"), (r"no narration", "sin narración")]
+       (r"narration audible", "narración audible"), (r"^none$", "ninguno"), (r"no narration", "sin narración"),
+       (r"^settings saved: (.+)$", r"ajustes guardados: \1"), (r"^language$", "idioma"), (r"\blanguage\b", "idioma"),
+       (r"^waiting at ([A-Z_]+)$", lambda m, L: f"esperando en {seat(m.group(1), L)}"), (r"^blocked at ([A-Z_]+)$", lambda m, L: f"bloqueado en {seat(m.group(1), L)}"),
+       (r"^rules passed$", "reglas superadas"), (r"^(\w+) written \((\d+) chars\)$", r"\1 redactado (\2 caracteres)"), (r"^missing: ", "falta: ")]
 _JA = [(r"^cycle (\d+) start$", r"サイクル \1 開始"), (r"^cycle (\d+): (\d+) passed, (\d+) blocked, (\d+) waiting / (\d+)$", r"サイクル \1: 合格 \2・ブロック \3・待機 \4 / \5"),
        (r"^(\d+) new item\(s\)$", r"新規 \1 件"), (r"waiting for a human to approve", "あなたの承認待ち"), (r"^PASS\b", "合格"), (r"(\d+)/(\d+) checks", r"\1/\2 項目"),
-       (r"narration audible", "ナレーションあり"), (r"^none$", "なし"), (r"no narration", "ナレーションなし")]
+       (r"narration audible", "ナレーションあり"), (r"^none$", "なし"), (r"no narration", "ナレーションなし"),
+       (r"^settings saved: (.+)$", r"設定を保存：\1"), (r"^language$", "言語"), (r"\blanguage\b", "言語"),
+       (r"^waiting at ([A-Z_]+)$", lambda m, L: f"{seat(m.group(1), L)}で待機"), (r"^blocked at ([A-Z_]+)$", lambda m, L: f"{seat(m.group(1), L)}でブロック"),
+       (r"^rules passed$", "ルールチェック合格"), (r"^(\w+) written \((\d+) chars\)$", r"\1 作成済み（\2 文字）"), (r"^missing: ", "不足：")]
 
 def seat(name, lang): return SEATS.get(lang, {}).get(str(name).lower(), str(name))
 
@@ -110,9 +122,16 @@ def localize_snapshot(snap, lang):
     """Add *_l display fields to events, check chains and QC reports (copies only; stored state is untouched)."""
     if lang in (None, "", "en"): return snap
     snap["events"] = [dict(e, kind_l=kind(e.get("kind"), lang), agent_l=seat(e.get("agent", ""), lang), msg_l=text(e.get("msg"), lang)) for e in snap.get("events", [])]
+    seats = {}
+    for k, v in (snap.get("seats") or {}).items():
+        v = dict(v); last = v.get("last") or ""
+        sym, _, rest = last.partition(" ")
+        v["last_l"] = (f"{sym} {text(rest, lang)}" if rest and len(sym) <= 2 else text(last, lang)) if last else ""
+        seats[k] = v
+    if seats: snap["seats"] = seats
     items = []
     for it in snap.get("items", []):
-        it = dict(it); it["chain"] = [dict(c, reason_l=text(c.get("reason"), lang)) for c in it.get("chain") or []]
+        it = dict(it); it["status_l"] = text(it.get("status"), lang); it["chain"] = [dict(c, reason_l=text(c.get("reason"), lang)) for c in it.get("chain") or []]
         d = it.get("data")
         if isinstance(d, dict) and isinstance(d.get("qc"), dict):
             d = dict(d); q = dict(d["qc"]); q["summary_l"] = text(q.get("summary"), lang)
