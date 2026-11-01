@@ -120,7 +120,7 @@
  "tile_events": "事件",
  "tile_events_s": "即時日誌中",
  "tile_equity": "權益",
- "tile_net": "淨通過",
+ "tile_net": "通過減攔截",
  "checks_run": "已執行 {n} 次檢查",
  "checked_n": "已檢查 {n}",
  "detail_title": "項目詳情",

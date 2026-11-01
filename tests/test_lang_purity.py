@@ -24,3 +24,18 @@ def test_scanner_catches_mixed_strings(tmp_path):
 def test_language_switch_links_are_allowed(tmp_path):
     (tmp_path / "README.md").write_text("# X\n\n[English](README.md) · [简体中文](README.zh-CN.md)\n", encoding="utf-8")
     assert lp.scan(tmp_path) == []
+
+def test_scanner_catches_untranslated_option_values_and_subjects(tmp_path):
+    ex = tmp_path / "examples" / "content_review"; (ex / "locales").mkdir(parents=True)
+    (ex / "workflow.yaml").write_text("submit:\n  - {name: speed, type: select, options: [auto, slow]}\n", encoding="utf-8")
+    full = {"opt_auto": "x", "opt_slow": "x", "subj_post": "x"}
+    for l in lp.UI_LANGS: (ex / "locales" / f"{l}.json").write_text(json.dumps(full), encoding="utf-8")
+    assert lp.scan_options(tmp_path) == []
+    (ex / "locales" / "zh-CN.json").write_text(json.dumps({"opt_auto": "自动"}), encoding="utf-8")
+    (ex / "locales" / "es.json").unlink()
+    got = {f: why for f, _, why, _ in lp.scan_options(tmp_path)}
+    assert "opt_slow" in got["examples/content_review/locales/zh-CN.json"] and "subj_post" in got["examples/content_review/locales/zh-CN.json"]
+    assert got["examples/content_review/locales/es.json"] == "missing locale file"
+
+def test_every_real_option_value_is_translated():
+    assert lp.scan_options() == []

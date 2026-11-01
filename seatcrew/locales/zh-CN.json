@@ -120,7 +120,7 @@
  "tile_events": "事件",
  "tile_events_s": "实时日志里",
  "tile_equity": "权益",
- "tile_net": "净通过",
+ "tile_net": "通过减拦截",
  "checks_run": "已执行 {n} 次检查",
  "checked_n": "已检查 {n}",
  "detail_title": "事项详情",

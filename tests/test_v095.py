@@ -144,3 +144,29 @@ def test_draft_cards_render_in_parallel_without_sharing_a_font_file(tmp_path):
     with ThreadPoolExecutor(8) as ex: outs = list(ex.map(lambda s: visuals.draft_card(s, tmp_path, "9:16", size=(360, 640)), shots))
     assert all(p.is_file() and p.stat().st_size > 0 for p in outs)
     assert len(list(tmp_path.glob("*.draft-font*"))) == 8
+
+
+def test_per_shot_voice_stem_is_always_full_length(tmp_path):
+    """The mixed voice stem must be exactly the timeline length; it used to end at the last voice line under load
+    (apad after amix), which QC then flagged as an A/V stream gap (flaky test_director_checks_brief...)."""
+    from seatcrew.video import ff, editor as ED
+    if not ff.have_ffmpeg(): import pytest; pytest.skip("needs ffmpeg")
+    shots = []
+    for i in range(3):
+        img = tmp_path / f"s{i}.png"; wav = tmp_path / f"s{i}.wav"
+        ff.run(["-f", "lavfi", "-i", "color=c=blue:s=270x480", "-frames:v", "1", str(img)])
+        ff.run(["-f", "lavfi", "-i", "sine=f=440:d=1.2", "-ar", "48000", str(wav)])
+        shots.append(dict(id=f"s{i}", clip=str(img), audio=str(wav), camera="push_in", transition="cut" if i else "crossfade", caption="x", duration=2.0))
+    man = ED.assemble(shots, tmp_path / "out.mp4", tmp_path / "w", size=(270, 480), supersample=1, preset="ultrafast", inter_crf=23)
+    assert abs(ff.duration(tmp_path / "w" / "voice.wav") - man["total"]) < 0.03
+    v = ff.vstream(man["output"]); assert v
+
+
+def test_net_tile_counts_currently_blocked_items_only():
+    """'Net pass' went negative: an item blocked once and then passed on a retry was counted as passed AND blocked."""
+    html = (Path(__file__).resolve().parents[1] / "seatcrew/web/index.html").read_text(encoding="utf-8")
+    assert "nb=its.filter(o=>/^blocked/.test(o.status||''))" in html and "(o.chain||[]).some(c=>!c.ok)).length" not in html
+    import json as _j
+    for l in ("en", "zh-CN", "zh-TW", "ja", "es"):
+        loc = _j.loads((Path(__file__).resolve().parents[1] / f"seatcrew/locales/{l}.json").read_text(encoding="utf-8"))
+        assert loc["tile_net"] and loc["tile_net"] not in ("Net pass", "净通过")

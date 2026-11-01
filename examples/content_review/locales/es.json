@@ -16,5 +16,10 @@
  "sn_policy": "POLÍTICA",
  "sn_approve": "APROBAR",
  "sn_publish": "PUBLICAR",
- "sn_review": "REVISIÓN"
+ "sn_review": "REVISIÓN",
+ "subj_post": "publicación",
+ "re:^template draft \\((\\d+) (?:words|词|詞)\\)$": "borrador de plantilla ($1 palabras)",
+ "re:^(\\d+) numeric claim\\(s\\), sources: none needed$": "$1 afirmación(es) numérica(s), no requiere fuentes",
+ "re:^(\\d+) numeric claim\\(s\\), sources: (.*)$": "$1 afirmación(es) numérica(s), fuentes: $2",
+ "re:^no banned phrases, (\\d+) (?:words|词|詞)$": "sin frases prohibidas, $1 palabras"
 }

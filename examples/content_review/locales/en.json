@@ -16,5 +16,6 @@
  "sn_policy": "POLICY",
  "sn_approve": "APPROVE",
  "sn_publish": "PUBLISH",
- "sn_review": "REVIEW"
+ "sn_review": "REVIEW",
+ "subj_post": "post"
 }

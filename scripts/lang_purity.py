@@ -92,10 +92,49 @@ def targets(root=ROOT):
     loc = [(p, p.stem) for p in [*root.glob("seatcrew/locales/*.json"), *root.glob("examples/*/locales/*.json")] if p.stem in ("en", "es", "zh-CN", "zh-TW")]
     return md, loc
 
+
+UI_LANGS = ("en", "zh-CN", "zh-TW", "ja", "es")
+SUBJECTS = {"content_review": ["post"]}          # sample-data subjects shown in the UI
+
+def _choices(ex):
+    """Option values a workflow shows in <select>s: CHOICES in workflow.py, options of submit fields in workflow.yaml."""
+    vals = set(); py = ex / "workflow.py"; ym = ex / "workflow.yaml"
+    if py.exists():
+        import runpy
+        if str(ex.parents[1]) not in sys.path: sys.path.insert(0, str(ex.parents[1]))
+        try: vals |= {str(v) for l in (runpy.run_path(str(py)).get("CHOICES") or {}).values() for v in l}
+        except Exception as e: return None, f"cannot load {py.name}: {e}"
+    if ex.name == "short_video":                       # Character Studio voice backends use the same opt_ keys
+        try:
+            from seatcrew.video.voices import BACKENDS; vals |= set(BACKENDS)
+        except Exception as e: return None, f"cannot load voice backends: {e}"
+    if ym.exists():
+        import yaml
+        d = yaml.safe_load(ym.read_text(encoding="utf-8")) or {}
+        for f in d.get("submit") or []:
+            if isinstance(f, dict): vals |= {str(o) for o in f.get("options") or []}
+    return vals, None
+
+def scan_options(root=ROOT):
+    """Every option value and sample subject must have opt_<v> / subj_<v> in every UI language (workflow or app locale)."""
+    out = []; app = {l: (json.loads(f.read_text(encoding="utf-8")) if (f := root / "seatcrew/locales" / f"{l}.json").exists() else {}) for l in UI_LANGS}
+    if not (root / "examples").is_dir(): return out
+    for ex in sorted(p for p in (root / "examples").iterdir() if (p / "locales").is_dir()):
+        vals, err = _choices(ex)
+        if err: out.append((ex.relative_to(root).as_posix(), "-", err, "")); continue
+        need = [f"opt_{v}" for v in sorted(vals)] + [f"subj_{v}" for v in SUBJECTS.get(ex.name, [])]
+        for l in UI_LANGS:
+            lp = ex / "locales" / f"{l}.json"; loc = json.loads(lp.read_text(encoding="utf-8")) if lp.exists() else {}
+            if not lp.exists(): out.append((lp.relative_to(root).as_posix(), "-", "missing locale file", "")); continue
+            miss = [k for k in need if not (loc.get(k) or app[l].get(k))]
+            if miss: out.append((lp.relative_to(root).as_posix(), "-", "untranslated option values: " + ", ".join(miss), ""))
+    return out
+
 def scan(root=ROOT):
     md, loc = targets(root); problems = []
     for p, l in md: problems += [(p.relative_to(root).as_posix(), *x) for x in scan_md(p, l)]
     for p, l in loc: problems += [(p.relative_to(root).as_posix(), *x) for x in scan_locale(p, l)]
+    problems += scan_options(root)
     return problems
 
 if __name__ == "__main__":

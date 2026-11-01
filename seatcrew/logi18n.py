@@ -77,15 +77,22 @@ _ZH = [
  (r"shot too long to read: ", "镜头读不完："), (r"(\S+) needs ~([\d.]+)s > (\d+)s", r"\1 需要约 \2 秒 > \3 秒"),
  (r"total ~(\d+)s outside ([\d.]+)-(\d+)s", r"总时长约 \1 秒，不在 \2–\3 秒内"),
  (r"ffmpeg not found - install ffmpeg and retry", "找不到 ffmpeg：请安装后重试"),
+ (r"^rules passed$", "规则检查通过"), (r"^(\w+) written \((\d+) chars\)$", r"\1 已写好（\2 字）"), (r"^missing: ", "缺少："),
  (r"\b(\d+) words\b", r"\1 词"),
 ]
 _TW_CHARS = str.maketrans("轮开个项导暂设语请这认驳处对镜头时约讲词审剪辑质检计划许输盖结会帧删静间隔声轨听获实际选异较备码电话还写须读总内围该后过频没见长迟发运错决缓达终围节绝择维损钟与齐顿无预览画关闭确离线", "輪開個項導暫設語請這認駁處對鏡頭時約講詞審剪輯質檢計劃許輸蓋結會幀刪靜間隔聲軌聽獲實際選異較備碼電話還寫須讀總內圍該後過頻沒見長遲發運錯決緩達終圍節絕擇維損鐘與齊頓無預覽畫關閉確離線")
 _ES = [(r"^cycle (\d+) start$", r"inicio del ciclo \1"), (r"^cycle (\d+): (\d+) passed, (\d+) blocked, (\d+) waiting / (\d+)$", r"ciclo \1: \2 aprobados, \3 bloqueados, \4 en espera / \5"),
        (r"^(\d+) new item\(s\)$", r"\1 elemento(s) nuevo(s)"), (r"waiting for a human to approve", "esperando tu aprobación"), (r"^PASS\b", "APROBADO"), (r"(\d+)/(\d+) checks", r"\1/\2 controles"),
-       (r"narration audible", "narración audible"), (r"^none$", "ninguno"), (r"no narration", "sin narración")]
+       (r"narration audible", "narración audible"), (r"^none$", "ninguno"), (r"no narration", "sin narración"),
+       (r"^settings saved: (.+)$", r"ajustes guardados: \1"), (r"^language$", "idioma"), (r"\blanguage\b", "idioma"),
+       (r"^waiting at ([A-Z_]+)$", lambda m, L: f"esperando en {seat(m.group(1), L)}"), (r"^blocked at ([A-Z_]+)$", lambda m, L: f"bloqueado en {seat(m.group(1), L)}"),
+       (r"^rules passed$", "reglas superadas"), (r"^(\w+) written \((\d+) chars\)$", r"\1 redactado (\2 caracteres)"), (r"^missing: ", "falta: ")]
 _JA = [(r"^cycle (\d+) start$", r"サイクル \1 開始"), (r"^cycle (\d+): (\d+) passed, (\d+) blocked, (\d+) waiting / (\d+)$", r"サイクル \1: 合格 \2・ブロック \3・待機 \4 / \5"),
        (r"^(\d+) new item\(s\)$", r"新規 \1 件"), (r"waiting for a human to approve", "あなたの承認待ち"), (r"^PASS\b", "合格"), (r"(\d+)/(\d+) checks", r"\1/\2 項目"),
-       (r"narration audible", "ナレーションあり"), (r"^none$", "なし"), (r"no narration", "ナレーションなし")]
+       (r"narration audible", "ナレーションあり"), (r"^none$", "なし"), (r"no narration", "ナレーションなし"),
+       (r"^settings saved: (.+)$", r"設定を保存：\1"), (r"^language$", "言語"), (r"\blanguage\b", "言語"),
+       (r"^waiting at ([A-Z_]+)$", lambda m, L: f"{seat(m.group(1), L)}で待機"), (r"^blocked at ([A-Z_]+)$", lambda m, L: f"{seat(m.group(1), L)}でブロック"),
+       (r"^rules passed$", "ルールチェック合格"), (r"^(\w+) written \((\d+) chars\)$", r"\1 作成済み（\2 文字）"), (r"^missing: ", "不足：")]
 
 def seat(name, lang): return SEATS.get(lang, {}).get(str(name).lower(), str(name))
 

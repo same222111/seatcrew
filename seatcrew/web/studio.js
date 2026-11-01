@@ -98,7 +98,7 @@ function form(c,name){c=c||{};const ps=V.presets.filter(p=>p.lang==V.lang).conca
  <label class="dim">${L('v_pitch','pitch')}</label><input data-vf="pitch" type=number min=-50 max=50 value="${c.pitch||0}" style="width:56px">Hz
  <label class="dim">${L('v_volume','volume')}</label><input data-vf="volume" type=number min=-50 max=50 value="${c.volume||0}" style="width:56px">%
  <input data-vf="color" type=color value="${c.color||'#FFE500'}" title="${esc(L('v_color','subtitle color'))}">
- <span class="adv">${sel('backend',V.backends,c.backend||'auto')} ${sel('openai_voice',['',...V.openai_voices],c.openai_voice||'')} <input data-vf="elevenlabs_voice" placeholder="ElevenLabs voice id" value="${esc(c.elevenlabs_voice||'')}" style="width:150px"></span>
+ <span class="adv">${sel('backend',V.backends,c.backend||'auto',o=>L('opt_'+o,o))} ${sel('openai_voice',['',...V.openai_voices],c.openai_voice||'')} <input data-vf="elevenlabs_voice" placeholder="ElevenLabs voice id" value="${esc(c.elevenlabs_voice||'')}" style="width:150px"></span>
  <button class="b" data-vact="tryp">▶ ${esc(L('v_play','Audition'))}</button><button class="b" data-vact="save">${esc(L('v_save','Save'))}</button>${name?`<button class="b" data-vact="cancel">✕</button>`:''}</div>`}
 function render(){if(!V)return;const sig=JSON.stringify([LOC.app_sub,V.characters,EDIT]);if(sig==SIGV)return;SIGV=sig;const C=V.characters;
  let h=`<div class="nx-h"><span>🎙 ${esc(L('voices_title','Character voices'))}</span><span class="qm" title="${esc(L('voices_hint','Each character keeps one voice in every shot and every future video. Tag storyboard lines with speaker: and emotion:.'))}">?</span></div>`;

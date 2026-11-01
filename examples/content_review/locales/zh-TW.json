@@ -24,5 +24,10 @@
  "re:^too long \\((\\d+) > (\\d+) words\\)$": "太長（$1 > $2 詞）",
  "re:^contains an email address or phone number$": "包含郵箱或電話號碼",
  "re:^published file missing$": "找不到已發佈的文件",
- "re:^published text differs from the approved draft$": "發佈的內容和批准的草稿不一致"
+ "re:^published text differs from the approved draft$": "發佈的內容和批准的草稿不一致",
+ "subj_post": "貼文",
+ "re:^template draft \\((\\d+) (?:words|词|詞)\\)$": "範本草稿（$1 詞）",
+ "re:^(\\d+) numeric claim\\(s\\), sources: none needed$": "$1 處數字說法，無需來源",
+ "re:^(\\d+) numeric claim\\(s\\), sources: (.*)$": "$1 處數字說法，來源：$2",
+ "re:^no banned phrases, (\\d+) (?:words|词|詞)$": "沒有違禁詞，共 $1 詞"
 }

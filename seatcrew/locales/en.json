@@ -120,7 +120,7 @@
  "tile_events": "Events",
  "tile_events_s": "in the live log",
  "tile_equity": "Equity",
- "tile_net": "Net pass",
+ "tile_net": "Passed − blocked",
  "checks_run": "{n} checks run",
  "checked_n": "checked {n}",
  "detail_title": "Item detail",
