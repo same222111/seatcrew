@@ -21,5 +21,8 @@
  "re:^template draft \\((\\d+) (?:words|词|詞)\\)$": "borrador de plantilla ($1 palabras)",
  "re:^(\\d+) numeric claim\\(s\\), sources: none needed$": "$1 afirmación(es) numérica(s), no requiere fuentes",
  "re:^(\\d+) numeric claim\\(s\\), sources: (.*)$": "$1 afirmación(es) numérica(s), fuentes: $2",
- "re:^no banned phrases, (\\d+) (?:words|词|詞)$": "sin frases prohibidas, $1 palabras"
+ "re:^no banned phrases, (\\d+) (?:words|词|詞)$": "sin frases prohibidas, $1 palabras",
+ "set_banned_phrases": "Frases prohibidas",
+ "set_min_words": "Mínimo de palabras",
+ "set_max_words": "Máximo de palabras"
 }

@@ -17,5 +17,8 @@
  "sn_approve": "APPROVE",
  "sn_publish": "PUBLISH",
  "sn_review": "REVIEW",
- "subj_post": "post"
+ "subj_post": "post",
+ "set_banned_phrases": "Banned phrases",
+ "set_min_words": "Minimum words",
+ "set_max_words": "Maximum words"
 }

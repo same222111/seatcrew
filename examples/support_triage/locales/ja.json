@@ -18,5 +18,12 @@
  "field_message": "メッセージ",
  "r:card number in message - move to the secure channel": "メッセージにカード番号があります。安全な窓口に移してください",
  "r:customer pasted a password - reset it, don't reply in thread": "顧客がパスワードを貼り付けました。リセットし、このスレッドでは返信しないでください",
- "r:reply makes a promise or admission legal must review": "返信に約束や過失の認定が含まれます。法務の確認が必要です"
+ "r:reply makes a promise or admission legal must review": "返信に約束や過失の認定が含まれます。法務の確認が必要です",
+ "re:^category=billing$": "分類：請求",
+ "re:^category=bug$": "分類：不具合",
+ "re:^category=account$": "分類：アカウント",
+ "re:^category=general$": "分類：一般",
+ "re:^category=(.*)$": "分類：$1",
+ "re:^reply written \\((\\d+) chars\\)$": "返信の下書き完成（$1 文字）",
+ "re:^rules passed$": "ルールチェック合格"
 }

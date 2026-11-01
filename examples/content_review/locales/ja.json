@@ -21,5 +21,8 @@
  "re:^template draft \\((\\d+) (?:words|词|詞)\\)$": "テンプレート下書き（$1 語）",
  "re:^(\\d+) numeric claim\\(s\\), sources: none needed$": "数値の主張 $1 件、出典は不要",
  "re:^(\\d+) numeric claim\\(s\\), sources: (.*)$": "数値の主張 $1 件、出典：$2",
- "re:^no banned phrases, (\\d+) (?:words|词|詞)$": "禁止語なし、$1 語"
+ "re:^no banned phrases, (\\d+) (?:words|词|詞)$": "禁止語なし、$1 語",
+ "set_banned_phrases": "禁止表現",
+ "set_min_words": "最小語数",
+ "set_max_words": "最大語数"
 }

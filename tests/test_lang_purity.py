@@ -39,3 +39,15 @@ def test_scanner_catches_untranslated_option_values_and_subjects(tmp_path):
 
 def test_every_real_option_value_is_translated():
     assert lp.scan_options() == []
+
+def test_scanner_catches_unlabelled_settings(tmp_path, monkeypatch):
+    ex = tmp_path / "examples" / "demo"; (ex / "locales").mkdir(parents=True)
+    for l in lp.UI_LANGS: (ex / "locales" / f"{l}.json").write_text(json.dumps({"set_min_words": "x"}), encoding="utf-8")
+    monkeypatch.setattr(lp, "_settings", lambda e: (["min_words", "parallel_items"], None))
+    got = lp.scan_options(tmp_path)
+    assert len(got) == len(lp.UI_LANGS) and all("set_parallel_items" in why and "set_min_words" not in why for _, _, why, _ in got)
+
+def test_ja_es_locales_do_not_hardcode_the_chief_seat_name():
+    for l in ("ja", "es"):
+        d = json.loads((ROOT / "seatcrew" / "locales" / f"{l}.json").read_text(encoding="utf-8"))
+        assert not [k for k, v in d.items() if isinstance(v, str) and "CHIEF" in v]

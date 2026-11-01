@@ -18,5 +18,12 @@
  "field_message": "留言",
  "r:card number in message - move to the secure channel": "留言裡有銀行卡號，請轉到安全管道處理",
  "r:customer pasted a password - reset it, don't reply in thread": "客戶貼出了密碼，請幫他重置，不要在對話裡回覆",
- "r:reply makes a promise or admission legal must review": "回覆裡有承諾或認錯，需要法務審核"
+ "r:reply makes a promise or admission legal must review": "回覆裡有承諾或認錯，需要法務審核",
+ "re:^category=billing$": "分類：帳單",
+ "re:^category=bug$": "分類：故障",
+ "re:^category=account$": "分類：帳號",
+ "re:^category=general$": "分類：一般",
+ "re:^category=(.*)$": "分類：$1",
+ "re:^reply written \\((\\d+) chars\\)$": "回覆草稿已寫好（$1 字）",
+ "re:^rules passed$": "規則檢查通過"
 }

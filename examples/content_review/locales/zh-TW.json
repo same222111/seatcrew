@@ -29,5 +29,8 @@
  "re:^template draft \\((\\d+) (?:words|词|詞)\\)$": "範本草稿（$1 詞）",
  "re:^(\\d+) numeric claim\\(s\\), sources: none needed$": "$1 處數字說法，無需來源",
  "re:^(\\d+) numeric claim\\(s\\), sources: (.*)$": "$1 處數字說法，來源：$2",
- "re:^no banned phrases, (\\d+) (?:words|词|詞)$": "沒有違禁詞，共 $1 詞"
+ "re:^no banned phrases, (\\d+) (?:words|词|詞)$": "沒有違禁詞，共 $1 詞",
+ "set_banned_phrases": "違禁用語",
+ "set_min_words": "最少字數",
+ "set_max_words": "最多字數"
 }

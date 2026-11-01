@@ -161,5 +161,8 @@
  "pmk_login": "請在首頁登入",
  "noai_tool": "工具步驟，不用 AI。後端在「設定」裡選（配音 / 畫面 / 對嘴服務）。",
  "noai_human": "這裡由你決定，不用 AI。",
- "default_model": "預設"
+ "default_model": "預設",
+ "sn_chief": "總指揮",
+ "set_approve_auto_approve": "人工批准席自動通過",
+ "set_load_samples": "啟動時載入範例事項"
 }

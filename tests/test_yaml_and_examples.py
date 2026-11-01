@@ -104,7 +104,7 @@ def test_core_locales_complete():
     assert used <= set(en), used - set(en)
     for f in i18n.CORE.glob("*.json"):
         d = json.loads(f.read_text(encoding="utf-8")); assert set(d) == set(en), f.name
-        for k, v in en.items(): assert set(re.findall(r"\{(\w+)\}", v)) == set(re.findall(r"\{(\w+)\}", d[k])), (f.name, k)
+        for k, v in en.items(): assert set(re.findall(r"\{(\w+)\}", v)) - {"chief"} == set(re.findall(r"\{(\w+)\}", d[k])) - {"chief"}, (f.name, k)   # {chief}: optional seat display name
     cr = loader.examples_dir() / "content_review/locales"
     keys = lambda f: {k for k in json.loads(f.read_text(encoding="utf-8")) if not k.startswith(("r:", "re:"))}   # r:/re: = optional reason translations
     assert all(keys(f) == keys(cr / "en.json") for f in cr.glob("*.json"))

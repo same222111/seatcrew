@@ -115,14 +115,27 @@ def _choices(ex):
             if isinstance(f, dict): vals |= {str(o) for o in f.get("options") or []}
     return vals, None
 
+def _settings(ex):
+    """Setting names the Settings tab labels (the workflow's real default config), or [] for a bare test folder."""
+    if not ((ex / "workflow.py").exists() or (ex / "workflow.yaml").exists()) or ex.parents[1] != ROOT: return [], None
+    import tempfile
+    if str(ROOT) not in sys.path: sys.path.insert(0, str(ROOT))
+    try:
+        from seatcrew import loader
+        with tempfile.TemporaryDirectory() as d:
+            wf = loader.build(ex.name, str(Path(d) / "config.yaml"), d); return sorted(wf.cfg.data.get("settings") or {}), None
+    except Exception as e: return None, f"cannot build {ex.name}: {type(e).__name__}: {e}"
+
 def scan_options(root=ROOT):
-    """Every option value and sample subject must have opt_<v> / subj_<v> in every UI language (workflow or app locale)."""
+    """Every option value, sample subject and setting must have opt_<v> / subj_<v> / set_<k> in every UI language (workflow or app locale)."""
     out = []; app = {l: (json.loads(f.read_text(encoding="utf-8")) if (f := root / "seatcrew/locales" / f"{l}.json").exists() else {}) for l in UI_LANGS}
     if not (root / "examples").is_dir(): return out
     for ex in sorted(p for p in (root / "examples").iterdir() if (p / "locales").is_dir()):
         vals, err = _choices(ex)
         if err: out.append((ex.relative_to(root).as_posix(), "-", err, "")); continue
-        need = [f"opt_{v}" for v in sorted(vals)] + [f"subj_{v}" for v in SUBJECTS.get(ex.name, [])]
+        keys, err = _settings(ex)
+        if err: out.append((ex.relative_to(root).as_posix(), "-", err, "")); continue
+        need = [f"opt_{v}" for v in sorted(vals)] + [f"subj_{v}" for v in SUBJECTS.get(ex.name, [])] + [f"set_{k}" for k in keys]
         for l in UI_LANGS:
             lp = ex / "locales" / f"{l}.json"; loc = json.loads(lp.read_text(encoding="utf-8")) if lp.exists() else {}
             if not lp.exists(): out.append((lp.relative_to(root).as_posix(), "-", "missing locale file", "")); continue

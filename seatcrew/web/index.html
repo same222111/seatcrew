@@ -175,7 +175,7 @@ body[data-density=comfy] main{padding:20px}body[data-density=comfy] .pn{padding:
 const $=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const get=u=>fetch(u).then(r=>r.json()),post=(u,b)=>fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)}).then(r=>r.json());
 let LOC={},META=null,DEF=null;
-function T(k,v){let s=LOC[k]??k;for(const x in v||{})s=s.replace('{'+x+'}',v[x]);return s}
+function T(k,v){let s=LOC[k]??k;for(const x in v||{})s=s.replace('{'+x+'}',v[x]);return typeof s=='string'?s.replace(/\{chief\}/g,LOC.sn_chief||'CHIEF'):s}   // {chief} = the workflow's own name for its CHIEF seat
 const job=s=>LOC['seat_'+s.name]||s.job;
 // a workflow locale may translate its own rule reasons: "r:<exact English reason>" or "re:<regex>" with $1..$9
 const SJ=x=>x?(LOC['subj_'+x]||x):x;

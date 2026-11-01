@@ -18,5 +18,12 @@
  "field_message": "留言",
  "r:card number in message - move to the secure channel": "留言里有银行卡号，请转到安全渠道处理",
  "r:customer pasted a password - reset it, don't reply in thread": "客户贴出了密码，请帮他重置，不要在对话里回复",
- "r:reply makes a promise or admission legal must review": "回复里有承诺或认错，需要法务审核"
+ "r:reply makes a promise or admission legal must review": "回复里有承诺或认错，需要法务审核",
+ "re:^category=billing$": "分类：账单",
+ "re:^category=bug$": "分类：故障",
+ "re:^category=account$": "分类：账号",
+ "re:^category=general$": "分类：一般",
+ "re:^category=(.*)$": "分类：$1",
+ "re:^reply written \\((\\d+) chars\\)$": "回复草稿已写好（$1 字）",
+ "re:^rules passed$": "规则检查通过"
 }

@@ -1,17 +1,22 @@
 # Changelog
 
-## Unreleased (v0.9.5 candidate) — Stability
+## 0.9.5 - 2026-11-01 — Stability
 
 ### Fixed
 - `transition: cut` no longer freezes the picture after the first shots: cuts are real concatenations, so every shot is in the video and the video track is as long as the audio.
 - `--lang` works before or after the subcommand (`seatcrew --lang zh-CN video init x` and `seatcrew video init x --lang zh`), and `video init` inherits the global language.
 - Dashboard in Chinese: seat activity, item status, rule reasons, the log seat names, the workflow title and the display toggles are translated; the support-triage example ships its own locales.
 - A timing-sensitive test no longer depends on a fixed sleep.
+- Per-shot voice tracks are mixed onto an exact-length silent bed: under load the voice stem could end at the last line, leaving the audio shorter than the video (seen as a flaky QC `av_stream_sync` failure).
+- Draft title cards render in parallel without sharing one font file (flaky on Linux CI).
+- The dashboard's net tile no longer goes negative for items that were blocked once and passed on a retry: "blocked" counts items blocked now, and the tile is labelled "Passed − blocked".
+- Every UI language: option values (backends, presets, templates, aspect ratios), the content-review sample subject, settings labels, statuses with the seat's own name, support-triage check notes (no raw `category=…` / `reply written`), the CHIEF seat name and the Japanese/Spanish log lines are translated.
 
 ### Added
 - QC check `av_stream_sync`: fails when the video and audio streams differ by more than 0.3 s (or a duration can't be read); the frozen-frame check stays on.
 - Title cards are larger and sit in the top safe area by default; `caption_style` in the storyboard (`position`: top / upper / lower, `scale`: 0.6-2.0) or `--caption-position` / `--caption-scale` on `video assemble` change them.
-- `scripts/lang_purity.py` (run in CI and by `tests/test_lang_purity.py`) flags Chinese text in English docs/locales and stray English in Chinese ones.
+- `scripts/lang_purity.py` (run in CI and by `tests/test_lang_purity.py`) flags Chinese text in English docs/locales and stray English in Chinese ones, and fails when an option value, sample subject or setting has no label in one of the five UI languages.
+- Japanese and Spanish locales for the support-triage example.
 - `README.zh-CN.md`, `docs/VIDEO.zh-CN.md`, `examples/trading/README.zh-CN.md` and a release-notes template (`docs/RELEASE_TEMPLATE.md`).
 
 ### Removed

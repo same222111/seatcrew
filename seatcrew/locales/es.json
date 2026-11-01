@@ -141,10 +141,10 @@
  "simple": "Simple",
  "simple_hint": "El modo simple oculta parámetros avanzados (prompts, modelos, límites). Desactívalo para verlo todo.",
  "who_title": "¿Quién decide?",
- "who_hint": "CHIEF asigna, los puestos juzgan, los controles filtran, una persona aprueba.",
- "ask_chief": "Preguntar a CHIEF",
+ "who_hint": "{chief} asigna, los puestos juzgan, los controles filtran, una persona aprueba.",
+ "ask_chief": "Preguntar a {chief}",
  "ai_rules": "reglas",
- "who_1": "CHIEF asigna",
+ "who_1": "{chief} asigna",
  "who_1d": "Inicia cada ciclo y reparte los elementos. Nunca aprueba por su cuenta.",
  "who_2": "Los puestos juzgan",
  "who_2d": "Cada puesto revisa una cosa: primero reglas, luego su IA (si hay). La IA solo puede ser más prudente.",
@@ -161,5 +161,8 @@
  "pmk_login": "inicia sesión en Inicio",
  "noai_tool": "Paso de herramienta: sin IA. Elige sus backends en Ajustes.",
  "noai_human": "Aquí decides tú: sin IA.",
- "default_model": "predeterminado"
+ "default_model": "predeterminado",
+ "sn_chief": "JEFE",
+ "set_approve_auto_approve": "Aprobar automáticamente en el puesto humano",
+ "set_load_samples": "Cargar ejemplos al iniciar"
 }
